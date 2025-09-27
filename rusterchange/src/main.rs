@@ -421,36 +421,47 @@ fn main() {
         }
 
         if sockets[1].get_revents().contains(zmq::PollEvents::POLLIN) {
-            println!("reverse message on tasks_interchange_to_workers");
-            // this is JSON, not pickle (TODO: don't use JSON - issue #3370)
+            println!("worker to interchange message on tasks_interchange_to_workers");
             let message = zmq_tasks_interchange_to_workers
                 .recv_multipart(0)
                 .expect("reading worker message from tasks_submit_to_interchange channel");
-            let manager_id = &message[0];
-            let json_bytes = &message[1];
-            let json: serde_json::Value =
-                serde_json::from_slice(json_bytes).expect("protocol error");
-            println!("Message from workers to interchange: {}", json); // TODO: log the manager ID too... awkward because it's a byte string
-            let serde_json::Value::Object(msg_map) = json else {
-                panic!("protocol error")
+            let manager_id = &message[0]; // bytestring
+            let meta = &message[1]; // pickle
+            // there can be more parts to this message, depending on the meta
+
+            let p = serde_pickle::de::value_from_slice(
+                &meta,
+                serde_pickle::de::DeOptions::new().replace_unresolved_globals(),
+            ).expect("protocol error: ZMQ message part could not be unpickled");
+
+            let serde_pickle::Value::Dict(part_dict) = p else {
+                panic!("protocol violation")
             };
-            let serde_json::Value::String(ref msg_type) = msg_map["type"] else {
-                panic!("protocol error")
+            let serde_pickle::Value::String(meta_type) =
+                &part_dict[&serde_pickle::HashableValue::String("type".to_string())]
+            else {
+                panic!("protocol violation")
             };
-            println!("Message type is: {}", msg_type);
-            if msg_type == "registration" {
+
+
+            println!("Message meta-type is: {}", meta_type);
+            if meta_type == "registration" {
                 println!("processing registration");
                 // I think all we need from this message is the worker capacity.
                 // There's also a uid field which is a text representation of the manager id. In the Python interchange, this field is unused - the manager_id coming from zmq as a byte sequence is used instead. TODO: assert that they align here. perhaps remove from protocol in master Parsl? - issue #3377
-                let serde_json::Value::Number(ref capacity_json) = msg_map["max_capacity"] else {
-                    panic!("protocol error")
-                }; // max_capacity = worker_count + prefetch_capacity
-                   // might be interesting to assert or validate that here as a protocol behaviour? TODO
+                let serde_pickle::Value::I64(capacity) =   // TODO: there's no expected max capacity upper limit in the protocol, so this may be a bug?
+                    &part_dict[&serde_pickle::HashableValue::String("max_capacity".to_string())]
+                else {
+                    panic!("protocol violation")
+                };
+
+                // max_capacity = worker_count + prefetch_capacity
+                // might be interesting to assert or validate that here as a protocol behaviour? or remove from protocol
+                // TODO
 
                 // now we're in a position for match-making
                 // let's do that as a queue of manager requests, so that we have capacity copies of a Slot, that will be matched with Task objects 1:1 over time: specifically *not* keeping manager capacity as an int, but more symmetrically structured as two queues being paired/matched until one is empty. As a trade-off, this probably makes summary info more awkward to provide, though.
-                let capacity = capacity_json.as_u64().expect("protocol error");
-                for _ in 0..capacity {
+                for _ in 0..*capacity {
                     println!("adding a slot");
                     slot_queue
                         .add(Slot {
@@ -458,9 +469,11 @@ fn main() {
                         })
                         .expect("enqueuing slot on registration");
                 }
-                // TODO: it's an error for a manager ID to be used... is that a protocol error? or some other error?
+                // TODO: it's an error for a manager ID to be re-used... is that a protocol error? or some other error?
                 manager_info.insert(manager_id.clone(), ManagerInfo {alive: true, last_heard: Instant::now()});
-            } else if msg_type == "heartbeat" {
+            } else if meta_type == "connection_probe" {
+                println!("connection probe - TODO NOTIMPL")
+            } else if meta_type == "heartbeat" {
                 // Heartbeat protocol:
                 //  Heartbeats are driven by the workers: a worker sends a heartbeat to the
                 //  interchange. The interchange should reply on this same channel with
@@ -472,12 +485,15 @@ fn main() {
                 //    * telling the monitoring system
                 //    * no longer scheduling tasks onto that manager
 
+                // TODO: implement heartbeat. and test it.
+
                 let mi = manager_info.get_mut(manager_id).unwrap();
                 let old_instant = mi.last_heard;
 
                 mi.last_heard = Instant::now();
 
                 println!("heartbeat from worker to interchange on task channel: {0:?} -> {1:?}", old_instant, mi.last_heard)
+
             } else {
                 panic!("unknown message type")
             };
