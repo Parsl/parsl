@@ -58,7 +58,7 @@ use std::time::Instant;
 struct Task {
     task_id: i64,
     buffer: Vec<u8>,
-    resource_spec: serde_pickle::Value,
+    context: serde_pickle::Value,
 }
 
 #[derive(Clone)]
@@ -398,10 +398,12 @@ fn main() {
             else {
                 panic!("protocol violation - no buffer or buffer is not Bytes")
             };
-            let resource_spec =
-                &task_dict[&serde_pickle::HashableValue::String("resource_spec".to_string())]
+            let context =
+                &task_dict[&serde_pickle::HashableValue::String("context".to_string())]
             else {
-                panic!("protocol violation - no resource_spec or resource_spec is not dict")
+                // BUG: this panic doesn't happen - instead the above lookup is panicing itself
+                // and this panic! block is never reached.
+                panic!("protocol violation - no context or context is not dict")
             };
 
             println!("Received htex task {}", task_id);
@@ -413,7 +415,7 @@ fn main() {
             let task = Task {
                 task_id: *task_id, // TODO: why need this *? something to do with ownership I don't understand
                 buffer: buffer.clone(), // TODO: awkward clone here of buffer but I guess because of serde_pickle, we have to clone it out of the task_dict value if we're doing shared values... perhaps there is a way to convert the task dict into the buffer forgetting everything else, linearly? TODO
-                resource_spec: resource_spec.clone(),
+                context: context.clone(),
             };
             task_queue.add(task).expect("queue broken - eg full?");
         }
@@ -698,8 +700,8 @@ fn main() {
                             serde_pickle::value::Value::Bytes(task.buffer),
                         ),
                         (
-                            serde_pickle::value::HashableValue::String("resource_spec".to_string()),
-                            task.resource_spec,
+                            serde_pickle::value::HashableValue::String("context".to_string()),
+                            task.context,
                         ),
                     ]),
                 )]

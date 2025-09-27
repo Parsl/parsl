@@ -588,7 +588,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         config_pickle = pickle.dumps(interchange_config)
 
         if self.benc_interchange_cli == "rust":
-            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange", str(self.cert_dir)],
+            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/debug/rusterchange", str(self.cert_dir)],
                                                      shell=False,
                                                      stdin=subprocess.PIPE)
             # when i was playing with performance, I did a dev/null redirect here
