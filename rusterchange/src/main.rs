@@ -536,19 +536,13 @@ fn main() {
                     serde_pickle::ser::SerOptions::new(),
                 )
                 .expect("pickling MANAGERS list")
-            } else if cmd == serde_pickle::Value::String("WORKER_PORTS".to_string()) {
+            } else if cmd == serde_pickle::Value::String("WORKER_BINDS".to_string()) {
                 serde_pickle::ser::value_to_vec(
-                    // TODO: allocate these ports dynamically - since PR #3461 this has been possible
-                    &serde_pickle::value::Value::Tuple(
-                        [
-                            serde_pickle::value::Value::I64(9003),
-                            serde_pickle::value::Value::I64(9004),
-                        ]
-                        .to_vec(),
-                    ),
+                    // TODO: allocate this port dynamically - since PR #3461 this has been possible
+                    &serde_pickle::value::Value::I64(9003),
                     serde_pickle::ser::SerOptions::new(),
                 )
-                .expect("pickling WORKER_PORTS tuple")
+                .expect("pickling WORKER_BINDS tuple")
             } else if cmd == serde_pickle::Value::String("OUTSTANDING_C".to_string()) {
                 // number of outstanding tasks known to htex: informally, tasks we've received that we havent' processed
                 // a result for. To deal with worker failure, we'll need a structure mapping tasks and managers to each
