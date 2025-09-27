@@ -16,7 +16,6 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobStatus
 from parsl.launchers import SimpleLauncher
 from parsl.monitoring.radios.base import RadioConfig
-from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
 
 
@@ -47,7 +46,7 @@ class MPIExecutor(HighThroughputExecutor):
     @typeguard.typechecked
     def __init__(self,
                  label: str = 'MPIExecutor',
-                 provider: ExecutionProvider = LocalProvider(),
+                 provider: Optional[ExecutionProvider] = None,
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[str] = None,
                  address: Optional[str] = None,
