@@ -27,16 +27,15 @@ jobs:
         run: |
           apt install -y python3-virtualenv
           virtualenv ./venv
-          find ./venv
-          source ./venv/bin/activate
+          . ./venv/bin/activate
           CC=/usr/lib64/openmpi/bin/mpicc pip3 install . -r test-requirements.txt
 
       - name: Verify Parsl Installation
         run: |
-          source venv/bin/activate
+          . venv/bin/activate
           pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/local_threads.py --random-order --durations 10
 
       - name: Test Parsl with Slurm Config
         run: |
-          source venv/bin/activate
+          . venv/bin/activate
           ./parsl/tests/slurm-entrypoint.sh  pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/slurm_local.py --random-order --durations 10
