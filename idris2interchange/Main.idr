@@ -25,8 +25,8 @@ import ZMQ
 
 -- TODO: this should eventually be chosen according to
 -- config supplied on stdin, or by random bind.
-WORKER_TASK_PORT : Int
-WORKER_TASK_PORT = 9003
+DEFAULT_WORKER_PORT : Int
+DEFAULT_WORKER_PORT = 9003
 
 -- for benc dev environment:
 -- apt install chezscheme      -- to run idris
@@ -140,7 +140,7 @@ dispatch_cmd "WORKER_BINDS" = do
   -- hard-code return value because port is also hard-coded ...
   -- TODO: this should be some environment to be passed around
   -- perhaps as a monad-style reader environment?
-  pure $ PickleInteger $ cast WORKER_TASK_PORT
+  pure $ PickleInteger $ cast DEFAULT_WORKER_PORT
 
 dispatch_cmd "CONNECTED_BLOCKS" = do
   log "CONNECTED_BLOCKS requested"
@@ -609,7 +609,7 @@ main_with_zmq cfg zmq_ctx = do
   worker_to_interchange_socket <- new_zmq_socket zmq_ctx ZMQSocketROUTER
   -- TODO: use configuration interchange address from submit process, rather
   -- than hard-coded 0.0.0.0, likewise for port
-  zmq_bind worker_to_interchange_socket "tcp://0.0.0.0:9003"
+  zmq_bind worker_to_interchange_socket "tcp://0.0.0.0:\{show DEFAULT_WORKER_PORT}"
 
   log "Created worker task socket"
 
