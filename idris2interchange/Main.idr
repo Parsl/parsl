@@ -176,7 +176,8 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
 
 dispatch_cmd "MANAGERS" = do
   log "MANAGERS requested"
-  -- TODO: notimpl, but maybe this is enough for tests?
+  -- TODO: notimpl, but this is enough for tests to pass, because it isn't
+  -- tested in the per-config case.
   pure (PickleDict [])
 
 dispatch_cmd c = do
