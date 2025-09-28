@@ -110,6 +110,14 @@ ascii_dump v = do
 -- the fields that are interesting, and this function becomes
 -- the probably much simpler projection of that field out of
 -- the manager record.
+
+-- parsl/tests/test_callables.py Error: get_block_id is not total, possibly not terminating due to call to Pickle.implEqPickleAST
+-- if we don't have `covering` here. That looks like its an expansion of
+-- using == equality or something similar. 
+-- Probably in the `lookup` performing a match against PickleDict's content.
+-- That key is a PickleAST, not a regular string, even though its got string
+-- syntax here. That would also go away, I think, if ManagerRegistration
+-- contained the block ID parsed earlier on.
 covering
 get_block_id : ManagerRegistration -> PickleAST
 get_block_id mr = 
