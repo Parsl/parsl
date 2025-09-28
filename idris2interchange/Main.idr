@@ -740,12 +740,6 @@ poll_loop sockets = do
 
   log "poll completed"
 
-
-  log "DEBUG: reading tasks interchange to worker status"
-  logv "DEBUG: socket poll result" (index 2 poll_outputs).revents
-  dbg_events <- zmq_get_socket_events sockets.worker_to_interchange
-  logv "DEBUG: zmq socket events" dbg_events
-
   -- TODO: some assert here?
 
   -- one thing i dislike about the rust polling interface I used is it
