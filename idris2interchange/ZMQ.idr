@@ -146,6 +146,12 @@ prim__zmq_msg_close : AnyPtr -> PrimIO ()
 %foreign "C:free,libc"
 prim__free : AnyPtr -> PrimIO ()
 
+
+-- TODO: make this linear so that the msg can't be
+-- used any more after being closed. Probably needs
+-- other calls to become borrow-style. It looks like
+-- at the time of writing this is being called correctly,
+-- but that isn't enforced in the type system.
 public export
 zmq_msg_close : HasErr AppHasIO es => ZMQMsg -> App es ()
 zmq_msg_close (MkZMQMsg msg_ptr) = do
