@@ -4,19 +4,15 @@ import hashlib
 import logging
 import os
 import pickle
+import types
+from concurrent.futures import Future
 from functools import lru_cache, singledispatch
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
 from parsl.dataflow.taskrecord import TaskRecord
-
-if TYPE_CHECKING:
-    from parsl import DataFlowKernel  # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
-
-import types
-from concurrent.futures import Future
 
 logger = logging.getLogger(__name__)
 
@@ -150,17 +146,13 @@ class Memoizer:
 
     """
 
-    def __init__(self, dfk: DataFlowKernel, *, memoize: bool = True, checkpoint_files: Sequence[str]):
+    def __init__(self, *, memoize: bool = True, checkpoint_files: Sequence[str]):
         """Initialize the memoizer.
-
-        Args:
-            - dfk (DFK obj): The DFK object
 
         KWargs:
             - memoize (Bool): enable memoization or not.
             - checkpoint (Dict): A checkpoint loaded as a dict.
         """
-        self.dfk = dfk
         self.memoize = memoize
 
         checkpoint = self.load_checkpoints(checkpoint_files)
