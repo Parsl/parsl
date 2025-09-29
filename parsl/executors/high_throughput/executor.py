@@ -642,7 +642,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.debug("Requesting worker ports")
         try:
-            self.worker_port = self.command_client.run("WORKER_BINDS", timeout_s=120)
+            self.worker_port = self.command_client.run("WORKER_BINDS", timeout_s=600)
         except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization")
             # TODO: use a parsl exception...
