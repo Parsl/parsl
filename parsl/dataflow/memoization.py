@@ -14,7 +14,7 @@ import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.errors import ConfigurationError, InternalConsistencyError
+from parsl.errors import ConfigurationError
 from parsl.utils import Timer, get_all_checkpoints
 
 logger = logging.getLogger(__name__)
@@ -286,8 +286,28 @@ class Memoizer:
     def update_memo_result(self, task: TaskRecord, r: Any) -> None:
         self._update_memo(task)
 
+        if self.checkpoint_mode == 'task_exit':
+            self.checkpoint(task=task, result=r)
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
+            # with self._modify_checkpointable_tasks_lock:  # TODO: sort out use of this lock
+            self.checkpointable_tasks.append(task)
+        elif self.checkpoint_mode is None:
+            pass
+        else:
+            assert False, "Invalid checkpoint mode {self.checkpoint_mode} - should have been validated at initialization"
+
     def update_memo_exception(self, task: TaskRecord, e: BaseException) -> None:
         self._update_memo(task)
+
+        if self.checkpoint_mode == 'task_exit':
+            self.checkpoint(task=task, exception=e)
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
+            # with self._modify_checkpointable_tasks_lock:  # TODO: sort out use of this lock
+            self.checkpointable_tasks.append(task)
+        elif self.checkpoint_mode is None:
+            pass
+        else:
+            assert False, "Invalid checkpoint mode {self.checkpoint_mode} - should have been validated at initialization"
 
     def _update_memo(self, task: TaskRecord) -> None:
         """Updates the memoization lookup table with the result from a task.
@@ -380,18 +400,17 @@ class Memoizer:
         else:
             return {}
 
-    def update_checkpoint(self, task_record: TaskRecord) -> None:
-        if self.checkpoint_mode == 'task_exit':
-            self.checkpoint(task=task_record)
-        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self.checkpoint_lock:
-                self.checkpointable_tasks.append(task_record)
-        elif self.checkpoint_mode is None:
-            pass
-        else:
-            raise InternalConsistencyError(f"Invalid checkpoint mode {self.checkpoint_mode}")
+    # TODO: this call becomes even more multiplexed...
+    # called with no parameters, we write out the task
+    # called with a task record, we can now no longer expect to get the
+    # result from the task record future, because it will not be
+    # populated yet.
+    # so then either we can an exception, or if exception is None, then
+    # checkpoint result. it's possible that result can be None as a
+    # real result: in the case that exception is None.
+    # what a horrible API that needs refactoring...
 
-    def checkpoint(self, *, task: Optional[TaskRecord] = None) -> None:
+    def checkpoint(self, *, task: Optional[TaskRecord] = None, exception: Optional[BaseException] = None, result: Any = None) -> None:
         """Checkpoint the dfk incrementally to a checkpoint file.
 
         When called with no argument, all tasks registered in self.checkpointable_tasks
@@ -411,11 +430,6 @@ class Memoizer:
         """
         with self.checkpoint_lock:
 
-            if task:
-                checkpoint_queue = [task]
-            else:
-                checkpoint_queue = self.checkpointable_tasks
-
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
@@ -425,22 +439,47 @@ class Memoizer:
             count = 0
 
             with open(checkpoint_tasks, 'ab') as f:
-                for task_record in checkpoint_queue:
-                    task_id = task_record['id']
 
-                    app_fu = task_record['app_fu']
+                if task:
+                    # TODO: refactor with below
 
-                    if app_fu.done() and app_fu.exception() is None:
-                        hashsum = task_record['hashsum']
+                    task_id = task['id']
+
+                    if exception is None:
+                        hashsum = task['hashsum']
                         if not hashsum:
-                            continue
-                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+                            pass  # TODO: log an error? see below discussion
+                        else:
+                            t = {'hash': hashsum, 'exception': None, 'result': result}
 
-                        # We are using pickle here since pickle dumps to a file in 'ab'
-                        # mode behave like a incremental log.
-                        pickle.dump(t, f)
-                        count += 1
+                            # We are using pickle here since pickle dumps to a file in 'ab'
+                            # mode behave like a incremental log.
+                            pickle.dump(t, f)
+                            count += 1
+
                         logger.debug("Task {} checkpointed".format(task_id))
+                else:
+                    checkpoint_queue = self.checkpointable_tasks
+
+                    for task_record in checkpoint_queue:
+                        task_id = task_record['id']
+
+                        app_fu = task_record['app_fu']
+
+                        assert app_fu.done(), "trying to checkpoint a task that is not done"
+
+                        if app_fu.done() and app_fu.exception() is None:
+                            hashsum = task_record['hashsum']
+                            if not hashsum:
+                                continue  # TODO: log an error? maybe some tasks don't have hashsums legitimately?
+                            t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+
+                            # We are using pickle here since pickle dumps to a file in 'ab'
+                            # mode behave like a incremental log.
+                            pickle.dump(t, f)
+                            count += 1
+
+                            logger.debug("Task {} checkpointed".format(task_id))
 
             self.checkpointed_tasks += count
 

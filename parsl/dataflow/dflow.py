@@ -522,8 +522,6 @@ class DataFlowKernel:
         if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_checkpoint(task_record)
-
         self.wipe_task(task_id)
         return
 
