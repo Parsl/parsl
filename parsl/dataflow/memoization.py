@@ -14,7 +14,8 @@ import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.utils import get_all_checkpoints
+from parsl.errors import ConfigurationError
+from parsl.utils import Timer, get_all_checkpoints
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,7 @@ class Memoizer:
     def __init__(self, *,
                  memoize: bool = True,
                  checkpoint_files: Sequence[str] | None,
+                 checkpoint_period: Optional[str],
                  checkpoint_mode: Literal['task_exit', 'periodic', 'dfk_exit', 'manual'] | None):
         """Initialize the memoizer.
 
@@ -168,8 +170,11 @@ class Memoizer:
 
         self.checkpoint_files = checkpoint_files
         self.checkpoint_mode = checkpoint_mode
+        self.checkpoint_period = checkpoint_period
 
         self.checkpointable_tasks: List[TaskRecord] = []
+
+        self._checkpoint_timer: Timer | None = None
 
     def start(self) -> None:
         if self.checkpoint_files is not None:
@@ -189,6 +194,29 @@ class Memoizer:
         else:
             logger.info("App caching disabled for all apps")
             self.memo_lookup_table = {}
+
+        if self.checkpoint_mode == "periodic":
+            if self.checkpoint_period is None:
+                raise ConfigurationError("Checkpoint period must be specified with periodic checkpoint mode")
+            else:
+                try:
+                    h, m, s = map(int, self.checkpoint_period.split(':'))
+                except Exception:
+                    raise ConfigurationError("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(self.checkpoint_period))
+                checkpoint_period = (h * 3600) + (m * 60) + s
+                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
+
+    def close(self) -> None:
+        # checkpoint if any valid checkpoint method is specified
+        if self.checkpoint_mode is not None:
+
+            # TODO: accesses to self.checkpointable_tasks should happen
+            # under a lock?
+            self.checkpoint()
+
+            if self._checkpoint_timer:
+                logger.info("Stopping checkpoint timer")
+                self._checkpoint_timer.close()
 
     def make_hash(self, task: TaskRecord) -> str:
         """Create a hash of the task inputs.

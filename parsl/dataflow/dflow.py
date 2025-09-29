@@ -49,7 +49,7 @@ from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSen
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.usage_tracking.usage import UsageTracker
-from parsl.utils import Timer, get_std_fname_mode, get_version
+from parsl.utils import get_std_fname_mode, get_version
 
 logger = logging.getLogger(__name__)
 
@@ -167,13 +167,13 @@ class DataFlowKernel:
 
         # TODO: the parameters that remain here should be parameters that are going to be configured by
         # the user as part of checkpoint/memo configuration object.
-        self.memoizer = Memoizer(memoize=config.app_cache, checkpoint_mode=config.checkpoint_mode, checkpoint_files=config.checkpoint_files)
+        self.memoizer = Memoizer(memoize=config.app_cache,
+                                 checkpoint_mode=config.checkpoint_mode,
+                                 checkpoint_files=config.checkpoint_files,
+                                 checkpoint_period=config.checkpoint_period)
         self.memoizer.run_dir = self.run_dir
         self.memoizer.start()
 
-        # TODO: this block needs to move too
-        self._checkpoint_timer = None
-        self.checkpoint_mode = config.checkpoint_mode
         self._modify_checkpointable_tasks_lock = threading.Lock()
 
         # this must be set before executors are added since add_executors calls
@@ -189,17 +189,6 @@ class DataFlowKernel:
                                                      label='_parsl_internal')
         self.add_executors(config.executors)
         self.add_executors([parsl_internal_executor])
-
-        if self.checkpoint_mode == "periodic":
-            if config.checkpoint_period is None:
-                raise ConfigurationError("Checkpoint period must be specified with periodic checkpoint mode")
-            else:
-                try:
-                    h, m, s = map(int, config.checkpoint_period.split(':'))
-                except Exception:
-                    raise ConfigurationError("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
-                checkpoint_period = (h * 3600) + (m * 60) + s
-                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
 
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
@@ -1187,16 +1176,7 @@ class DataFlowKernel:
 
         self.log_task_states()
 
-        # checkpoint if any valid checkpoint method is specified
-        if self.checkpoint_mode is not None:
-
-            # TODO: accesses to self.checkpointable_tasks should happen
-            # under a lock?
-            self.memoizer.checkpoint()
-
-            if self._checkpoint_timer:
-                logger.info("Stopping checkpoint timer")
-                self._checkpoint_timer.close()
+        self.memoizer.close()
 
         # Send final stats
         self.usage_tracker.send_end_message()
