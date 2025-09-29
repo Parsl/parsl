@@ -4,7 +4,17 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads_no_cache import fresh_config as local_config
+from parsl.config import Config
+from parsl.executors.threads import ThreadPoolExecutor
+
+
+def local_config():
+    return Config(
+        executors=[
+            ThreadPoolExecutor(max_threads=4),
+        ],
+        app_cache=False
+    )
 
 
 @python_app
