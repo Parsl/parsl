@@ -370,7 +370,7 @@ class DataFlowKernel:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
                 task_record['time_returned'] = datetime.datetime.now()
                 self._send_task_log_info(task_record)
-                self.memoizer.update_memo(task_record)
+                self.memoizer.update_memo_exception(task_record, e)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -396,7 +396,7 @@ class DataFlowKernel:
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
                 self._send_task_log_info(task_record)
-                self.memoizer.update_memo(task_record)
+                self.memoizer.update_memo_exception(task_record, e)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -443,10 +443,10 @@ class DataFlowKernel:
                         self.update_task_state(task_record, States.failed)
                         task_record['time_returned'] = datetime.datetime.now()
                         self._send_task_log_info(task_record)
-                        self.memoizer.update_memo(task_record)
+                        ex = TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}")
+                        self.memoizer.update_memo_exception(task_record, ex)
                         with task_record['app_fu']._update_lock:
-                            task_record['app_fu'].set_exception(
-                                TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
+                            task_record['app_fu'].set_exception(ex)
 
         self._log_std_streams(task_record)
 
@@ -519,7 +519,7 @@ class DataFlowKernel:
 
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
-                self.memoizer.update_memo(task_record)
+                self.memoizer.update_memo_exception(task_record, e)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -588,7 +588,7 @@ class DataFlowKernel:
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
-        self.memoizer.update_memo(task_record)
+        self.memoizer.update_memo_result(task_record, result)
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
 
