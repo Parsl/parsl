@@ -351,26 +351,30 @@ class Memoizer:
         else:
             return {}
 
-    def checkpoint(self, tasks: Sequence[TaskRecord]) -> None:
+    def checkpoint(self, *, task: Optional[TaskRecord] = None) -> None:
         """Checkpoint the dfk incrementally to a checkpoint file.
 
-        When called, every task that has been completed yet not
-        checkpointed is checkpointed to a file.
+        When called with no argument, all tasks registered in self.checkpointable_tasks
+        will be checkpointed. When called with a single TaskRecord argument, that task will be
+        checkpointed.
+
+        By default the checkpoints are written to the RUNDIR of the current
+        run under RUNDIR/checkpoints/tasks.pkl
 
         Kwargs:
-            - tasks (List of task records) : List of task ids to checkpoint. Default=None
-                                         if set to None, we iterate over all tasks held by the DFK.
+            - task (Optional task records) : A task to checkpoint. Default=None, meaning all
+              tasks registered for checkpointing.
 
         .. note::
             Checkpointing only works if memoization is enabled
 
-        Returns:
-            Checkpoint dir if checkpoints were written successfully.
-            By default the checkpoints are written to the RUNDIR of the current
-            run under RUNDIR/checkpoints/tasks.pkl
         """
         with self.checkpoint_lock:
-            checkpoint_queue = tasks
+
+            if task:
+                checkpoint_queue = [task]
+            else:
+                checkpoint_queue = self.checkpointable_tasks
 
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'

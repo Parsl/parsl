@@ -564,7 +564,7 @@ class DataFlowKernel:
         # Do we need to checkpoint now, or queue for later,
         # or do nothing?
         if self.checkpoint_mode == 'task_exit':
-            self.memoizer.checkpoint(tasks=[task_record])
+            self.memoizer.checkpoint(task=task_record)
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
             with self._modify_checkpointable_tasks_lock:
                 self.memoizer.checkpointable_tasks.append(task_record)
@@ -1205,7 +1205,7 @@ class DataFlowKernel:
 
             # TODO: accesses to self.checkpointable_tasks should happen
             # under a lock?
-            self.memoizer.checkpoint(self.memoizer.checkpointable_tasks)
+            self.memoizer.checkpoint()
 
             if self._checkpoint_timer:
                 logger.info("Stopping checkpoint timer")
@@ -1269,7 +1269,7 @@ class DataFlowKernel:
 
     def checkpoint(self) -> None:
         with self._modify_checkpointable_tasks_lock:
-            self.memoizer.checkpoint(self.memoizer.checkpointable_tasks)
+            self.memoizer.checkpoint()
             self.memoizer.checkpointable_tasks = []
 
     @staticmethod
