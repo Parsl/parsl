@@ -175,7 +175,7 @@ class DataFlowKernel:
         else:
             checkpoint_files = []
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
+        self.memoizer = Memoizer(memoize=config.app_cache, checkpoint_files=checkpoint_files)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
