@@ -561,7 +561,7 @@ class DataFlowKernel:
         if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_record, future)
+        self.memoizer.update_memo(task_record)
 
         # Cover all checkpointing cases here:
         # Do we need to checkpoint now, or queue for later,

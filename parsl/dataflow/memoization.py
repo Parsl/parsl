@@ -242,16 +242,14 @@ class Memoizer:
         assert isinstance(result, Future) or result is None
         return result
 
-    def update_memo(self, task: TaskRecord, r: Future[Any]) -> None:
+    def update_memo(self, task: TaskRecord) -> None:
         """Updates the memoization lookup table with the result from a task.
+        This doesn't move any values around but associates the memoization
+        hashsum with the completed (by success or failure) AppFuture.
 
         Args:
-             - task (dict) : A task dict from dfk.tasks
-             - r (Result future): Result future
+             - task (TaskRecord) : A task record from dfk.tasks
         """
-        # TODO: could use typeguard
-        assert isinstance(r, Future)
-
         task_id = task['id']
 
         if not self.memoize or not task['memoize'] or 'hashsum' not in task:
@@ -265,7 +263,7 @@ class Memoizer:
             logger.info(f"Replacing app cache entry {task['hashsum']} with result from task {task_id}")
         else:
             logger.debug(f"Storing app cache entry {task['hashsum']} with result from task {task_id}")
-        self.memo_lookup_table[task['hashsum']] = r
+        self.memo_lookup_table[task['hashsum']] = task['app_fu']
 
     def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
         """Load a checkpoint file into a lookup table.
