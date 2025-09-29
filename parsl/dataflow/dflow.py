@@ -560,19 +560,6 @@ class DataFlowKernel:
         if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        # Cover all checkpointing cases here:
-        # Do we need to checkpoint now, or queue for later,
-        # or do nothing?
-        if self.checkpoint_mode == 'task_exit':
-            self.memoizer.checkpoint(task=task_record)
-        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self._modify_checkpointable_tasks_lock:
-                self.memoizer.checkpointable_tasks.append(task_record)
-        elif self.checkpoint_mode is None:
-            pass
-        else:
-            raise InternalConsistencyError(f"Invalid checkpoint mode {self.checkpoint_mode}")
-
         self.wipe_task(task_id)
         return
 
