@@ -175,7 +175,7 @@ class DataFlowKernel:
         else:
             checkpoint_files = []
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
+        self.memoizer = Memoizer(memoize=config.app_cache, checkpoint_files=checkpoint_files)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
@@ -561,7 +561,7 @@ class DataFlowKernel:
         if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_record, future)
+        self.memoizer.update_memo(task_record)
 
         # Cover all checkpointing cases here:
         # Do we need to checkpoint now, or queue for later,
@@ -1202,7 +1202,6 @@ class DataFlowKernel:
 
         self.log_task_states()
 
-        # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
         if self.checkpoint_mode is not None:
             self.checkpoint()

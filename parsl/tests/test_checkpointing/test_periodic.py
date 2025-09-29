@@ -2,11 +2,17 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads_checkpoint_periodic import fresh_config
+from parsl.config import Config
+from parsl.executors.threads import ThreadPoolExecutor
 
 
-def local_setup():
-    parsl.load(fresh_config())
+def fresh_config():
+    tpe = ThreadPoolExecutor(label='local_threads_checkpoint_periodic', max_threads=1)
+    return Config(
+        executors=[tpe],
+        checkpoint_mode='periodic',
+        checkpoint_period='00:00:02'
+    )
 
 
 @python_app(cache=True)
@@ -25,12 +31,12 @@ def tstamp_to_seconds(line):
 def test_periodic():
     """Test checkpointing with task_periodic behavior
     """
-    h, m, s = map(int, parsl.dfk().config.checkpoint_period.split(":"))
-    assert h == 0, "Verify test setup"
-    assert m == 0, "Verify test setup"
-    assert s > 0, "Verify test setup"
-    sleep_for = s + 1
-    with parsl.dfk():
+    with parsl.load(fresh_config()):
+        h, m, s = map(int, parsl.dfk().config.checkpoint_period.split(":"))
+        assert h == 0, "Verify test setup"
+        assert m == 0, "Verify test setup"
+        assert s > 0, "Verify test setup"
+        sleep_for = s + 1
         futs = [slow_double(sleep_for) for _ in range(4)]
         [f.result() for f in futs]
         run_dir = parsl.dfk().run_dir
