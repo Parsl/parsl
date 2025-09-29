@@ -35,8 +35,11 @@ def load_dfk_from_config(filename: str) -> DataFlowKernel:
         raise RuntimeError("Config module does not define config or fresh_config")
 
 
-@parsl.python_app
+@parsl.python_app(cache=True)
+# @parsl.python_app
 def app(extra_payload: Any, parsl_resource_specification: Dict = {}) -> int:
+    import time
+    time.sleep(0.01)
     return 7
 
 
