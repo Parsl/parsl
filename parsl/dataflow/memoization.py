@@ -283,7 +283,13 @@ class Memoizer:
         assert isinstance(result, Future) or result is None
         return result
 
-    def update_memo(self, task: TaskRecord) -> None:
+    def update_memo_result(self, task: TaskRecord, r: Any) -> None:
+        self._update_memo(task)
+
+    def update_memo_exception(self, task: TaskRecord, e: BaseException) -> None:
+        self._update_memo(task)
+
+    def _update_memo(self, task: TaskRecord) -> None:
         """Updates the memoization lookup table with the result from a task.
         This doesn't move any values around but associates the memoization
         hashsum with the completed (by success or failure) AppFuture.
