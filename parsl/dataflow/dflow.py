@@ -1270,7 +1270,6 @@ class DataFlowKernel:
     def checkpoint(self) -> None:
         with self._modify_checkpointable_tasks_lock:
             self.memoizer.checkpoint()
-            self.memoizer.checkpointable_tasks = []
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:

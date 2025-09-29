@@ -411,3 +411,10 @@ class Memoizer:
                     logger.debug("No tasks checkpointed in this pass.")
             else:
                 logger.info("Done checkpointing {} tasks".format(count))
+
+            # TODO: test that tasks are not repeatedly checkpointed.
+            # TODO: race condition here, for tasks that were added while the list was being updated
+            # That's maybe a race condition in checkpointing in master at time of writing, and I could write a test for that?
+            # Or maybe a failure of iteration if the list is appended to while checkpointing is happening?
+            if not task:
+                self.checkpointable_tasks = []
