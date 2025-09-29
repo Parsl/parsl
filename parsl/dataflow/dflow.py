@@ -49,7 +49,7 @@ from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSen
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.usage_tracking.usage import UsageTracker
-from parsl.utils import Timer, get_all_checkpoints, get_std_fname_mode, get_version
+from parsl.utils import Timer, get_std_fname_mode, get_version
 
 logger = logging.getLogger(__name__)
 
@@ -165,19 +165,15 @@ class DataFlowKernel:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
 
-        if config.checkpoint_files is not None:
-            checkpoint_files = config.checkpoint_files
-        elif config.checkpoint_files is None and config.checkpoint_mode is not None:
-            checkpoint_files = get_all_checkpoints(self.run_dir)
-        else:
-            checkpoint_files = []
-
-        self.memoizer = Memoizer(memoize=config.app_cache, checkpoint_files=checkpoint_files)
+        # TODO: the parameters that remain here should be parameters that are going to be configured by
+        # the user as part of checkpoint/memo configuration object.
+        self.memoizer = Memoizer(memoize=config.app_cache, checkpoint_mode=config.checkpoint_mode, checkpoint_files=config.checkpoint_files)
         self.memoizer.run_dir = self.run_dir
+        self.memoizer.start()
 
+        # TODO: this block needs to move too
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
-
         self._modify_checkpointable_tasks_lock = threading.Lock()
         self.checkpointable_tasks: List[TaskRecord] = []
 

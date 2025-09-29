@@ -8,12 +8,13 @@ import threading
 import types
 from concurrent.futures import Future
 from functools import lru_cache, singledispatch
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Literal, Optional, Sequence
 
 import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
 from parsl.dataflow.taskrecord import TaskRecord
+from parsl.utils import get_all_checkpoints
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +150,10 @@ class Memoizer:
 
     run_dir: str
 
-    def __init__(self, *, memoize: bool = True, checkpoint_files: Sequence[str]):
+    def __init__(self, *,
+                 memoize: bool = True,
+                 checkpoint_files: Sequence[str] | None,
+                 checkpoint_mode: Literal['task_exit', 'periodic', 'dfk_exit', 'manual'] | None):
         """Initialize the memoizer.
 
         KWargs:
@@ -161,6 +165,17 @@ class Memoizer:
         self.checkpointed_tasks = 0
 
         self.checkpoint_lock = threading.Lock()
+
+        self.checkpoint_files = checkpoint_files
+        self.checkpoint_mode = checkpoint_mode
+
+    def start(self) -> None:
+        if self.checkpoint_files is not None:
+            checkpoint_files = self.checkpoint_files
+        elif self.checkpoint_files is None and self.checkpoint_mode is not None:
+            checkpoint_files = get_all_checkpoints(self.run_dir)
+        else:
+            checkpoint_files = []
 
         # TODO: we always load checkpoints even if we then discard them...
         # this is more obvious here, less obvious in previous Parsl...
