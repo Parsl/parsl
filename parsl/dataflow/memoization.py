@@ -169,6 +169,8 @@ class Memoizer:
         self.checkpoint_files = checkpoint_files
         self.checkpoint_mode = checkpoint_mode
 
+        self.checkpointable_tasks: List[TaskRecord] = []
+
     def start(self) -> None:
         if self.checkpoint_files is not None:
             checkpoint_files = self.checkpoint_files

@@ -175,7 +175,6 @@ class DataFlowKernel:
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
         self._modify_checkpointable_tasks_lock = threading.Lock()
-        self.checkpointable_tasks: List[TaskRecord] = []
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
@@ -568,7 +567,7 @@ class DataFlowKernel:
             self.memoizer.checkpoint(tasks=[task_record])
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
             with self._modify_checkpointable_tasks_lock:
-                self.checkpointable_tasks.append(task_record)
+                self.memoizer.checkpointable_tasks.append(task_record)
         elif self.checkpoint_mode is None:
             pass
         else:
@@ -1206,7 +1205,7 @@ class DataFlowKernel:
 
             # TODO: accesses to self.checkpointable_tasks should happen
             # under a lock?
-            self.memoizer.checkpoint(self.checkpointable_tasks)
+            self.memoizer.checkpoint(self.memoizer.checkpointable_tasks)
 
             if self._checkpoint_timer:
                 logger.info("Stopping checkpoint timer")
@@ -1270,8 +1269,8 @@ class DataFlowKernel:
 
     def checkpoint(self) -> None:
         with self._modify_checkpointable_tasks_lock:
-            self.memoizer.checkpoint(self.checkpointable_tasks)
-            self.checkpointable_tasks = []
+            self.memoizer.checkpoint(self.memoizer.checkpointable_tasks)
+            self.memoizer.checkpointable_tasks = []
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
