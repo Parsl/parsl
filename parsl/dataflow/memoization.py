@@ -8,16 +8,24 @@ import threading
 import types
 from concurrent.futures import Future
 from functools import lru_cache, singledispatch
-from typing import Any, Dict, List, Literal, Optional, Sequence
+from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple
 
 import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.errors import ConfigurationError, InternalConsistencyError
+from parsl.errors import ConfigurationError
 from parsl.utils import Timer, get_all_checkpoints
 
 logger = logging.getLogger(__name__)
+
+# there's an XOR rule that isn't expressed in the type
+# system: exactly one of object or BaseException must
+# be set. This could be made into something more dataclass-like
+# to give the fields names. Except we can't distinguish
+# between None as a result and that not being set -
+# so the None-ness of the exception is actually what is the differentiator.
+CheckpointCommand = Tuple[TaskRecord, Optional[object], Optional[BaseException]]
 
 
 @singledispatch
@@ -172,7 +180,7 @@ class Memoizer:
         self.checkpoint_mode = checkpoint_mode
         self.checkpoint_period = checkpoint_period
 
-        self.checkpointable_tasks: List[TaskRecord] = []
+        self.checkpointable_tasks: List[CheckpointCommand] = []
 
         self._checkpoint_timer: Timer | None = None
 
@@ -286,8 +294,28 @@ class Memoizer:
     def update_memo_result(self, task: TaskRecord, r: Any) -> None:
         self._update_memo(task)
 
+        if self.checkpoint_mode == 'task_exit':
+            self.checkpoint_one((task, r, None))
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
+            # with self._modify_checkpointable_tasks_lock:  # TODO: sort out use of this lock
+            self.checkpointable_tasks.append((task, r, None))
+        elif self.checkpoint_mode is None:
+            pass
+        else:
+            assert False, "Invalid checkpoint mode {self.checkpoint_mode} - should have been validated at initialization"
+
     def update_memo_exception(self, task: TaskRecord, e: BaseException) -> None:
         self._update_memo(task)
+
+        if self.checkpoint_mode == 'task_exit':
+            self.checkpoint_one((task, None, e))
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
+            # with self._modify_checkpointable_tasks_lock:  # TODO: sort out use of this lock
+            self.checkpointable_tasks.append((task, None, e))
+        elif self.checkpoint_mode is None:
+            pass
+        else:
+            assert False, "Invalid checkpoint mode {self.checkpoint_mode} - should have been validated at initialization"
 
     def _update_memo(self, task: TaskRecord) -> None:
         """Updates the memoization lookup table with the result from a task.
@@ -380,18 +408,7 @@ class Memoizer:
         else:
             return {}
 
-    def update_checkpoint(self, task_record: TaskRecord) -> None:
-        if self.checkpoint_mode == 'task_exit':
-            self.checkpoint_one(task=task_record)
-        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self.checkpoint_lock:
-                self.checkpointable_tasks.append(task_record)
-        elif self.checkpoint_mode is None:
-            pass
-        else:
-            raise InternalConsistencyError(f"Invalid checkpoint mode {self.checkpoint_mode}")
-
-    def checkpoint_one(self, *, task: TaskRecord) -> None:
+    def checkpoint_one(self, cc: CheckpointCommand) -> None:
         """Checkpoint a single task to a checkpoint file.
 
         By default the checkpoints are written to the RUNDIR of the current
@@ -405,7 +422,7 @@ class Memoizer:
 
         """
         with self.checkpoint_lock:
-            self._checkpoint_these_tasks([task])
+            self._checkpoint_these_tasks([cc])
 
     def checkpoint_queue(self) -> None:
         """Checkpoint all tasks registered in self.checkpointable_tasks.
@@ -421,8 +438,8 @@ class Memoizer:
             self._checkpoint_these_tasks(self.checkpointable_tasks)
             self.checkpointable_tasks = []
 
-    def _checkpoint_these_tasks(self, checkpoint_queue: List[TaskRecord]) -> None:
-        """Checkpoint a list of task records.
+    def _checkpoint_these_tasks(self, checkpoint_queue: List[CheckpointCommand]) -> None:
+        """Play a sequence of CheckpointCommands into a checkpoint file.
 
         The checkpoint lock must be held when invoking this method.
         """
@@ -435,22 +452,19 @@ class Memoizer:
         count = 0
 
         with open(checkpoint_tasks, 'ab') as f:
-            for task_record in checkpoint_queue:
-                task_id = task_record['id']
-
-                app_fu = task_record['app_fu']
-
-                if app_fu.done() and app_fu.exception() is None:
+            for cc in checkpoint_queue:
+                (task_record, result, exception) = cc
+                if exception is None:
                     hashsum = task_record['hashsum']
                     if not hashsum:
                         continue
-                    t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+                    t = {'hash': hashsum, 'exception': None, 'result': result}
 
                     # We are using pickle here since pickle dumps to a file in 'ab'
                     # mode behave like a incremental log.
                     pickle.dump(t, f)
                     count += 1
-                    logger.debug("Task {} checkpointed".format(task_id))
+                    logger.debug("Task {task_record['id']} checkpointed")
 
         self.checkpointed_tasks += count
 
