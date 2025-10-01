@@ -12,18 +12,17 @@ from .user_opts import user_opts
 
 def fresh_config():
     from parsl.data_provider.globus import GlobusStaging
-    opts = user_opts['globus']
 
     storage_access = default_staging + [GlobusStaging(
-                    endpoint_uuid=opts['endpoint'],
-                    endpoint_path=opts['path']
+                    endpoint_uuid=user_opts['globus']['endpoint'],
+                    endpoint_path=user_opts['globus']['path']
                 )]
 
     return Config(
         executors=[
             ThreadPoolExecutor(
                 label='local_threads_globus',
-                working_dir=opts['path'],
+                working_dir=user_opts['globus']['path'],
                 storage_access=storage_access
             )
         ]
