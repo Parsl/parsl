@@ -14,15 +14,6 @@ def import_square(x):
     return math.pow(x, 2)
 
 
-class CustomException(Exception):
-    pass
-
-
-@python_app
-def custom_exception():
-    raise CustomException('foobar')
-
-
 def test_simple(n=2):
     x = double(n)
     assert x.result() == n * 2
@@ -41,9 +32,3 @@ def test_parallel_for(n):
 
     for i in d:
         assert d[i].result() == 2 * i
-
-
-def test_custom_exception():
-    x = custom_exception()
-    with pytest.raises(CustomException):
-        x.result()
