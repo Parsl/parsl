@@ -16,6 +16,7 @@ def mock_ex():
 
 
 @pytest.mark.local
+@pytest.mark.globus_compute
 def test_gc_executor_mock_spec(mock_ex):
     # a test of tests -- make sure we're using spec= in the mock
     with pytest.raises(AttributeError):
@@ -23,12 +24,14 @@ def test_gc_executor_mock_spec(mock_ex):
 
 
 @pytest.mark.local
+@pytest.mark.globus_compute
 def test_gc_executor_label_default(mock_ex):
     gce = GlobusComputeExecutor(mock_ex)
     assert gce.label == type(gce).__name__, "Expect reasonable default label"
 
 
 @pytest.mark.local
+@pytest.mark.globus_compute
 def test_gc_executor_label(mock_ex, randomstring):
     exp_label = randomstring()
     gce = GlobusComputeExecutor(mock_ex, label=exp_label)
@@ -36,6 +39,7 @@ def test_gc_executor_label(mock_ex, randomstring):
 
 
 @pytest.mark.local
+@pytest.mark.globus_compute
 def test_gc_executor_resets_spec_after_submit(mock_ex, randomstring):
     submit_res = {randomstring(): "some submit res"}
     res = {"some": randomstring(), "spec": randomstring()}
@@ -59,6 +63,7 @@ def test_gc_executor_resets_spec_after_submit(mock_ex, randomstring):
 
 
 @pytest.mark.local
+@pytest.mark.globus_compute
 def test_gc_executor_resets_uep_after_submit(mock_ex, randomstring):
     uep_conf = randomstring()
     res = {"some": randomstring()}
@@ -81,6 +86,7 @@ def test_gc_executor_resets_uep_after_submit(mock_ex, randomstring):
 
 
 @pytest.mark.local
+@pytest.mark.globus_compute
 def test_gc_executor_happy_path(mock_ex, randomstring):
     mock_fn = mock.Mock()
     args = tuple(randomstring() for _ in range(random.randint(0, 3)))
@@ -97,6 +103,7 @@ def test_gc_executor_happy_path(mock_ex, randomstring):
 
 
 @pytest.mark.local
+@pytest.mark.globus_compute
 def test_gc_executor_shuts_down_asynchronously(mock_ex):
     gce = GlobusComputeExecutor(mock_ex)
     gce.shutdown()
