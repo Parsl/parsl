@@ -9,16 +9,11 @@ from parsl.executors.threads import ThreadPoolExecutor
 #          (i.e., user_opts['swan']['username'] -> 'your_username')
 from .user_opts import user_opts
 
+
 def fresh_config():
+    from parsl.data_provider.globus import GlobusStaging
     opts = user_opts['globus']
 
-    # This user_opts key lookup will implicitly skip the
-    # test when the user has not defined a globus entry,
-    # skipping the rest of configuration construction,
-    # especially the import of GlobusStaging which may
-    # not be importable in non-Globus-user cases.
-
-    from parsl.data_provider.globus import GlobusStaging
     storage_access = default_staging + [GlobusStaging(
                     endpoint_uuid=opts['endpoint'],
                     endpoint_path=opts['path']
@@ -30,8 +25,9 @@ def fresh_config():
                 label='local_threads_globus',
                 working_dir=opts['path'],
                 storage_access=storage_access
-           )
-       ]
+            )
+        ]
     )
+
 
 remote_writeable = user_opts['globus']['remote_writeable']
