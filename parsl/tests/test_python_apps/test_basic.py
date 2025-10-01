@@ -14,10 +14,13 @@ def import_square(x):
     return math.pow(x, 2)
 
 
+class CustomException(Exception):
+    pass
+
+
 @python_app
 def custom_exception():
-    from globus_sdk import GlobusError
-    raise GlobusError('foobar')
+    raise CustomException('foobar')
 
 
 def test_simple(n=2):
@@ -41,8 +44,6 @@ def test_parallel_for(n):
 
 
 def test_custom_exception():
-    from globus_sdk import GlobusError
-
     x = custom_exception()
-    with pytest.raises(GlobusError):
+    with pytest.raises(CustomException):
         x.result()

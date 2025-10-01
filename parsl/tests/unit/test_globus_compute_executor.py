@@ -2,14 +2,16 @@ import random
 from unittest import mock
 
 import pytest
-from globus_compute_sdk import Executor
 
 from parsl.executors import GlobusComputeExecutor
 
 
 @pytest.fixture
 def mock_ex():
-    # Not Parsl's job to test GC's Executor
+    # Not Parsl's job to test GC's Executor, although it
+    # still needs to be importable for these test cases.
+    from globus_compute_sdk import Executor
+
     yield mock.Mock(spec=Executor)
 
 
