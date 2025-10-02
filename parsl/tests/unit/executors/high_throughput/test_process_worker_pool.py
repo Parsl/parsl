@@ -36,6 +36,20 @@ def test_arg_parser_known_required():
 
 @pytest.mark.local
 @pytest.mark.parametrize("req", _known_required)
+@pytest.mark.skipif(sys.version_info > (3, 12), reason="parse_args behavior changed in 3.13")
+def test_arg_parser_required_pre_3_13(req):
+    p = process_worker_pool.get_arg_parser()
+    p.exit_on_error = False
+    with pytest.raises(SystemExit) as pyt_exc:
+        p.parse_args([])
+
+    e_msg = pyt_exc.value.args[1]
+    assert req in e_msg
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("req", _known_required)
+@pytest.mark.skipif(sys.version_info < (3, 13), reason="parse_args behavior changed in 3.13")
 def test_arg_parser_required(req):
     p = process_worker_pool.get_arg_parser()
     p.exit_on_error = False
