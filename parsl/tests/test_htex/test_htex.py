@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 
 from parsl import HighThroughputExecutor, curvezmq
+from parsl.serialize.facade import pack_apply_message, unpack_apply_message
 
 _MOCK_BASE = "parsl.executors.high_throughput.executor"
 
@@ -19,11 +20,16 @@ def encrypted(request: pytest.FixtureRequest):
 
 
 @pytest.fixture
-def htex(encrypted: bool):
+def htex(encrypted: bool, tmpd_cwd):
     htex = HighThroughputExecutor(encrypted=encrypted)
+    htex.max_workers_per_node = 1
+    htex.run_dir = tmpd_cwd
+    htex.provider.script_dir = tmpd_cwd
 
     yield htex
 
+    if hasattr(htex, "outgoing_q"):
+        htex.scale_in(blocks=1000)
     htex.shutdown()
 
 
@@ -146,3 +152,32 @@ def test_htex_interchange_launch_cmd(cmd: Optional[Sequence[str]]):
     else:
         htex = HighThroughputExecutor()
         assert htex.interchange_launch_cmd == ["interchange.py"]
+
+
+def dyn_exec(buf, *vec_y):
+    f, a, _ = unpack_apply_message(buf)
+    custom_args = [a, vec_y]
+    return f(*custom_args)
+
+
+@pytest.mark.local
+def test_worker_dynamic_import(htex: HighThroughputExecutor):
+    def _dot_prod(vec_x, vec_y):
+        return sum(x * y for x, y in zip(vec_x, vec_y))
+
+    htex.start()
+    htex.scale_out_facade(1)
+
+    num_array = tuple(range(10))
+
+    fn_buf = pack_apply_message(_dot_prod, num_array, {})
+    ctxt = {
+        "task_executor": {
+            "f": f"{dyn_exec.__module__}.{dyn_exec.__name__}",
+            "a": num_array,  # prove "custom" dyn_exec
+        }
+    }
+    val = htex.submit_payload(ctxt, fn_buf).result()
+    exp_val = _dot_prod(num_array, num_array)
+
+    assert val == exp_val
