@@ -753,19 +753,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         self.validate_resource_spec(resource_specification)
 
-        if self.bad_state_is_set:
-            raise self.executor_exception
-
-        self._task_counter += 1
-        task_id = self._task_counter
-
         # handle people sending blobs gracefully
         if logger.getEffectiveLevel() <= logging.DEBUG:
             args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
             logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
-
-        fut = HTEXFuture(task_id)
-        self.tasks[task_id] = fut
 
         try:
             fn_buf = pack_apply_message(func, args, kwargs, buffer_threshold=1 << 20)
@@ -776,12 +767,69 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if resource_specification:
             context["resource_spec"] = resource_specification
 
-        msg = {"task_id": task_id, "context": context, "buffer": fn_buf}
+        return self.submit_payload(context, fn_buf)
 
-        # Post task to the outgoing queue
+    def submit_payload(self, context: dict, buffer: bytes) -> HTEXFuture:
+        """
+        Submit specially crafted payloads.
+
+        For use-cases where the ``HighThroughputExecutor`` consumer needs the payload
+        handled by the worker in a special way.  For example, if the function is
+        serialized differently than Parsl's default approach, or if the task must
+        be setup more precisely than Parsl's default ``execute_task`` allows.
+
+        An example interaction:
+
+        .. code-block: python
+
+            >>> htex: HighThroughputExecutor  # setup prior to this example
+            >>> ctxt = {
+            ...   "task_executor": {
+            ...     "f": "full.import.path.of.custom_execute_task",
+            ...     "a": ("additional", "arguments"),
+            ...     "k": {"some": "keyword", "args": "here"}
+            ...   }
+            ... }
+            >>> fn_buf = custom_serialize(task_func, *task_args, **task_kwargs)
+            >>> fut = htex.submit_payload(ctxt, fn_buf)
+
+        The custom ``custom_execute_task`` would be dynamically imported, and
+        invoked as:
+
+        .. code-block: python
+
+            args = ("additional", "arguments")
+            kwargs = {"some": "keyword", "args": "here"}
+            result = custom_execute_task(fn_buf, *args, **kwargs)
+
+        Parameters
+        ----------
+        context:
+            A task-specific context associated with the function buffer.  Parsl
+            currently implements the keys ``task_executor`` and ``resource_spec``
+
+        buffer:
+            A serialized function, that will be deserialized and executed by
+            ``execute_task`` (or custom function, if ``task_executor`` is specified)
+
+        Returns
+        -------
+        An HTEXFuture (a normal Future, with the attribute ``.parsl_executor_task_id``
+        set).  The future will be set to done when the associated function buffer has
+        been invoked and completed.
+        """
+        if self.bad_state_is_set:
+            raise self.executor_exception
+
+        self._task_counter += 1
+        task_id = self._task_counter
+
+        fut = HTEXFuture(task_id)
+        self.tasks[task_id] = fut
+
+        msg = {"task_id": task_id, "context": context, "buffer": buffer}
         self.outgoing_q.put(msg)
 
-        # Return the future
         return fut
 
     @property

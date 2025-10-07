@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import importlib
 import logging
 import math
 import multiprocessing
@@ -17,7 +18,7 @@ from importlib.metadata import distributions
 from multiprocessing.context import SpawnProcess
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
-from typing import Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
 import psutil
 import zmq
@@ -779,8 +780,20 @@ def worker(
 
         _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=res_spec)
 
+        exec_func: Callable = execute_task
+        exec_args = ()
+        exec_kwargs = {}
+
         try:
-            result = execute_task(req['buffer'])
+            if task_executor := ctxt.get("task_executor", None):
+                mod_name, _, fn_name = task_executor["f"].rpartition(".")
+                exec_mod = importlib.import_module(mod_name)
+                exec_func = getattr(exec_mod, fn_name)
+
+                exec_args = task_executor.get("a", ())
+                exec_kwargs = task_executor.get("k", {})
+
+            result = exec_func(req['buffer'], *exec_args, **exec_kwargs)
             serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
