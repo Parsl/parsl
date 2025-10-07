@@ -161,6 +161,12 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 """  # Documentation for params used by both HTEx and MPIEx
 
 
+class HTEXFuture(Future):
+    def __init__(self, task_id) -> None:
+        super().__init__()
+        self.parsl_executor_task_id = task_id
+
+
 class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageInformation):
     __doc__ = f"""Executor designed for cluster-scale
 
@@ -726,7 +732,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
                 self._hold_manager(manager['manager'])
 
-    def submit(self, func, resource_specification, *args, **kwargs):
+    def submit(self, func: Callable, resource_specification: dict, *args, **kwargs) -> HTEXFuture:
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
@@ -758,8 +764,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
             logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
-        fut = Future()
-        fut.parsl_executor_task_id = task_id
+        fut = HTEXFuture(task_id)
         self.tasks[task_id] = fut
 
         try:
