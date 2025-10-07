@@ -1202,7 +1202,6 @@ class DataFlowKernel:
 
         self.log_task_states()
 
-        # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
         if self.checkpoint_mode is not None:
             self.checkpoint()
