@@ -2,17 +2,30 @@ import argparse
 import concurrent.futures
 import importlib
 import time
+from typing import Any, Dict
 
 from typing import Optional
 
 import parsl
+from parsl.dataflow.dflow import DataFlowKernel
 
 min_iterations = 2
 
 
 # TODO: factor with conftest.py where this is copy/pasted from?
-def load_dfk_from_config(filename):
+def load_dfk_from_config(filename: str) -> DataFlowKernel:
     spec = importlib.util.spec_from_file_location('', filename)
+
+    if spec is None:
+        raise RuntimeError("Could not import configuration")
+
+    module = importlib.util.module_from_spec(spec)
+
+    if spec.loader is None:
+        raise RuntimeError("Could not load configuration")
+
+    spec.loader.exec_module(module)
+
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
@@ -25,11 +38,11 @@ def load_dfk_from_config(filename):
 
 
 @parsl.python_app
-def app(extra_payload, parsl_resource_specification={}):
+def app(extra_payload: Any, parsl_resource_specification: Dict = {}) -> int:
     return 7
 
 
-def performance(*, resources: dict, target_t: float, args_extra_size: int, count: Optional[int]):
+def performance(*, resources: dict, target_t: float, args_extra_size: int, count: Optional[int]) -> None:
     n = 10
 
     delta_t: float
