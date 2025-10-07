@@ -175,7 +175,7 @@ class DataFlowKernel:
         else:
             checkpoint_files = []
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
+        self.memoizer = Memoizer(memoize=config.app_cache, checkpoint_files=checkpoint_files)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
@@ -375,6 +375,7 @@ class DataFlowKernel:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
                 task_record['time_returned'] = datetime.datetime.now()
                 self._send_task_log_info(task_record)
+                self.memoizer.update_memo(task_record)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -400,6 +401,7 @@ class DataFlowKernel:
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
                 self._send_task_log_info(task_record)
+                self.memoizer.update_memo(task_record)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -446,6 +448,7 @@ class DataFlowKernel:
                         self.update_task_state(task_record, States.failed)
                         task_record['time_returned'] = datetime.datetime.now()
                         self._send_task_log_info(task_record)
+                        self.memoizer.update_memo(task_record)
                         with task_record['app_fu']._update_lock:
                             task_record['app_fu'].set_exception(
                                 TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
@@ -521,6 +524,7 @@ class DataFlowKernel:
 
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
+                self.memoizer.update_memo(task_record)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -561,8 +565,6 @@ class DataFlowKernel:
         if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_record, future)
-
         # Cover all checkpointing cases here:
         # Do we need to checkpoint now, or queue for later,
         # or do nothing?
@@ -591,6 +593,7 @@ class DataFlowKernel:
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
+        self.memoizer.update_memo(task_record)
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
 
@@ -1202,7 +1205,6 @@ class DataFlowKernel:
 
         self.log_task_states()
 
-        # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
         if self.checkpoint_mode is not None:
             self.checkpoint()

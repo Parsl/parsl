@@ -5,7 +5,6 @@ from parsl.dataflow.dflow import DataFlowKernel
 
 
 def run_checkpointed(checkpoints):
-    # set_stream_logger()
     from parsl.tests.configs.local_threads_checkpoint_task_exit import config
     config.checkpoint_files = checkpoints
     dfk = DataFlowKernel(config=config)
