@@ -238,7 +238,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     @typeguard.typechecked
     def __init__(self,
                  label: str = 'HighThroughputExecutor',
-                 provider: ExecutionProvider = LocalProvider(),
+                 provider: Optional[ExecutionProvider] = None,
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
@@ -269,7 +269,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.debug("Initializing HighThroughputExecutor")
 
-        BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
+        BlockProviderExecutor.__init__(self,
+                                       provider=provider if provider else LocalProvider(),
+                                       block_error_handler=block_error_handler)
         self.benc_interchange_cli = benc_interchange_cli
         self.label = label
         self.worker_debug = worker_debug
