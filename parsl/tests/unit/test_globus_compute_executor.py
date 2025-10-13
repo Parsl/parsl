@@ -2,18 +2,17 @@ import random
 from unittest import mock
 
 import pytest
-from globus_compute_sdk import Executor
-
-from parsl.executors import GlobusComputeExecutor
 
 
 @pytest.fixture
 def mock_ex():
     # Not Parsl's job to test GC's Executor
+    from globus_compute_sdk import Executor
     yield mock.Mock(spec=Executor)
 
 
 @pytest.mark.local
+@pytest.mark.globus
 def test_gc_executor_mock_spec(mock_ex):
     # a test of tests -- make sure we're using spec= in the mock
     with pytest.raises(AttributeError):
@@ -21,20 +20,26 @@ def test_gc_executor_mock_spec(mock_ex):
 
 
 @pytest.mark.local
+@pytest.mark.globus
 def test_gc_executor_label_default(mock_ex):
+    from parsl.executors import GlobusComputeExecutor
     gce = GlobusComputeExecutor(mock_ex)
     assert gce.label == type(gce).__name__, "Expect reasonable default label"
 
 
 @pytest.mark.local
+@pytest.mark.globus
 def test_gc_executor_label(mock_ex, randomstring):
+    from parsl.executors import GlobusComputeExecutor
     exp_label = randomstring()
     gce = GlobusComputeExecutor(mock_ex, label=exp_label)
     assert gce.label == exp_label
 
 
 @pytest.mark.local
+@pytest.mark.globus
 def test_gc_executor_resets_spec_after_submit(mock_ex, randomstring):
+    from parsl.executors import GlobusComputeExecutor
     submit_res = {randomstring(): "some submit res"}
     res = {"some": randomstring(), "spec": randomstring()}
     mock_ex.resource_specification = res
@@ -57,7 +62,9 @@ def test_gc_executor_resets_spec_after_submit(mock_ex, randomstring):
 
 
 @pytest.mark.local
+@pytest.mark.globus
 def test_gc_executor_resets_uep_after_submit(mock_ex, randomstring):
+    from parsl.executors import GlobusComputeExecutor
     uep_conf = randomstring()
     res = {"some": randomstring()}
     gce = GlobusComputeExecutor(mock_ex)
@@ -79,7 +86,9 @@ def test_gc_executor_resets_uep_after_submit(mock_ex, randomstring):
 
 
 @pytest.mark.local
+@pytest.mark.globus
 def test_gc_executor_happy_path(mock_ex, randomstring):
+    from parsl.executors import GlobusComputeExecutor
     mock_fn = mock.Mock()
     args = tuple(randomstring() for _ in range(random.randint(0, 3)))
     kwargs = {randomstring(): randomstring() for _ in range(random.randint(0, 3))}
@@ -95,7 +104,9 @@ def test_gc_executor_happy_path(mock_ex, randomstring):
 
 
 @pytest.mark.local
+@pytest.mark.globus
 def test_gc_executor_shuts_down_asynchronously(mock_ex):
+    from parsl.executors import GlobusComputeExecutor
     gce = GlobusComputeExecutor(mock_ex)
     gce.shutdown()
     assert mock_ex.shutdown.called

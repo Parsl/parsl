@@ -1,3 +1,5 @@
+from random import randint
+
 import pytest
 
 import parsl
@@ -40,8 +42,11 @@ def test_priority_queue():
         futures = {}
 
         # Submit tasks with mixed priorities
-        # Priorities: [10, 10, 5, 5, 1, 1] to test fallback behavior
-        for i, priority in enumerate([10, 10, 5, 5, 1, 1]):
+        # Test fallback behavior with a guaranteed-unsorted priorities
+        priorities = [randint(2, 9) for _ in range(randint(1, 10))]
+        priorities.insert(0, 10)
+        priorities.extend((1, 10, 1))
+        for i, priority in enumerate(priorities):
             spec = {'priority': priority}
             futures[(priority, i)] = fake_task(parsl_resource_specification=spec)
 

@@ -35,7 +35,7 @@ from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_recei
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
-from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize import deserialize, pack_apply_message
 from parsl.serialize.errors import DeserializationError, SerializationError
 from parsl.usage_tracking.api import UsageInformation
 from parsl.utils import RepresentationMixin
@@ -160,6 +160,12 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 """  # Documentation for params used by both HTEx and MPIEx
 
 
+class HTEXFuture(Future):
+    def __init__(self, task_id) -> None:
+        super().__init__()
+        self.parsl_executor_task_id = task_id
+
+
 class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageInformation):
     __doc__ = f"""Executor designed for cluster-scale
 
@@ -237,7 +243,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     @typeguard.typechecked
     def __init__(self,
                  label: str = 'HighThroughputExecutor',
-                 provider: ExecutionProvider = LocalProvider(),
+                 provider: Optional[ExecutionProvider] = None,
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
@@ -267,7 +273,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.debug("Initializing HighThroughputExecutor")
 
-        BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
+        BlockProviderExecutor.__init__(self,
+                                       provider=provider if provider else LocalProvider(),
+                                       block_error_handler=block_error_handler)
         self.label = label
         self.worker_debug = worker_debug
         self.storage_access = storage_access
@@ -501,10 +509,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             else:
 
                 for serialized_msg in msgs:
-                    try:
-                        msg = pickle.loads(serialized_msg)
-                    except pickle.UnpicklingError:
-                        raise BadMessage("Message received could not be unpickled")
+                    msg = pickle.loads(serialized_msg)
 
                     if msg['type'] == 'result':
                         try:
@@ -671,7 +676,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
                 self._hold_manager(manager['manager'])
 
-    def submit(self, func, resource_specification, *args, **kwargs):
+    def submit(self, func: Callable, resource_specification: dict, *args, **kwargs) -> HTEXFuture:
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
@@ -692,34 +697,83 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         self.validate_resource_spec(resource_specification)
 
+        # handle people sending blobs gracefully
+        if logger.getEffectiveLevel() <= logging.DEBUG:
+            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
+            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
+
+        try:
+            fn_buf = pack_apply_message(func, args, kwargs, buffer_threshold=1 << 20)
+        except TypeError:
+            raise SerializationError(func.__name__)
+
+        context = {}
+        if resource_specification:
+            context["resource_spec"] = resource_specification
+
+        return self.submit_payload(context, fn_buf)
+
+    def submit_payload(self, context: dict, buffer: bytes) -> HTEXFuture:
+        """
+        Submit specially crafted payloads.
+
+        For use-cases where the ``HighThroughputExecutor`` consumer needs the payload
+        handled by the worker in a special way.  For example, if the function is
+        serialized differently than Parsl's default approach, or if the task must
+        be setup more precisely than Parsl's default ``execute_task`` allows.
+
+        An example interaction:
+
+        .. code-block: python
+
+            >>> htex: HighThroughputExecutor  # setup prior to this example
+            >>> ctxt = {
+            ...   "task_executor": {
+            ...     "f": "full.import.path.of.custom_execute_task",
+            ...     "a": ("additional", "arguments"),
+            ...     "k": {"some": "keyword", "args": "here"}
+            ...   }
+            ... }
+            >>> fn_buf = custom_serialize(task_func, *task_args, **task_kwargs)
+            >>> fut = htex.submit_payload(ctxt, fn_buf)
+
+        The custom ``custom_execute_task`` would be dynamically imported, and
+        invoked as:
+
+        .. code-block: python
+
+            args = ("additional", "arguments")
+            kwargs = {"some": "keyword", "args": "here"}
+            result = custom_execute_task(fn_buf, *args, **kwargs)
+
+        Parameters
+        ----------
+        context:
+            A task-specific context associated with the function buffer.  Parsl
+            currently implements the keys ``task_executor`` and ``resource_spec``
+
+        buffer:
+            A serialized function, that will be deserialized and executed by
+            ``execute_task`` (or custom function, if ``task_executor`` is specified)
+
+        Returns
+        -------
+        An HTEXFuture (a normal Future, with the attribute ``.parsl_executor_task_id``
+        set).  The future will be set to done when the associated function buffer has
+        been invoked and completed.
+        """
         if self.bad_state_is_set:
             raise self.executor_exception
 
         self._task_counter += 1
         task_id = self._task_counter
 
-        # handle people sending blobs gracefully
-        if logger.getEffectiveLevel() <= logging.DEBUG:
-            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
-            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
-
-        fut = Future()
-        fut.parsl_executor_task_id = task_id
+        fut = HTEXFuture(task_id)
         self.tasks[task_id] = fut
 
-        try:
-            fn_buf = pack_res_spec_apply_message(func, args, kwargs,
-                                                 resource_specification=resource_specification,
-                                                 buffer_threshold=1024 * 1024)
-        except TypeError:
-            raise SerializationError(func.__name__)
-
-        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": fn_buf}
-
-        # Post task to the outgoing queue
+        msg = {"task_id": task_id, "context": context, "buffer": buffer}
         self.outgoing_q.put(msg)
 
-        # Return the future
         return fut
 
     @property

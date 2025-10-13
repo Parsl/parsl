@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import importlib
 import logging
 import math
 import multiprocessing
@@ -17,7 +18,7 @@ from importlib.metadata import distributions
 from multiprocessing.context import SpawnProcess
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
-from typing import Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
 import psutil
 import zmq
@@ -373,6 +374,8 @@ class Manager:
             if socks.get(ix_sock) == zmq.POLLIN:
                 pkl_msg = ix_sock.recv()
                 tasks = pickle.loads(pkl_msg)
+                del pkl_msg
+
                 last_interchange_contact = time.time()
 
                 if tasks == HEARTBEAT_CODE:
@@ -454,6 +457,7 @@ class Manager:
                                               'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
+                            del pkl_package
                     except KeyError:
                         logger.info("Worker {} was not busy when it died".format(worker_id))
 
@@ -603,6 +607,10 @@ def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: Dict, node_i
 
 
 def _init_mpi_env(mpi_launcher: str, resource_spec: Dict):
+    for varname in resource_spec:
+        envname = "PARSL_" + str(varname).upper()
+        os.environ[envname] = str(resource_spec[varname])
+
     node_list = resource_spec.get("MPI_NODELIST")
     if node_list is None:
         return
@@ -633,10 +641,11 @@ def worker(
     # override the global logger inherited from the __main__ process (which
     # usually logs to manager.log) with one specific to this worker.
     global logger
-    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
-                               worker_id,
-                               name="worker_log",
-                               level=logging.DEBUG if debug else logging.INFO)
+    logger = logging.getLogger(__name__)
+    # logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
+    #                           worker_id,
+    #                           name="worker_log",
+    #                           level=logging.DEBUG if debug else logging.INFO)
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -753,8 +762,8 @@ def worker(
             worker_enqueued = True
 
         try:
-            # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
             req = task_queue.get(timeout=task_queue_timeout)
+            # req is {'task_id':<tid>, 'buffer':<buf>, 'resource_spec':<dict>}
         except queue.Empty:
             continue
 
@@ -766,17 +775,33 @@ def worker(
             ready_worker_count.value -= 1
         worker_enqueued = False
 
-        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=req["resource_spec"])
+        ctxt = req["context"]
+        res_spec = ctxt.get("resource_spec", {})
+
+        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=res_spec)
+
+        exec_func: Callable = execute_task
+        exec_args = ()
+        exec_kwargs = {}
 
         try:
-            result = execute_task(req['buffer'])
+            if task_executor := ctxt.get("task_executor", None):
+                mod_name, _, fn_name = task_executor["f"].rpartition(".")
+                exec_mod = importlib.import_module(mod_name)
+                exec_func = getattr(exec_mod, fn_name)
+
+                exec_args = task_executor.get("a", ())
+                exec_kwargs = task_executor.get("k", {})
+
+            result = exec_func(req['buffer'], *exec_args, **exec_kwargs)
             serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
             result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
-            # logger.debug("Result: {}".format(result))
+            del serialized_result
+        del req
 
         logger.info("Completed executor task {}".format(tid))
         try:
@@ -788,6 +813,7 @@ def worker(
                                         })
 
         result_queue.put(pkl_package)
+        del pkl_package, result_package
         tasks_in_progress.pop(worker_id)
         logger.info("All processing finished for executor task {}".format(tid))
 
@@ -943,11 +969,12 @@ if __name__ == "__main__":
 
     os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
-    logger = start_file_logger(
-        f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
-        0,
-        level=logging.DEBUG if args.debug is True else logging.INFO
-    )
+    logger = logging.getLogger(__name__)
+    # start_file_logger(
+    #    f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
+    #    0,
+    #    level=logging.DEBUG if args.debug is True else logging.INFO
+    # )
     logger.info(
         f"\n  Python version: {sys.version}"
         f"\n  Debug logging: {args.debug}"

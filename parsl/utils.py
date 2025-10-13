@@ -228,10 +228,6 @@ class RepresentationMixin:
         if hasattr(init, '__wrapped__'):
             init = init.__wrapped__
 
-        # TODO: add some description here about whats being done to the arg
-        # and default structures, and assumptions being made.
-        # (for example, that defaults is a suffix of the args list)
-
         argspec = inspect.getfullargspec(init)
         if len(argspec.args) > 1 and argspec.defaults is not None:
             defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
@@ -249,35 +245,10 @@ class RepresentationMixin:
         default = "<unrecorded>"
 
         if len(defaults) != 0:
-            non_default_arg_names = argspec.args[1:-len(defaults)]
+            args = [getattr(self, a, default) for a in argspec.args[1:-len(defaults)]]
         else:
-            non_default_arg_names = argspec.args[1:]
-
-        args = [getattr(self, a, default) for a in non_default_arg_names]
-
-        # TODO: rename args and kwargs here: the above args are the args with no default
-        # specified, and the kwargs below are the args with a default specified.
-        # this is different from the kwonly args which right now are not implemented
-        # and causing a test failure.
-        # either kind can be positional or not, but having a default forces the
-        # rendering to be keyword style, and having no default forces the rendering
-        # to be positional style. leave an inline comment about that.
-
-        logger.warning(f"BENC: kwarg keys are {[key for key in defaults]}")
+            args = [getattr(self, a, default) for a in argspec.args[1:]]
         kwargs = {key: getattr(self, key, default) for key in defaults}
-
-        # TODO: now have the possibility of kwonly arguments, which may or may not
-        # have defaults. but the existence of defaults is a irrelevant I think?
-        # the value will always be rendered. the default value will never be rendered
-        # because it will always have been defaulted at construction of the object
-        # and then stored into self.whatever
-        # Perhaps I can make that clearer here too in naming of defaults?
-        # and perhaps that means I don't need to make any distinction between
-        # positional and kwargs before the *? I could always used named parameters
-        # which probably is always better for Parsl style objects?
-
-        # the keyword-only args should be output the same as the above kwargs, so
-        # probably can write them into the same kwargs structure?
 
         kwonlyargs = {key: getattr(self, key, default) for key in argspec.kwonlyargs}
         kwargs.update(kwonlyargs)
