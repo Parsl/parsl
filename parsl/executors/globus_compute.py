@@ -76,10 +76,6 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         self.storage_access = storage_access
         self.working_dir = working_dir
 
-    def start(self) -> None:
-        """ Start the Globus Compute Executor """
-        super().start()
-
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """ Submit func to globus-compute
 
