@@ -11,7 +11,6 @@ from types import TracebackType
 from typing import (
     IO,
     Any,
-    AnyStr,
     Callable,
     Dict,
     Generator,
@@ -126,15 +125,10 @@ def get_std_fname_mode(
     fdname: str,
     stdfspec: Union[os.PathLike, str, Tuple[str, str], Tuple[os.PathLike, str]]
 ) -> Tuple[str, str]:
-    import parsl.app.errors as pe
     if isinstance(stdfspec, (str, os.PathLike)):
         fname = stdfspec
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
-        if len(stdfspec) != 2:
-            msg = (f"std descriptor {fdname} has incorrect tuple length "
-                   f"{len(stdfspec)}")
-            raise pe.BadStdStreamFile(msg)
         fname, mode = stdfspec
 
     path = os.fspath(fname)
@@ -157,7 +151,7 @@ def wait_for_file(path: str, seconds: int = 10) -> Generator[None, None, None]:
 
 
 @contextmanager
-def time_limited_open(path: str, mode: str, seconds: int = 1) -> Generator[IO[AnyStr], None, None]:
+def time_limited_open(path: str, mode: str, seconds: int = 1) -> Generator[IO, None, None]:
     with wait_for_file(path, seconds):
         logger.debug("wait_for_file yielded")
     f = open(path, mode)
