@@ -48,3 +48,4 @@ jobs:
       run: |
         make wqex_local_test
         make vineex_local_test
+        make workqueue_mon_test

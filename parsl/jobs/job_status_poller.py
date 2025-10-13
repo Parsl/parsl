@@ -3,6 +3,7 @@ from typing import List, Optional, Sequence, Union
 
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.strategy import Strategy
+from parsl.process_loggers import wrap_with_logs
 from parsl.utils import Timer
 
 logger = logging.getLogger(__name__)
@@ -16,10 +17,15 @@ class JobStatusPoller(Timer):
                                   max_idletime=max_idletime)
         super().__init__(self.poll, interval=strategy_period, name="JobStatusPoller")
 
+    @wrap_with_logs
     def poll(self) -> None:
+        logger.info("POLL: update state")
         self._update_state()
+        logger.debug("POLL: run error handlers")
         self._run_error_handlers(self._executors)
+        logger.debug("POLL: strategize")
         self._strategy.strategize(self._executors)
+        logger.debug("POLL: done")
 
     def _run_error_handlers(self, executors: List[BlockProviderExecutor]) -> None:
         for e in executors:

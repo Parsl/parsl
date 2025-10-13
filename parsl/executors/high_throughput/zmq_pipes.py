@@ -44,6 +44,7 @@ class CommandClient:
         self.create_socket_and_bind()
         self._lock = threading.Lock()
         self.ok = True
+        self._my_thread = None
 
     def create_socket_and_bind(self):
         """ Creates socket and binds to a port.
@@ -59,7 +60,7 @@ class CommandClient:
         else:
             self.zmq_socket.bind(tcp_url(self.ip_address, self.port))
 
-    def run(self, message, max_retries=3, timeout_s=None):
+    def run(self, message, max_retries=3, timeout_s=30):
         """ This function needs to be fast at the same time aware of the possibility of
         ZMQ pipes overflowing.
 
@@ -72,7 +73,14 @@ class CommandClient:
 
         start_time_s = time.monotonic()
 
+        if self._my_thread is None:
+            self._my_thread = threading.current_thread()
+        elif self._my_thread != threading.current_thread():
+            logger.warning(f"Command socket suspicious thread usage: {self._my_thread} vs {threading.current_thread()}")
+        # otherwise, _my_thread and current_thread match, which is ok and no need to log
+
         reply = '__PARSL_ZMQ_PIPES_MAGIC__'
+        logger.debug("acquiring command lock")
         with self._lock:
             logger.debug("Sending command client command")
 
@@ -136,6 +144,7 @@ class TasksOutgoing:
         self.port = self.zmq_socket.bind_to_random_port(tcp_url(ip_address),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
+        self._lock = threading.Lock()
 
     def put(self, message):
         """ This function needs to be fast at the same time aware of the possibility of
@@ -146,12 +155,14 @@ class TasksOutgoing:
         This issue can be magnified if each the serialized buffer itself is larger.
         """
         logger.debug("Sending TasksOutgoing message")
-        self.zmq_socket.send_pyobj(message)
-        logger.debug("Sent TasksOutgoing message")
+        with self._lock:
+            self.zmq_socket.send_pyobj(message)
+            logger.debug("Sent TasksOutgoing message")
 
     def close(self):
-        self.zmq_socket.close()
-        self.zmq_context.term()
+        with self._lock:
+            self.zmq_socket.close()
+            self.zmq_context.term()
 
 
 class ResultsIncoming:
@@ -180,16 +191,19 @@ class ResultsIncoming:
         self.port = self.results_receiver.bind_to_random_port(tcp_url(ip_address),
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])
+        self._lock = threading.Lock()
 
     def get(self, timeout_ms=None):
         """Get a message from the queue, returning None if timeout expires
         without a message. timeout is measured in milliseconds.
         """
-        if zmq.POLLIN == self.results_receiver.poll(timeout_ms, zmq.POLLIN):
-            logger.debug("Receiving ResultsIncoming multipart message")
-            return self.results_receiver.recv_multipart()
-        return None
+        with self._lock:
+            if zmq.POLLIN == self.results_receiver.poll(timeout_ms, zmq.POLLIN):
+                logger.debug("Receiving ResultsIncoming multipart message")
+                return self.results_receiver.recv_multipart()
+            return None
 
     def close(self):
-        self.results_receiver.close()
-        self.zmq_context.term()
+        with self._lock:
+            self.results_receiver.close()
+            self.zmq_context.term()

@@ -379,7 +379,7 @@ class Manager:
                 last_interchange_contact = time.time()
 
                 if tasks == HEARTBEAT_CODE:
-                    logger.debug("Got heartbeat from interchange")
+                    logger.debug("Got heartbeat response from interchange")
                 elif tasks == DRAINED_CODE:
                     logger.info("Got fully drained message from interchange - setting kill flag")
                     self._stop_event.set()
@@ -641,10 +641,11 @@ def worker(
     # override the global logger inherited from the __main__ process (which
     # usually logs to manager.log) with one specific to this worker.
     global logger
-    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
-                               worker_id,
-                               name="worker_log",
-                               level=logging.DEBUG if debug else logging.INFO)
+    logger = logging.getLogger(__name__)
+    # logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
+    #                           worker_id,
+    #                           name="worker_log",
+    #                           level=logging.DEBUG if debug else logging.INFO)
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -968,11 +969,12 @@ if __name__ == "__main__":
 
     os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
-    logger = start_file_logger(
-        f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
-        0,
-        level=logging.DEBUG if args.debug is True else logging.INFO
-    )
+    logger = logging.getLogger(__name__)
+    # start_file_logger(
+    #    f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
+    #    0,
+    #    level=logging.DEBUG if args.debug is True else logging.INFO
+    # )
     logger.info(
         f"\n  Python version: {sys.version}"
         f"\n  Debug logging: {args.debug}"

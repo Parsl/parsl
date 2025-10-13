@@ -1,3 +1,26 @@
+import time
+
+t_start = time.time()
+import sys
+from typing import Any, List
+
+metas = []
+
+
+class MetaPathLogger:
+
+    def find_spec(*args, **kwargs):
+        metas.append(f"{time.time()} META_PATH {args[0]}")
+        return None
+
+
+if __name__ == "__main__":
+    mpl: List[Any]  # failure in CI... doesn't happen on my laptop. I haven't dug into why
+    mpl = [MetaPathLogger]
+    sys.meta_path = mpl + sys.meta_path
+
+t_postmeta = time.time()
+
 import pickle
 import sys
 import traceback
@@ -7,6 +30,7 @@ from parsl.data_provider.files import File
 from parsl.serialize import serialize
 from parsl.utils import get_std_fname_mode
 
+t_postimport = time.time()
 # This scripts executes a parsl function which is pickled in a file:
 #
 # exec_parsl_function.py map_file function_file result_file
@@ -27,9 +51,13 @@ from parsl.utils import get_std_fname_mode
 #
 
 
-def load_pickled_file(filename):
+def load_pickled_file(filename, logfile):
+    print(f"{time.time()} LOADPICKLED_OPEN", file=logfile)
     with open(filename, "rb") as f_in:
-        return pickle.load(f_in)
+        print(f"{time.time()} LOADPICKLED_LOAD", file=logfile)
+        v = pickle.load(f_in)
+        print(f"{time.time()} LOADPICKLED_DONE", file=logfile)
+        return v
 
 
 def dump_result_to_file(result_file, result_package):
@@ -138,24 +166,30 @@ def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_nam
     return code
 
 
-def load_function(map_file, function_file):
+def load_function(map_file, function_file, logfile):
     # Decodes the function and its file arguments to be executed into
     # function_code, and updates a user namespace with the function name and
     # the variable named result_name. When the function is executed, its result
     # will be stored in this variable in the user namespace.
     # Returns (namespace, function_code, result_name)
 
+    print(f"{time.time()} LOADFUNCTION_MAKENS", file=logfile)
     # Create the namespace to isolate the function execution.
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
-    function_info = load_pickled_file(function_file)
+    print(f"{time.time()} LOADFUNCTION_LOADPICKLED_FUNCTION", file=logfile)
+    function_info = load_pickled_file(function_file, logfile)
 
+    print(f"{time.time()} LOADFUNCTION_UNPACK", file=logfile)
     (fn, fn_name, fn_args, fn_kwargs) = unpack_function(function_info, user_ns)
 
-    mapping = load_pickled_file(map_file)
+    print(f"{time.time()} LOADFUNCTION_LOAD_PICKLED_MAPPING", file=logfile)
+    mapping = load_pickled_file(map_file, logfile)
+    print(f"{time.time()} LOADFUNCTION_REMAP", file=logfile)
     remap_all_files(mapping, fn_args, fn_kwargs)
 
+    print(f"{time.time()} LOADFUNCTION_ENCODE", file=logfile)
     (code, result_name) = encode_function(user_ns, fn, fn_name, fn_args, fn_kwargs)
 
     return (user_ns, code, result_name)
@@ -172,6 +206,7 @@ def execute_function(namespace, function_code, result_name):
 
 
 if __name__ == "__main__":
+    t_mainstart = time.time()
     try:
         # parse the three required command line arguments:
         # map_file: contains a pickled dictionary to map original names to
@@ -180,17 +215,27 @@ if __name__ == "__main__":
         # result_file: any output (including exceptions) will be written to
         #              this file.
         try:
-            (map_file, function_file, result_file) = sys.argv[1:]
+            (map_file, function_file, result_file, log_file) = sys.argv[1:]
         except ValueError:
             print("Usage:\n\t{} function result mapping\n".format(sys.argv[0]))
             raise
 
+        logfile = open(log_file, "w")
+        print(f"{t_start} START", file=logfile)
+        print(f"{t_postmeta} POSTMETA", file=logfile)
+        print(f"{t_postimport} POSTIMPORT", file=logfile)
+        print(f"{t_mainstart} MAINSTART", file=logfile)
+
+        t_loadfunction = time.time()
+        print(f"{t_loadfunction} LOADFUNCTION", file=logfile)
         try:
-            (namespace, function_code, result_name) = load_function(map_file, function_file)
+            (namespace, function_code, result_name) = load_function(map_file, function_file, logfile)
         except Exception:
             print("There was an error setting up the function for execution.")
             raise
 
+        t_executefunction = time.time()
+        print(f"{t_executefunction} EXECUTEFUNCTION", file=logfile)
         try:
             result = execute_function(namespace, function_code, result_name)
         except Exception:
@@ -202,8 +247,18 @@ if __name__ == "__main__":
 
     # Write out function result to the result file
     try:
+        t_dump = time.time()
+        print(f"{t_dump} DUMP", file=logfile)
         dump_result_to_file(result_file, result)
     except Exception:
         print("Could not write to result file.")
         traceback.print_exc()
         sys.exit(1)
+    t_printmetas = time.time()
+    print(f"{t_printmetas} PRINTMETAS", file=logfile)
+    for m in metas:
+        print(m, file=logfile)
+    t_done = time.time()
+    print(f"{t_done} DONE", file=logfile)
+
+    logfile.close()

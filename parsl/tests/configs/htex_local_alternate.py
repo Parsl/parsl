@@ -56,6 +56,7 @@ def fresh_config():
             )
         ],
         strategy='simple',
+        strategy_period=0.5,
         app_cache=True, checkpoint_mode='task_exit',
         retries=2,
         monitoring=MonitoringHub(

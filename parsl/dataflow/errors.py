@@ -103,3 +103,7 @@ class JoinError(PropagatedException):
     def __init__(self, dependent_exceptions_tids: Sequence[Tuple[BaseException, str]], task_id: int) -> None:
         super().__init__(dependent_exceptions_tids, task_id,
                          failure_description="Join failure")
+
+
+class RundirCreateError(ParslError):
+    pass

@@ -23,6 +23,7 @@ import _pytest.runner as runner
 import pytest
 
 import parsl
+import parsl.trace as pt
 from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.utils import RepresentationMixin
 
@@ -175,6 +176,14 @@ def pytest_configure(config):
         'markers',
         'taskvine: Marks local tests that require a working Task Vine installation'
     )
+
+
+@pytest.fixture(autouse=True, scope='session')
+def handle_microtracing():
+    pt.trace_by_logger = True
+    pt.trace_by_dict = True
+    yield
+    pt.output_event_stats()
 
 
 @pytest.fixture(autouse=True, scope='session')

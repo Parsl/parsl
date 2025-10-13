@@ -8,6 +8,7 @@ import parsl
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.errors import InternalConsistencyError
 
+# TODO: rename this to warmup iterations and make a --warmup parameter?
 min_iterations = 2
 
 
@@ -52,6 +53,11 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
 
     iterate = True
 
+    # TODO: optional, and mandatory filename as --csv=whatever.csv
+    # don't need to close this as process exit will close it?
+    # unless I'm intending for this to be a library/modular?
+    csv_file = open("parsl-perf.csv", "w")
+
     while iterate:
         print(f"==== Iteration {iteration} ====")
         print(f"Will run {n} tasks to target {target_t} seconds runtime")
@@ -77,6 +83,10 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
 
         print(f"Runtime: actual {delta_t:.3f}s vs target {target_t}s")
         print(f"Tasks per second: {rate:.3f}")
+
+        # TODO: use a csv lib?
+        if csv_file:
+            print(f"{iteration},{n},{start_t},{submitted_t},{end_t}", file=csv_file)
 
         iteration += 1
 

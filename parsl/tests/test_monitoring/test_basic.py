@@ -15,12 +15,6 @@ from parsl.monitoring.radios.udp import UDPRadio
 
 @parsl.python_app
 def this_app():
-    # this delay needs to be several times the resource monitoring
-    # period configured in the test configuration, so that some
-    # messages are actually sent - there is no guarantee that any
-    # (non-first) resource message will be sent at all for a short app.
-    time.sleep(3)
-
     return 5
 
 
@@ -97,8 +91,12 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
     config.run_dir = tmpd_cwd
     config.monitoring.logging_endpoint = db_url
 
+    print(f"load {time.time()}")
     with parsl.load(config):
+        print(f"start {time.time()}")
         assert this_app().result() == 5
+        print(f"end {time.time()}")
+    print(f"unload {time.time()}")
 
     # at this point, we should find one row in the monitoring database.
 
