@@ -70,8 +70,8 @@ jobs:
         pip install .
         
         # Temporary fix until fixes make it to a release
-        # git clone -b main https://github.com/globus/globus-compute.git
-        # pip3 install globus-compute/compute_sdk globus-compute/compute_endpoint
+        git clone -b main https://github.com/globus/globus-compute.git
+        pip3 install globus-compute/compute_sdk globus-compute/compute_endpoint
         # pip3 install globus-compute-endpoint
 
     - name: start globus_compute_endpoint
