@@ -67,7 +67,8 @@ jobs:
         source .venv/bin/activate
         make deps
         make clean_coverage
-
+        pip install .
+        
         # Temporary fix until fixes make it to a release
         git clone -b main https://github.com/globus/globus-compute.git
         pip3 install globus-compute/compute_sdk globus-compute/compute_endpoint
@@ -80,6 +81,7 @@ jobs:
         source /home/runner/work/parsl/parsl/.venv/bin/activate
         globus-compute-endpoint configure default
         which globus-compute-endpoint
+        python3 -c "import parsl; print(parsl.__version__, parsl.__file__)"
         python3 -c "import globus_compute_sdk; print(globus_compute_sdk.__version__)"
         python3 -c "import globus_compute_endpoint; print(globus_compute_endpoint.__version__)"
         cat << EOF > /home/runner/.globus_compute/default/config.yaml
