@@ -377,7 +377,6 @@ class DataFlowKernel:
             else:
                 logger.exception("Task {} failed after {} retry attempts".format(task_id,
                                                                                  task_record['try_id']))
-                task_record['time_returned'] = datetime.datetime.now()
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
                 self._send_task_log_info(task_record)
