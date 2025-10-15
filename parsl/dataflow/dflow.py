@@ -616,7 +616,7 @@ class DataFlowKernel:
         _launch_if_ready will launch the specified task, if it is ready
         to run (for example, without dependencies, and in pending state).
         """
-        exec_fu = None
+        exec_fu: Future
 
         task_id = task_record['id']
         with task_record['task_launch_lock']:
@@ -664,19 +664,19 @@ class DataFlowKernel:
                 exec_fu.set_exception(DependencyError(exceptions_tids,
                                                       task_id))
 
-        if exec_fu:
-            assert isinstance(exec_fu, Future)
-            try:
-                exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
-            except Exception:
-                # this exception is ignored here because it is assumed that exception
-                # comes from directly executing handle_exec_update (because exec_fu is
-                # done already). If the callback executes later, then any exception
-                # coming out of the callback will be ignored and not propate anywhere,
-                # so this block attempts to keep the same behaviour here.
-                logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
+        assert isinstance(exec_fu, Future), "Every code path leading here needs to define exec_fu"
 
-            task_record['exec_fu'] = exec_fu
+        try:
+            exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
+        except Exception:
+            # this exception is ignored here because it is assumed that exception
+            # comes from directly executing handle_exec_update (because exec_fu is
+            # done already). If the callback executes later, then any exception
+            # coming out of the callback will be ignored and not propate anywhere,
+            # so this block attempts to keep the same behaviour here.
+            logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
+
+        task_record['exec_fu'] = exec_fu
 
     def launch_task(self, task_record: TaskRecord) -> Future:
         """Handle the actual submission of the task to the executor layer.
