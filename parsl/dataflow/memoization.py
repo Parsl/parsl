@@ -4,15 +4,18 @@ import hashlib
 import logging
 import os
 import pickle
+import threading
 import types
 from concurrent.futures import Future
 from functools import lru_cache, singledispatch
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Literal, Optional, Sequence
 
 import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
 from parsl.dataflow.taskrecord import TaskRecord
+from parsl.errors import ConfigurationError, InternalConsistencyError
+from parsl.utils import Timer, get_all_checkpoints
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +149,13 @@ class Memoizer:
 
     """
 
-    def __init__(self, *, memoize: bool = True, checkpoint_files: Sequence[str]):
+    run_dir: str
+
+    def __init__(self, *,
+                 memoize: bool = True,
+                 checkpoint_files: Sequence[str] | None,
+                 checkpoint_period: Optional[str],
+                 checkpoint_mode: Literal['task_exit', 'periodic', 'dfk_exit', 'manual'] | None):
         """Initialize the memoizer.
 
         KWargs:
@@ -154,6 +163,26 @@ class Memoizer:
             - checkpoint (Dict): A checkpoint loaded as a dict.
         """
         self.memoize = memoize
+
+        self.checkpointed_tasks = 0
+
+        self.checkpoint_lock = threading.Lock()
+
+        self.checkpoint_files = checkpoint_files
+        self.checkpoint_mode = checkpoint_mode
+        self.checkpoint_period = checkpoint_period
+
+        self.checkpointable_tasks: List[TaskRecord] = []
+
+        self._checkpoint_timer: Timer | None = None
+
+    def start(self) -> None:
+        if self.checkpoint_files is not None:
+            checkpoint_files = self.checkpoint_files
+        elif self.checkpoint_files is None and self.checkpoint_mode is not None:
+            checkpoint_files = get_all_checkpoints(self.run_dir)
+        else:
+            checkpoint_files = []
 
         checkpoint = self.load_checkpoints(checkpoint_files)
 
@@ -163,6 +192,26 @@ class Memoizer:
         else:
             logger.info("App caching disabled for all apps")
             self.memo_lookup_table = {}
+
+        if self.checkpoint_mode == "periodic":
+            if self.checkpoint_period is None:
+                raise ConfigurationError("Checkpoint period must be specified with periodic checkpoint mode")
+            else:
+                try:
+                    h, m, s = map(int, self.checkpoint_period.split(':'))
+                except Exception:
+                    raise ConfigurationError("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(self.checkpoint_period))
+                checkpoint_period = (h * 3600) + (m * 60) + s
+                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
+
+    def close(self) -> None:
+        if self.checkpoint_mode is not None:
+            logger.info("Making final checkpoint")
+            self.checkpoint()
+
+        if self._checkpoint_timer:
+            logger.info("Stopping checkpoint timer")
+            self._checkpoint_timer.close()
 
     def make_hash(self, task: TaskRecord) -> str:
         """Create a hash of the task inputs.
@@ -324,3 +373,78 @@ class Memoizer:
             return self._load_checkpoints(checkpointDirs)
         else:
             return {}
+
+    def update_checkpoint(self, task_record: TaskRecord) -> None:
+        if self.checkpoint_mode == 'task_exit':
+            self.checkpoint(task=task_record)
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
+            with self.checkpoint_lock:
+                self.checkpointable_tasks.append(task_record)
+        elif self.checkpoint_mode is None:
+            pass
+        else:
+            raise InternalConsistencyError(f"Invalid checkpoint mode {self.checkpoint_mode}")
+
+    def checkpoint(self, *, task: Optional[TaskRecord] = None) -> None:
+        """Checkpoint the dfk incrementally to a checkpoint file.
+
+        When called with no argument, all tasks registered in self.checkpointable_tasks
+        will be checkpointed. When called with a single TaskRecord argument, that task will be
+        checkpointed.
+
+        By default the checkpoints are written to the RUNDIR of the current
+        run under RUNDIR/checkpoints/tasks.pkl
+
+        Kwargs:
+            - task (Optional task records) : A task to checkpoint. Default=None, meaning all
+              tasks registered for checkpointing.
+
+        .. note::
+            Checkpointing only works if memoization is enabled
+
+        """
+        with self.checkpoint_lock:
+
+            if task:
+                checkpoint_queue = [task]
+            else:
+                checkpoint_queue = self.checkpointable_tasks
+
+            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
+            checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
+
+            if not os.path.exists(checkpoint_dir):
+                os.makedirs(checkpoint_dir, exist_ok=True)
+
+            count = 0
+
+            with open(checkpoint_tasks, 'ab') as f:
+                for task_record in checkpoint_queue:
+                    task_id = task_record['id']
+
+                    app_fu = task_record['app_fu']
+
+                    if app_fu.done() and app_fu.exception() is None:
+                        hashsum = task_record['hashsum']
+                        if not hashsum:
+                            continue
+                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+
+                        # We are using pickle here since pickle dumps to a file in 'ab'
+                        # mode behave like a incremental log.
+                        pickle.dump(t, f)
+                        count += 1
+                        logger.debug("Task {} checkpointed".format(task_id))
+
+            self.checkpointed_tasks += count
+
+            if count == 0:
+                if self.checkpointed_tasks == 0:
+                    logger.warning("No tasks checkpointed so far in this run. Please ensure caching is enabled")
+                else:
+                    logger.debug("No tasks checkpointed in this pass.")
+            else:
+                logger.info("Done checkpointing {} tasks".format(count))
+
+            if not task:
+                self.checkpointable_tasks = []
