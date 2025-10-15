@@ -386,12 +386,10 @@ class DataFlowKernel:
 
         else:
             if task_record['from_memo']:
-                self._complete_task(task_record, States.memo_done, res)
-                self._send_task_log_info(task_record)
+                self._complete_task_result(task_record, States.memo_done, res)
             else:
                 if not task_record['join']:
-                    self._complete_task(task_record, States.exec_done, res)
-                    self._send_task_log_info(task_record)
+                    self._complete_task_result(task_record, States.exec_done, res)
                 else:
                     # This is a join task, and the original task's function code has
                     # completed. That means that the future returned by that code
@@ -506,6 +504,7 @@ class DataFlowKernel:
                 self.memoizer.update_memo(task_record)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
+                self._send_task_log_info(task_record)
 
             else:
                 # all the joinables succeeded, so construct a result:
@@ -518,11 +517,9 @@ class DataFlowKernel:
                         res.append(future.result())
                 else:
                     raise TypeError(f"Unknown joinable type {type(joinable)}")
-                self._complete_task(task_record, States.exec_done, res)
+                self._complete_task_result(task_record, States.exec_done, res)
 
             self._log_std_streams(task_record)
-
-            self._send_task_log_info(task_record)
 
     def handle_app_update(self, task_record: TaskRecord, future: AppFuture) -> None:
         """This function is called as a callback when an AppFuture
@@ -549,7 +546,7 @@ class DataFlowKernel:
         self.wipe_task(task_id)
         return
 
-    def _complete_task(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
+    def _complete_task_result(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
         """Set a task into a completed state
         """
         assert new_state in FINAL_STATES
@@ -562,6 +559,9 @@ class DataFlowKernel:
         task_record['time_returned'] = datetime.datetime.now()
 
         self.memoizer.update_memo(task_record)
+
+        self._send_task_log_info(task_record)
+
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
 
