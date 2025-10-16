@@ -351,7 +351,9 @@ class DataFlowKernel:
             else:
                 task_record['fail_cost'] += 1
 
-            if task_record['status'] == States.dep_fail:
+            if isinstance(e, DependencyError):
+                # was this sending two task log infos? if so would I see the row twice in the monitoring db?
+                self.update_task_state(task_record, States.dep_fail)
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
                 task_record['time_returned'] = datetime.datetime.now()
                 self._send_task_log_info(task_record)
@@ -654,10 +656,6 @@ class DataFlowKernel:
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
-                # Raise a dependency exception
-                self.update_task_state(task_record, States.dep_fail)
-
-                self._send_task_log_info(task_record)
 
                 exec_fu = Future()
                 exec_fu.set_exception(DependencyError(exceptions_tids,
