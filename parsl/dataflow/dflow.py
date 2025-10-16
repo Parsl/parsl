@@ -423,7 +423,6 @@ class DataFlowKernel:
                         for inner_future in joinable:
                             inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                     else:
-                        task_record['time_returned'] = datetime.datetime.now()
                         self.update_task_state(task_record, States.failed)
                         task_record['time_returned'] = datetime.datetime.now()
                         self._send_task_log_info(task_record)
