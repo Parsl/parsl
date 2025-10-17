@@ -185,6 +185,11 @@ class Strategy:
 
         for executor in executors:
             label = executor.label
+
+            if executor.bad_state_is_set:
+                logger.info(f"Not strategizing for executor {label} because bad state is set")
+                continue
+
             logger.debug(f"Strategizing for executor {label}")
 
             if self.executors[label]['first']:

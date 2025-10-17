@@ -51,6 +51,7 @@ def test_htex_strategy_does_not_oscillate(ns):
     executor.outstanding = lambda: n_tasks
     executor.status_facade = statuses
     executor.workers_per_node = n_workers
+    executor.bad_state_is_set = False
 
     provider.parallelism = 1
     provider.init_blocks = 0
