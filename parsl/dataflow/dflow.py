@@ -389,47 +389,46 @@ class DataFlowKernel:
         else:
             if task_record['from_memo']:
                 self._complete_task_result(task_record, States.memo_done, res)
+            elif not task_record['join']:
+                self._complete_task_result(task_record, States.exec_done, res)
             else:
-                if not task_record['join']:
-                    self._complete_task_result(task_record, States.exec_done, res)
+                # This is a join task, and the original task's function code has
+                # completed. That means that the future returned by that code
+                # will be available inside the executor future, so we can now
+                # record the inner app ID in monitoring, and add a completion
+                # listener to that inner future.
+
+                joinable = future.result()
+
+                # Fail with a TypeError if the joinapp python body returned
+                # something we can't join on.
+                if isinstance(joinable, Future):
+                    self.update_task_state(task_record, States.joining)
+                    task_record['joins'] = joinable
+                    task_record['join_lock'] = threading.Lock()
+                    self._send_task_log_info(task_record)
+                    joinable.add_done_callback(partial(self.handle_join_update, task_record))
+                elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
+                    self.update_task_state(task_record, States.joining)
+                    task_record['joins'] = joinable
+                    task_record['join_lock'] = threading.Lock()
+                    self._send_task_log_info(task_record)
+                    self.handle_join_update(task_record, None)
+                elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
+                    self.update_task_state(task_record, States.joining)
+                    task_record['joins'] = joinable
+                    task_record['join_lock'] = threading.Lock()
+                    self._send_task_log_info(task_record)
+                    for inner_future in joinable:
+                        inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                 else:
-                    # This is a join task, and the original task's function code has
-                    # completed. That means that the future returned by that code
-                    # will be available inside the executor future, so we can now
-                    # record the inner app ID in monitoring, and add a completion
-                    # listener to that inner future.
-
-                    joinable = future.result()
-
-                    # Fail with a TypeError if the joinapp python body returned
-                    # something we can't join on.
-                    if isinstance(joinable, Future):
-                        self.update_task_state(task_record, States.joining)
-                        task_record['joins'] = joinable
-                        task_record['join_lock'] = threading.Lock()
-                        self._send_task_log_info(task_record)
-                        joinable.add_done_callback(partial(self.handle_join_update, task_record))
-                    elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
-                        self.update_task_state(task_record, States.joining)
-                        task_record['joins'] = joinable
-                        task_record['join_lock'] = threading.Lock()
-                        self._send_task_log_info(task_record)
-                        self.handle_join_update(task_record, None)
-                    elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
-                        self.update_task_state(task_record, States.joining)
-                        task_record['joins'] = joinable
-                        task_record['join_lock'] = threading.Lock()
-                        self._send_task_log_info(task_record)
-                        for inner_future in joinable:
-                            inner_future.add_done_callback(partial(self.handle_join_update, task_record))
-                    else:
-                        self.update_task_state(task_record, States.failed)
-                        task_record['time_returned'] = datetime.datetime.now()
-                        self._send_task_log_info(task_record)
-                        self.memoizer.update_memo(task_record)
-                        with task_record['app_fu']._update_lock:
-                            task_record['app_fu'].set_exception(
-                                TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
+                    self.update_task_state(task_record, States.failed)
+                    task_record['time_returned'] = datetime.datetime.now()
+                    self._send_task_log_info(task_record)
+                    self.memoizer.update_memo(task_record)
+                    with task_record['app_fu']._update_lock:
+                        task_record['app_fu'].set_exception(
+                            TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
