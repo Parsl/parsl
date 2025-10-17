@@ -29,7 +29,7 @@ from parsl.data_provider.files import File
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
-from parsl.dataflow.memoization import Memoizer
+from parsl.dataflow.memoization import BasicMemoizer, Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import FINAL_FAILURE_STATES, FINAL_STATES, States
 from parsl.dataflow.taskrecord import TaskRecord
@@ -165,12 +165,8 @@ class DataFlowKernel:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
 
-        self.memoizer = Memoizer(memoize=config.app_cache,
-                                 checkpoint_mode=config.checkpoint_mode,
-                                 checkpoint_files=config.checkpoint_files,
-                                 checkpoint_period=config.checkpoint_period)
-        self.memoizer.run_dir = self.run_dir
-        self.memoizer.start()
+        self.memoizer: Memoizer = config.memoizer if config.memoizer is not None else BasicMemoizer()
+        self.memoizer.start(run_dir=self.run_dir)
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
@@ -352,14 +348,8 @@ class DataFlowKernel:
                 task_record['fail_cost'] += 1
 
             if isinstance(e, DependencyError):
-                # was this sending two task log infos? if so would I see the row twice in the monitoring db?
-                self.update_task_state(task_record, States.dep_fail)
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
-                task_record['time_returned'] = datetime.datetime.now()
-                self._send_task_log_info(task_record)
-                self.memoizer.update_memo(task_record)
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                self._complete_task_exception(task_record, States.dep_fail, e)
 
             elif task_record['fail_cost'] <= self._config.retries:
 
@@ -379,12 +369,7 @@ class DataFlowKernel:
             else:
                 logger.exception("Task {} failed after {} retry attempts".format(task_id,
                                                                                  task_record['try_id']))
-                self.update_task_state(task_record, States.failed)
-                task_record['time_returned'] = datetime.datetime.now()
-                self._send_task_log_info(task_record)
-                self.memoizer.update_memo(task_record)
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                self._complete_task_exception(task_record, States.failed, e)
 
         else:
             if task_record['from_memo']:
@@ -422,13 +407,10 @@ class DataFlowKernel:
                     for inner_future in joinable:
                         inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                 else:
-                    self.update_task_state(task_record, States.failed)
-                    task_record['time_returned'] = datetime.datetime.now()
-                    self._send_task_log_info(task_record)
-                    self.memoizer.update_memo(task_record)
-                    with task_record['app_fu']._update_lock:
-                        task_record['app_fu'].set_exception(
-                            TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
+                    self._complete_task_exception(
+                        task_record,
+                        States.failed,
+                        TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
@@ -499,12 +481,7 @@ class DataFlowKernel:
                 # no need to update the fail cost because join apps are never
                 # retried
 
-                self.update_task_state(task_record, States.failed)
-                task_record['time_returned'] = datetime.datetime.now()
-                self.memoizer.update_memo(task_record)
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
-                self._send_task_log_info(task_record)
+                self._complete_task_exception(task_record, States.failed, e)
 
             else:
                 # all the joinables succeeded, so construct a result:
@@ -521,31 +498,6 @@ class DataFlowKernel:
 
             self._log_std_streams(task_record)
 
-    def handle_app_update(self, task_record: TaskRecord, future: AppFuture) -> None:
-        """This function is called as a callback when an AppFuture
-        is in its final state.
-
-        It will trigger post-app processing such as checkpointing.
-
-        Args:
-             task_record : Task record
-             future (Future) : The relevant app future (which should be
-                 consistent with the task structure 'app_fu' entry
-
-        """
-
-        task_id = task_record['id']
-
-        if not task_record['app_fu'].done():
-            logger.error("Internal consistency error: app_fu is not done for task {}".format(task_id))
-        if not task_record['app_fu'] == future:
-            logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
-
-        self.memoizer.update_checkpoint(task_record)
-
-        self.wipe_task(task_id)
-        return
-
     def _complete_task_result(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
         """Set a task into a completed state
         """
@@ -558,12 +510,35 @@ class DataFlowKernel:
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
-        self.memoizer.update_memo(task_record)
+        self.memoizer.update_memo_result(task_record, result)
 
         self._send_task_log_info(task_record)
 
+        self.wipe_task(task_record['id'])
+
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
+
+    def _complete_task_exception(self, task_record: TaskRecord, new_state: States, exception: BaseException) -> None:
+        """Set a task into a failure state
+        """
+        assert new_state in FINAL_STATES
+        assert new_state in FINAL_FAILURE_STATES
+        old_state = task_record['status']
+
+        self.update_task_state(task_record, new_state)
+
+        logger.info(f"Task {task_record['id']} failed ({old_state.name} -> {new_state.name})")
+        task_record['time_returned'] = datetime.datetime.now()
+
+        self.memoizer.update_memo_exception(task_record, exception)
+
+        self._send_task_log_info(task_record)
+
+        self.wipe_task(task_record['id'])
+
+        with task_record['app_fu']._update_lock:
+            task_record['app_fu'].set_exception(exception)
 
     def update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
         """Updates a task record state, and recording an appropriate change
@@ -1053,7 +1028,6 @@ class DataFlowKernel:
                                                               task_record['func_name'],
                                                               waiting_message))
 
-        app_fu.add_done_callback(partial(self.handle_app_update, task_record))
         self.update_task_state(task_record, States.pending)
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
 
@@ -1227,6 +1201,10 @@ class DataFlowKernel:
         # should still see it.
         logger.info("DFK cleanup complete")
 
+    # TODO: this should maybe go away: manual explicit checkponting is
+    # a property of the (upcoming) BasicMemoizer, not of a memoisation
+    # plugin in general -- configure a BasicMemoizer separately from the
+    # DFK and call checkpoint on that...
     def checkpoint(self) -> None:
         self.memoizer.checkpoint()
 
