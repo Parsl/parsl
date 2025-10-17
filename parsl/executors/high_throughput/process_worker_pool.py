@@ -349,7 +349,7 @@ class Manager:
 
             logger.debug(
                 'ready workers: %d, pending tasks: %d',
-                self.ready_worker_count.value,  # type: ignore[attr-defined]
+                self.ready_worker_count.value,
                 pending_task_count,
             )
 

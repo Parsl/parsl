@@ -5,7 +5,7 @@ pytest-cov
 pytest-random-order
 nbsphinx
 sphinx_rtd_theme
-mypy==1.5.1
+mypy==1.18.2
 types-mock
 types-python-dateutil
 types-requests

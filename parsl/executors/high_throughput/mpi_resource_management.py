@@ -145,11 +145,11 @@ class MPITaskScheduler(TaskScheduler):
         )
         acquired_nodes = []
         with self._free_node_counter.get_lock():
-            if num_nodes <= self._free_node_counter.value:  # type: ignore[attr-defined]
-                self._free_node_counter.value -= num_nodes  # type: ignore[attr-defined]
+            if num_nodes <= self._free_node_counter.value:
+                self._free_node_counter.value -= num_nodes
             else:
                 raise MPINodesUnavailable(
-                    requested=num_nodes, available=self._free_node_counter.value  # type: ignore[attr-defined]
+                    requested=num_nodes, available=self._free_node_counter.value
                 )
 
             for i in range(num_nodes):
@@ -162,7 +162,7 @@ class MPITaskScheduler(TaskScheduler):
         for node in nodes:
             self.nodes_q.put(node)
         with self._free_node_counter.get_lock():
-            self._free_node_counter.value += len(nodes)  # type: ignore[attr-defined]
+            self._free_node_counter.value += len(nodes)
 
     def put_task(self, task_package: dict):
         """Schedule task if resources are available otherwise backlog the task"""
