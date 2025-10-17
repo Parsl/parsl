@@ -6,8 +6,9 @@ Measuring performance with parsl-perf
 ``parsl-perf`` is tool for making basic performance measurements of Parsl
 configurations.
 
-It runs increasingly large numbers of no-op apps until a batch takes
-(by default) 120 seconds, giving a measurement of tasks per second.
+It runs repeated batches of no-op apps, giving a measurement of tasks per
+second. By default, ``parsl-perf`` will attempt to estimate a batch size
+that will take 2 minutes to execute.
 
 This can give a basic measurement of some of the overheads in task
 execution.
@@ -22,6 +23,20 @@ argument.
 
 To change the target runtime from the default of 120 seconds, add a
 ``--time`` parameter.
+
+To change the iteration algorithm used to pick the next batch size and to
+decide when to stop, use the ``--iterate`` parameter:
+
+ * ``--iterate=estimate`` (the default) will run a small batch, then
+   repeatedly re-estimate a new batch size until it finds one that takes at least
+   75% of the target run time. This will rapidly find a batch size of around
+   the target size.
+
+ * ``--iterate=exponential`` will start with a small batch, then double the size
+   in each subsequent batch until reaching the target run time. This is useful
+   for understanding how a configuration scales down as batch sizes increase,
+   which is sometimes sub-linear, and to get more consistent batch sizes across
+   runs of ``parsl-perf``.
 
 For example:
 

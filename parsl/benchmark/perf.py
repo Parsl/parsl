@@ -4,10 +4,9 @@ import importlib
 import time
 from typing import Any, Dict
 
-from typing import Optional
-
 import parsl
 from parsl.dataflow.dflow import DataFlowKernel
+from parsl.errors import InternalConsistencyError
 
 min_iterations = 2
 
@@ -42,25 +41,19 @@ def app(extra_payload: Any, parsl_resource_specification: Dict = {}) -> int:
     return 7
 
 
-def performance(*, resources: dict, target_t: float, args_extra_size: int, count: Optional[int]) -> None:
+def performance(*, resources: dict, target_t: float, args_extra_size: int, iterate_mode: str) -> None:
     n = 10
 
     delta_t: float
-    delta_t = 0
-
-    threshold_t = target_t
 
     iteration = 1
 
     args_extra_payload = "x" * args_extra_size
 
-    while (delta_t < threshold_t and count is None) or iteration <= min_iterations:
-        print(f"==== Iteration {iteration} ====")
+    iterate = True
 
-        # skip forcing count on first iteration
-        if count is not None and iteration != 1:
-            assert isinstance(count, int)
-            n = count
+    while iterate:
+        print(f"==== Iteration {iteration} ====")
 
         print(f"Will run {n} tasks to target {target_t} seconds runtime")
         start_t = time.time()
@@ -86,22 +79,19 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, count
         print(f"Runtime: actual {delta_t:.3f}s vs target {target_t}s")
         print(f"Tasks per second: {rate:.3f}")
 
-        # n = max(1, int(target_t * rate))
-        # I'm suspicious about performance dropping off as task numbers get bigger:
-        # i've seen that with WQ, for example,
-        # so this hack, which could be an optional mode, performs a determininistic
-        # increase in numbers of tasks up to the time limit - so that non-linear behaviour
-        # can be seen a bit better - this is specially for comparing parsl-perf runs which
-        # otherwise might be picking a random sweet-ish spot...
-        # the threshold, in this case, could also be expressed in terms of task count,
-        # rather than max time (to give the same number of readings, rather than up to around
-        # the same task time) but using time can give more constant execution time in the
-        # presence of wildly different per-task performances (which is the case with parsl...)
-        # switching to these modes could all be parameters...
-
-        n = int(n * 1.4142135623730951)  # (doesn't have to be 2... could also be parameterised... sqrt(2) would be nice?)
-
         iteration += 1
+
+        # decide upon next iteration
+
+        match iterate_mode:
+            case "estimate":
+                n = max(1, int(target_t * rate))
+                iterate = delta_t < (0.75 * target_t) or iteration <= min_iterations
+            case "exponential":
+                n = int(n * 2)
+                iterate = delta_t < target_t or iteration <= min_iterations
+            case _:
+                raise InternalConsistencyError(f"Bad iterate mode {iterate_mode} - should have been validated at arg parse time")
 
 
 def cli_run() -> None:
@@ -122,6 +112,12 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
 
     parser.add_argument("--argsize", metavar="BYTES", help="extra bytes to add into app invocation arguments", default=0, type=int)
     parser.add_argument("--version", action="version", version=f"parsl-perf from Parsl {parsl.__version__}")
+    parser.add_argument("--iterate",
+                        metavar="MODE",
+                        help="Iteration mode: estimate, exponential",
+                        type=str,
+                        default="estimate",
+                        choices=("estimate", "exponential"))
 
     args = parser.parse_args()
 
@@ -131,7 +127,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
         resources = {}
 
     with load_dfk_from_config(args.config):
-        performance(resources=resources, target_t=args.time, args_extra_size=args.argsize, count=args.count)
+        performance(resources=resources, target_t=args.time, args_extra_size=args.argsize, iterate_mode=args.iterate)
         print("Tests complete - leaving DFK block")
     print("The end")
 
