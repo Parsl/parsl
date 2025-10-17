@@ -13,11 +13,12 @@ from parsl.monitoring.radios.base import (
     RadioConfig,
 )
 from parsl.monitoring.radios.udp_router import start_udp_receiver
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class UDPRadio(RadioConfig):
+class UDPRadio(RadioConfig, RepresentationMixin):
     def __init__(self, *, port: Optional[int] = None, atexit_timeout: int = 3, address: str, debug: bool = False, hmac_digest: str = 'sha512'):
         self.port = port
         self.atexit_timeout = atexit_timeout

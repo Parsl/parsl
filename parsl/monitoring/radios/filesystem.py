@@ -10,11 +10,12 @@ from parsl.monitoring.radios.base import (
     RadioConfig,
 )
 from parsl.monitoring.radios.filesystem_router import FilesystemRadioReceiver
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class FilesystemRadio(RadioConfig):
+class FilesystemRadio(RadioConfig, RepresentationMixin):
     """A MonitoringRadioSender that sends messages over a shared filesystem.
 
     The messsage directory structure is based on maildir,
