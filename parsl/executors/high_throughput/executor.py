@@ -767,6 +767,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         self._task_counter += 1
         task_id = self._task_counter
+        logger.debug("Allocated task id %s", task_id, extra={"htex_task_id": task_id})
+        # TODO: while interchange and workers have directory hierarchy to
+        # tell them what the parsl_dfk is, we don't have that here, so its
+        # unclear to me right now how this will get disambiguated...
+        # I need to add context one way or another -- a choice is via
+        # context vars that add to the log context, or a stack of explicit
+        # LoggerAdapters where htex and its components use a supplied (at start)
+        # parent logger?
 
         fut = HTEXFuture(task_id)
         self.tasks[task_id] = fut
@@ -774,6 +782,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         msg = {"task_id": task_id, "context": context, "buffer": buffer}
         self.outgoing_q.put(msg)
 
+        logger.debug("Put HTEX task %s on outgoing_q", task_id, extra={"htex_task_id": task_id})
         return fut
 
     @property

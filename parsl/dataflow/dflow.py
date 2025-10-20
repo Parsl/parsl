@@ -628,6 +628,9 @@ class DataFlowKernel:
                 tl.info(f"changing state from {task_record['status'].name} to {new_state.name}")
             else:
                 tl.info(f"initializing state to {new_state.name}")
+            # Style question on templating: having status being in the string rather than templated
+            # means the template messages reflect the state change. which works nicely with
+            # findcommon (otherwise findcommon will see all state changes the same)
 
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
@@ -666,7 +669,9 @@ class DataFlowKernel:
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
+        task_record['logger'].info("submitting into launch pool executor")
         self._task_launch_pool.submit(self._launch_if_ready_async, task_record)
+        task_record['logger'].info("submitted into launch pool executor")
 
     @wrap_with_logs
     def _launch_if_ready_async(self, task_record: TaskRecord) -> None:
@@ -784,8 +789,12 @@ class DataFlowKernel:
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 
+        tl.info("before submitter lock")
         with self.submitter_lock:
+            tl.info("after submitter lock, before executor.submit")
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
+            # to dig in here, I need better joining on the analysis side ^
+            tl.info("after executor.submit")
 
         self._update_task_state(task_record, States.launched)
 
@@ -1147,7 +1156,9 @@ class DataFlowKernel:
             except Exception as e:
                 self._logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
+        task_logger.debug("TMP: dependencies added, calling launch_if_ready")
         self.launch_if_ready(task_record)
+        task_logger.debug("TMP: launch_if_ready returned")
 
         return app_fu
 

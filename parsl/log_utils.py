@@ -145,6 +145,7 @@ def set_file_logger(filename: str,
     logger.setLevel(logging.DEBUG)
     # handler = logging.FileHandler(filename=filename)
     handler = JSONHandler(filename=filename)
+    # handler = logging.FileHandler(filename)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)

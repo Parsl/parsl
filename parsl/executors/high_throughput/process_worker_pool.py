@@ -810,15 +810,19 @@ def worker(
 
         logger.info("HTEX task %s: Completed task", tid, extra={"htex_task_id": tid})
         try:
+            logger.info("HTEX task %s: pre-pickle", tid, extra={"htex_task_id": tid})
             pkl_package = pickle.dumps(result_package)
+            logger.info("HTEX task %s: post-pickle", tid, extra={"htex_task_id": tid})
         except Exception:
             logger.exception("Caught exception while trying to pickle the result package", extra={"htex_task_id": tid})
             pkl_package = pickle.dumps({'type': 'result', 'task_id': tid,
                                         'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))
                                         })
 
+        logger.info("HTEX task %s: about to put in result_queue", tid, extra={"htex_task_id": tid})
         result_queue.put(pkl_package)
         del pkl_package, result_package
+        logger.info("HTEX task %s: about to pop worker from tasks_in_progress", tid, extra={"htex_task_id": tid})
         tasks_in_progress.pop(worker_id)
         logger.info("HTEX task %s: All processing finished for task", tid, extra={"htex_task_id": tid})
 

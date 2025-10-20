@@ -199,6 +199,8 @@ class Interchange:
             for _ in range(count):
                 *_, task = self.pending_task_queue.pop()
                 tasks.append(task)
+                ql = len(self.pending_task_queue)
+                logger.info(f"TMP1: there are {ql} tasks in the pending task queue", extra={"metric": "pending_task_queue_length", "queued_tasks": ql})
         except IndexError:
             pass
 
@@ -344,8 +346,14 @@ class Interchange:
 
             self.pending_task_queue.add(queue_entry)
             logger.debug("HTEX task %s: fetched task", task_id, extra={"htex_task_id": task_id})
+
+
+
             # ^ i am not super fond of the phrasing of these two log messages
             # when put together
+
+            ql = len(self.pending_task_queue)
+            logger.info(f"TMP1: there are {ql} tasks in the pending task queue", extra={"metric": "pending_task_queue_length", "queued_tasks": ql})
 
     def process_manager_socket_message(
         self,
