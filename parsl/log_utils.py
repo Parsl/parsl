@@ -114,20 +114,21 @@ class LexicalSpan:
     readability?
     """
 
-    def __init__(self, description: str):
+    def __init__(self, logger, description: str):
         """description is human readable.
         """
         self.description = description
+        self._logger = logger
 
     def __enter__(self):
-        logger.debug(f"{self.description}: start", stacklevel=2)
+        self._logger.debug(f"{self.description}: start", stacklevel=2)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_value is None:
-            logger.debug(f"{self.description}: end", stacklevel=2)
+            self._logger.debug(f"{self.description}: end", stacklevel=2)
         else:
-            logger.debug(f"{self.description}: end with exception", stacklevel=2)
+            self._logger.debug(f"{self.description}: end with exception", stacklevel=2)
             # the exception could be logged here or not. and other
             # observability channels that store more structured stuff
             # might like that - even if parsl.log doesn't like it.
