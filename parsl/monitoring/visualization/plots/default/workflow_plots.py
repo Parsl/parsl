@@ -15,8 +15,7 @@ from parsl.monitoring.visualization.utils import (
 
 # gantt_colors must assign a color value for every state name defined
 # in parsl/dataflow/states.py
-gantt_colors = {'unsched': 'rgb(240, 240, 240)',
-                'pending': 'rgb(168, 168, 168)',
+gantt_colors = {'pending': 'rgb(168, 168, 168)',
                 'launched': 'rgb(100, 255, 255)',
                 'running': 'rgb(0, 0, 255)',
                 'running_ended': 'rgb(64, 64, 255)',
@@ -201,8 +200,7 @@ def total_tasks_plot(df_task, df_status, columns=20):
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
 
-dag_state_colors = {"unsched": (0, 'rgb(240, 240, 240)'),
-                    "pending": (1, 'rgb(168, 168, 168)'),
+dag_state_colors = {"pending": (1, 'rgb(168, 168, 168)'),
                     "launched": (2, 'rgb(100, 255, 255)'),
                     "running": (3, 'rgb(0, 0, 255)'),
                     "dep_fail": (4, 'rgb(255, 128, 255)'),
