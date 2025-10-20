@@ -113,7 +113,7 @@ class LexicalSpan:
     readability?
     """
 
-    def __init__(self, logger: logging.Logger, description: str):
+    def __init__(self, logger: logging.Logger | logging.LoggerAdapter, description: str):
         """description is human readable.
         """
         self.description = description
