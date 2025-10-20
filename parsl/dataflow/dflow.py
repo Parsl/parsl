@@ -358,11 +358,11 @@ class DataFlowKernel:
             elif task_record['fail_cost'] <= self._config.retries:
 
                 # record the final state for this try before we mutate for retries
-                self.update_task_state(task_record, States.fail_retryable)
+                self._update_task_state(task_record, States.fail_retryable)
                 self._send_task_log_info(task_record)
 
                 task_record['try_id'] += 1
-                self.update_task_state(task_record, States.pending)
+                self._update_task_state(task_record, States.pending)
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
@@ -392,19 +392,19 @@ class DataFlowKernel:
                 # Fail with a TypeError if the joinapp python body returned
                 # something we can't join on.
                 if isinstance(joinable, Future):
-                    self.update_task_state(task_record, States.joining)
+                    self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
                     self._send_task_log_info(task_record)
                     joinable.add_done_callback(partial(self.handle_join_update, task_record))
                 elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
-                    self.update_task_state(task_record, States.joining)
+                    self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
                     self._send_task_log_info(task_record)
                     self.handle_join_update(task_record, None)
                 elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
-                    self.update_task_state(task_record, States.joining)
+                    self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
                     self._send_task_log_info(task_record)
@@ -534,7 +534,7 @@ class DataFlowKernel:
         assert new_state not in FINAL_FAILURE_STATES
         old_state = task_record['status']
 
-        self.update_task_state(task_record, new_state)
+        self._update_task_state(task_record, new_state)
 
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
@@ -553,7 +553,7 @@ class DataFlowKernel:
         assert new_state in FINAL_FAILURE_STATES
         old_state = task_record['status']
 
-        self.update_task_state(task_record, new_state)
+        self._update_task_state(task_record, new_state)
 
         logger.info(f"Task {task_record['id']} failed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
@@ -565,7 +565,7 @@ class DataFlowKernel:
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_exception(exception)
 
-    def update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
+    def _update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
         """Updates a task record state, and recording an appropriate change
         to task state counters.
         """
@@ -726,7 +726,7 @@ class DataFlowKernel:
 
         with self.submitter_lock:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
-        self.update_task_state(task_record, States.launched)
+        self._update_task_state(task_record, States.launched)
 
         self._send_task_log_info(task_record)
 
@@ -1001,7 +1001,7 @@ class DataFlowKernel:
                        'try_time_returned': None,
                        'resource_specification': resource_specification}
 
-        self.update_task_state(task_record, States.unsched)
+        self._update_task_state(task_record, States.unsched)
 
         for kw in ['stdout', 'stderr']:
             if kw in app_kwargs:
@@ -1054,7 +1054,7 @@ class DataFlowKernel:
                                                               waiting_message))
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_record))
-        self.update_task_state(task_record, States.pending)
+        self._update_task_state(task_record, States.pending)
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
 
         self._send_task_log_info(task_record)
