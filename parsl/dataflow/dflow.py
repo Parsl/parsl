@@ -62,18 +62,53 @@ class TaskLoggerAdapter(logging.LoggerAdapter):
         self.task_id = task_id
 
     def process(self, msg, kwargs):
-        # am I meant to call super here?
-        return super().process(f"Task {self.task_id}: " + msg, kwargs)
+        if "extra" not in kwargs:
+            kwargs["extra"] = None
+
+        if kwargs["extra"] is None:
+            kwargs["extra"] = {"parsl_task_id": self.task_id}
+        else:
+            assert isinstance(kwargs["extra"], dict)
+            kwargs["extra"]["parsl_task_id"] = self.task_id
+
+        # unlike DFKLoggerAdapter, I want the task ID logged in the human
+        # readable part of the message as well as being represented in
+        # structured metadata.
+        # Although that might be better handled at the formatter level.
+        # raise RuntimeError(f"BENC: hook {kwargs!r}")
+        return (msg, kwargs)
+
+    # this is not the process() way of modifying msg, because i want to
+    # keep it templated, for later template-style analysis, rather than
+    # filling concrete values into msg.
+    def log(self, level, msg, *args, **kwargs):
+        super().log(level, "Task %s: " + msg, self.task_id, *args, **kwargs)
 
 
 class DFKLoggerAdapter(logging.LoggerAdapter):
     def __init__(self, *args, uuid, **kwargs):
         super().__init__(*args, **kwargs)
+        # slight weird own processing of extra -- because extra processing
+        # doesn't seem to like no downstream extra if merge_extra is True
+        # but the logger call doesn't have an extra
         self.uuid = uuid
 
     def process(self, msg, kwargs):
-        # am I meant to call super here?
-        return super().process(f"DFK {self.uuid}: " + msg, kwargs)
+        if "extra" not in kwargs:
+            # sometimes a log record has a None extra, sometimes not
+            # but i'm not clear why. this makes it consistent, for the
+            # second part of the function.
+            kwargs["extra"] = None
+
+        if kwargs["extra"] is None:
+            kwargs["extra"] = {"parsl_dfk": self.uuid}
+        else:
+            assert isinstance(kwargs["extra"], dict)
+            kwargs["extra"]["parsl_dfk"] = self.uuid
+
+        # this is like merge_extra, but different. also merge_extra is not
+        # available in Python 3.13
+        return (msg, kwargs)
 
 
 class DataFlowKernel:
@@ -138,6 +173,11 @@ class DataFlowKernel:
             #        usually a singleton.
 
         self._logger.info("Starting DataFlowKernel with config\n{}".format(config))
+
+        self._logger.info("BENC1")
+        self._logger.info("BENC2", extra={"someextra": "loL"})
+        logger3 = logging.getLogger("parsl.logger3")
+        logger3.info("BENC3", extra={"someextra_three": "loL3lol"})
 
         self._logger.info("Parsl version: {}".format(get_version()))
 
@@ -766,11 +806,14 @@ class DataFlowKernel:
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
             tl.info(
-                f"try {try_id} launched on executor {executor.label} "
-                f"with executor id {exec_fu.parsl_executor_task_id}")
+                "try %s launched on executor %s "
+                "with executor id %s", try_id, executor.label, exec_fu.parsl_executor_task_id,
+                extra={"parsl_try_id": try_id,
+                       "parsl_executor": executor.label,
+                       "parsl_executor_id": exec_fu.parsl_executor_task_id})
 
         else:
-            tl.info(f"try {try_id} launched on executor {executor.label}")
+            tl.info(f"try {try_id} launched on executor {executor.label}", extra={"parsl_try_id": try_id, "parsl_executor": executor.label})
 
         self._log_std_streams(task_record)
 
@@ -1088,7 +1131,7 @@ class DataFlowKernel:
                                                            waiting_message))
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_record))
-        task_logger.debug("has AppFuture: {}".format(task_record['app_fu']))
+        task_logger.debug("has AppFuture: %s", repr(task_record['app_fu']))
         self._update_task_state(task_record, States.pending)
 
         assert task_id not in self.tasks
