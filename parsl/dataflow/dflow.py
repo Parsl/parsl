@@ -219,7 +219,7 @@ class DataFlowKernel:
         else:
             raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
-    def _send_task_log_info(self, task_record: TaskRecord) -> None:
+    def _send_task_info(self, task_record: TaskRecord) -> None:
         if self.monitoring_radio:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring_radio.send((MessageType.TASK_INFO, task_log_info))
@@ -359,14 +359,14 @@ class DataFlowKernel:
 
                 # record the final state for this try before we mutate for retries
                 self._update_task_state(task_record, States.fail_retryable)
-                self._send_task_log_info(task_record)
+                self._send_task_info(task_record)
 
                 task_record['try_id'] += 1
                 self._update_task_state(task_record, States.pending)
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
-                self._send_task_log_info(task_record)
+                self._send_task_info(task_record)
 
                 logger.info("Task {} marked for retry".format(task_id))
 
@@ -395,19 +395,19 @@ class DataFlowKernel:
                     self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
-                    self._send_task_log_info(task_record)
+                    self._send_task_info(task_record)
                     joinable.add_done_callback(partial(self.handle_join_update, task_record))
                 elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
                     self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
-                    self._send_task_log_info(task_record)
+                    self._send_task_info(task_record)
                     self.handle_join_update(task_record, None)
                 elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
                     self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
-                    self._send_task_log_info(task_record)
+                    self._send_task_info(task_record)
                     for inner_future in joinable:
                         inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                 else:
@@ -541,7 +541,7 @@ class DataFlowKernel:
 
         self.memoizer.update_memo_result(task_record, result)
 
-        self._send_task_log_info(task_record)
+        self._send_task_info(task_record)
 
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
@@ -560,7 +560,7 @@ class DataFlowKernel:
 
         self.memoizer.update_memo_exception(task_record, exception)
 
-        self._send_task_log_info(task_record)
+        self._send_task_info(task_record)
 
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_exception(exception)
@@ -728,7 +728,7 @@ class DataFlowKernel:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
         self._update_task_state(task_record, States.launched)
 
-        self._send_task_log_info(task_record)
+        self._send_task_info(task_record)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
             logger.info(
@@ -1057,7 +1057,7 @@ class DataFlowKernel:
         self._update_task_state(task_record, States.pending)
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
 
-        self._send_task_log_info(task_record)
+        self._send_task_info(task_record)
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.
