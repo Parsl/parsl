@@ -52,8 +52,6 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.utils import get_std_fname_mode, get_version
 
-logger = logging.getLogger(__name__)
-
 
 class TaskLoggerAdapter(logging.LoggerAdapter):
     """Logger adapter that sticks "task {tid}" on the front of every log message.
@@ -66,6 +64,16 @@ class TaskLoggerAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         # am I meant to call super here?
         return super().process(f"Task {self.task_id}: " + msg, kwargs)
+
+
+class DFKLoggerAdapter(logging.LoggerAdapter):
+    def __init__(self, *args, uuid, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.uuid = uuid
+
+    def process(self, msg, kwargs):
+        # am I meant to call super here?
+        return super().process(f"DFK {self.uuid}: " + msg, kwargs)
 
 
 class DataFlowKernel:
@@ -98,6 +106,10 @@ class DataFlowKernel:
             :class:~`parsl.config.Config` documentation.
         """
 
+        self.run_id = str(uuid4())
+
+        self._logger = DFKLoggerAdapter(logging.getLogger(__name__), uuid=self.run_id)
+
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
@@ -125,9 +137,9 @@ class DataFlowKernel:
             #        easiest to begin with, keeping with the notion that a DFK is
             #        usually a singleton.
 
-        logger.info("Starting DataFlowKernel with config\n{}".format(config))
+        self._logger.info("Starting DataFlowKernel with config\n{}".format(config))
 
-        logger.info("Parsl version: {}".format(get_version()))
+        self._logger.info("Parsl version: {}".format(get_version()))
 
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_start_message()
@@ -136,7 +148,6 @@ class DataFlowKernel:
         self.task_state_counts = {state: 0 for state in States}
 
         # Monitoring
-        self.run_id = str(uuid4())
 
         self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
@@ -150,23 +161,23 @@ class DataFlowKernel:
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
 
-        logger.info("Run id is: " + self.run_id)
+        self._logger.info("Run id is: " + self.run_id)
 
         self.workflow_name = None
         if self.monitoring is not None and self.monitoring.workflow_name is not None:
             self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
-                logger.debug("Considering candidate for workflow name: {}".format(frame.filename))
+                self._logger.debug("Considering candidate for workflow name: {}".format(frame.filename))
                 fname = os.path.basename(str(frame.filename))
                 parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
-                    logger.debug("Using {} as workflow name".format(fname))
+                    self._logger.debug("Using {} as workflow name".format(fname))
                     break
             else:
-                logger.debug("Could not choose a name automatically")
+                self._logger.debug("Could not choose a name automatically")
                 self.workflow_name = "unnamed"
 
         self.workflow_version = str(self.time_began.replace(microsecond=0))
@@ -231,19 +242,19 @@ class DataFlowKernel:
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         mode = self.config.exit_mode
-        logger.debug("Exiting context manager, with exit mode '%s'", mode)
+        self._logger.debug("Exiting context manager, with exit mode '%s'", mode)
         if mode == "cleanup":
-            logger.info("Calling cleanup for DFK")
+            self._logger.info("Calling cleanup for DFK")
             self.cleanup()
         elif mode == "skip":
-            logger.info("Skipping all cleanup handling")
+            self._logger.info("Skipping all cleanup handling")
         elif mode == "wait":
             if exc_type is None:
-                logger.info("Waiting for all tasks to complete")
+                self._logger.info("Waiting for all tasks to complete")
                 self.wait_for_current_tasks()
                 self.cleanup()
             else:
-                logger.info("There was an exception - cleaning up without waiting for task completion")
+                self._logger.info("There was an exception - cleaning up without waiting for task completion")
                 self.cleanup()
         else:
             raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
@@ -364,7 +375,7 @@ class DataFlowKernel:
                 try:
                     cost = self._config.retry_handler(e, task_record)
                 except Exception as retry_handler_exception:
-                    logger.exception("retry_handler raised an exception - will not retry")
+                    self._logger.exception("retry_handler raised an exception - will not retry")
 
                     # this can be any amount > self._config.retries, to stop any more
                     # retries from happening
@@ -780,7 +791,7 @@ class DataFlowKernel:
         # Return if the task is a data management task, rather than doing
         #  data management on it.
         if self.check_staging_inhibited(kwargs):
-            logger.debug("Not performing input staging")
+            self._logger.debug("Not performing input staging")
             return args, kwargs, func
 
         inputs = kwargs.get('inputs', [])
@@ -801,7 +812,7 @@ class DataFlowKernel:
         return tuple(newargs), kwargs, func
 
     def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable) -> Callable:
-        logger.debug("Adding output dependencies")
+        self._logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         app_fut._outputs = []
 
@@ -823,13 +834,13 @@ class DataFlowKernel:
                 # while the DataFuture-contained original will not be modified by any staging.
                 f_copy = file.cleancopy()
 
-                logger.debug("Submitting stage out for output file {}".format(repr(file)))
+                self._logger.debug("Submitting stage out for output file {}".format(repr(file)))
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
-                    logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
+                    self._logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
                     df = DataFuture(stageout_fut, file, tid=app_fut.tid)
                 else:
-                    logger.debug("No stageout dependency for {}".format(repr(file)))
+                    self._logger.debug("No stageout dependency for {}".format(repr(file)))
                     df = DataFuture(app_fut, file, tid=app_fut.tid)
 
                 # this is a hook for post-task stageout
@@ -838,7 +849,7 @@ class DataFlowKernel:
                 rewritable_func = self.data_manager.replace_task_stage_out(f_copy, rewritable_func, executor)
                 return rewritable_func, f_copy, df
             else:
-                logger.debug("Not performing output staging for: {}".format(repr(file)))
+                self._logger.debug("Not performing output staging for: {}".format(repr(file)))
                 return rewritable_func, file, DataFuture(app_fut, file, tid=app_fut.tid)
 
         for idx, file in enumerate(outputs):
@@ -872,7 +883,7 @@ class DataFlowKernel:
             try:
                 depends.extend(self.dependency_resolver.traverse_to_gather(d))
             except Exception:
-                logger.exception("Exception in dependency_resolver.traverse_to_gather")
+                self._logger.exception("Exception in dependency_resolver.traverse_to_gather")
                 raise
 
         # Check the positional args
@@ -987,7 +998,7 @@ class DataFlowKernel:
         task_id = self.task_count
         self.task_count += 1
 
-        task_logger = TaskLoggerAdapter(logger, task_id=task_id)  # todo: task_id
+        task_logger = TaskLoggerAdapter(self._logger, task_id=task_id)  # todo: task_id
 
         if isinstance(executors, str) and executors.lower() == 'all':
             choices = list(e for e in self.executors if e != '_parsl_internal')
@@ -1046,7 +1057,7 @@ class DataFlowKernel:
 
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
 
-        logger.debug("Added output dependencies")
+        self._logger.debug("Added output dependencies")
 
         # Replace the function invocation in the TaskRecord with whatever file-staging
         # substitutions have been made.
@@ -1055,7 +1066,7 @@ class DataFlowKernel:
                     'func': func,
                     'kwargs': app_kwargs})
 
-        with LexicalSpan(logger, "Gathering dependencies"):
+        with LexicalSpan(self._logger, "Gathering dependencies"):
             # Get the list of dependencies for the task
             depends = self._gather_all_deps(app_args, app_kwargs)
             task_record['depends'] = depends
@@ -1099,7 +1110,7 @@ class DataFlowKernel:
             try:
                 d.add_done_callback(callback_adapter)
             except Exception as e:
-                logger.error("add_done_callback got an exception {} which will be ignored".format(e))
+                self._logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
         self.launch_if_ready(task_record)
 
@@ -1113,13 +1124,13 @@ class DataFlowKernel:
     # If tasks have their states changed, this won't work properly
     # but we can validate that...
     def log_task_states(self) -> None:
-        logger.info("Summary of tasks in DFK:")
+        self._logger.info("Summary of tasks in DFK:")
 
         with self.task_state_counts_lock:
             for state in States:
-                logger.info("Tasks in state {}: {}".format(str(state), self.task_state_counts[state]))
+                self._logger.info("Tasks in state {}: {}".format(str(state), self.task_state_counts[state]))
 
-        logger.info("End of summary")
+        self._logger.info("End of summary")
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
@@ -1127,9 +1138,9 @@ class DataFlowKernel:
             executor.run_dir = self.run_dir
             if self.monitoring and executor.remote_monitoring_radio is not None:
                 executor.monitoring_messages = self.monitoring.resource_msgs
-                logger.debug("Starting monitoring receiver for executor %s "
-                             "with remote monitoring radio config %s",
-                             executor.label, executor.remote_monitoring_radio)
+                self._logger.debug("Starting monitoring receiver for executor %s "
+                                   "with remote monitoring radio config %s",
+                                   executor.label, executor.remote_monitoring_radio)
 
                 executor.monitoring_receiver = executor.remote_monitoring_radio.create_receiver(resource_msgs=executor.monitoring_messages,
                                                                                                 run_dir=executor.run_dir)
@@ -1144,9 +1155,9 @@ class DataFlowKernel:
         self.job_status_poller.add_executors(block_executors)
 
     def atexit_cleanup(self) -> None:
-        logger.warning("Python is exiting with a DFK still running. "
-                       "You should call parsl.dfk().cleanup() before "
-                       "exiting to release any resources")
+        self._logger.warning("Python is exiting with a DFK still running. "
+                             "You should call parsl.dfk().cleanup() before "
+                             "exiting to release any resources")
 
     def wait_for_current_tasks(self) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
@@ -1154,7 +1165,7 @@ class DataFlowKernel:
         added after cleanup has started (such as data stageout?)
         """
 
-        logger.info("Waiting for all remaining tasks to complete")
+        self._logger.info("Waiting for all remaining tasks to complete")
 
         # .values is made into a list immediately to reduce (although not
         # eliminate) a race condition where self.tasks can be modified
@@ -1171,14 +1182,14 @@ class DataFlowKernel:
             while task_record['status'] not in FINAL_STATES:
                 time.sleep(0.1)
 
-        logger.info("All remaining tasks completed")
+        self._logger.info("All remaining tasks completed")
 
     @wrap_with_logs
     def cleanup(self) -> None:
         """Clean-up by closing all of the components used by the DFK
         """
 
-        with LexicalSpan(logger, "DFK cleanup"):
+        with LexicalSpan(self._logger, "DFK cleanup"):
 
             # this check won't detect two DFK cleanups happening from
             # different threads extremely close in time because of
@@ -1195,12 +1206,12 @@ class DataFlowKernel:
             self.usage_tracker.send_end_message()
             self.usage_tracker.close()
 
-            with LexicalSpan(logger, "Closing job status poller"):
+            with LexicalSpan(self._logger, "Closing job status poller"):
                 self.job_status_poller.close()
 
-            with LexicalSpan(logger, "Shutting down executors"):
+            with LexicalSpan(self._logger, "Shutting down executors"):
                 for executor in self.executors.values():
-                    with LexicalSpan(logger, f"Shutting down executor {executor.label}"):
+                    with LexicalSpan(self._logger, f"Shutting down executor {executor.label}"):
                         # that ^ executor.label should be some structured attribute
                         # for observability?
                         executor.shutdown()
@@ -1208,7 +1219,7 @@ class DataFlowKernel:
             self.time_completed = datetime.datetime.now()
 
             if self.monitoring_radio:
-                logger.info("Sending final monitoring message")
+                self._logger.info("Sending final monitoring message")
                 self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                            {'tasks_failed_count': self.task_state_counts[States.failed],
                                             'tasks_completed_count': self.task_state_counts[States.exec_done],
@@ -1217,28 +1228,28 @@ class DataFlowKernel:
                                             'run_id': self.run_id, 'rundir': self.run_dir}))
 
             if self.monitoring:
-                with LexicalSpan(logger, "Terminating monitoring"):
+                with LexicalSpan(self._logger, "Terminating monitoring"):
                     self.monitoring.close()
 
-            with LexicalSpan(logger, "Terminating task launch pool"):
+            with LexicalSpan(self._logger, "Terminating task launch pool"):
                 self._task_launch_pool.shutdown()
 
-            with LexicalSpan(logger, "Unregistering atexit hook"):
+            with LexicalSpan(self._logger, "Unregistering atexit hook"):
                 atexit.unregister(self.atexit_cleanup)
 
             if DataFlowKernelLoader._dfk is self:
-                with LexicalSpan(logger, "Unregistering default DFK"):
+                with LexicalSpan(self._logger, "Unregistering default DFK"):
                     parsl.clear()
             else:
-                logger.debug("Cleaning up non-default DFK - not unregistering")
+                self._logger.debug("Cleaning up non-default DFK - not unregistering")
 
             if self._logging_unregister_callback:
-                with LexicalSpan(logger, "Unregistering log handler"):
+                with LexicalSpan(self._logger, "Unregistering log handler"):
                     self._logging_unregister_callback()
 
             # This message won't go to the default parsl.log, but other handlers
             # should still see it.
-            logger.info("DFK cleanup complete")
+            self._logger.info("DFK cleanup complete")
 
     def checkpoint(self) -> None:
         self.memoizer.checkpoint_queue()
