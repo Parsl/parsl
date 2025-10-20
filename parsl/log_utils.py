@@ -6,15 +6,17 @@ parsl messages to parsl.log.
 when working in a Jupyter notebook.
 """
 import io
+import json
 import logging
 from typing import Callable, Optional
 
 import typeguard
 
 DEFAULT_FORMAT = (
-    "%(created)f %(asctime)s %(processName)s-%(process)d "
-    "%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s %(levelname)s: "
     "%(message)s"
+    # everything else is removed so that we end up with the message with
+    # substitutions but without other metadata inlaid.
+    # that makes the formatted message more useful/readable
 )
 
 
@@ -57,6 +59,66 @@ def set_stream_logger(name: str = 'parsl',
     return unregister_callback
 
 
+class JSONHandler(logging.Handler):
+    def __init__(self, filename, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.f = open(filename, "w")
+
+    def emit(self, record):
+
+        """ here's whats in the parsl.log default record:
+        "%(created)f %(asctime)s %(processName)s-%(process)d "
+        "%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s %(levelname)s: "
+        "%(message)s"
+        """
+
+        d = {
+            "created": record.created,
+            "process": record.process,
+            "processName": record.processName,
+            "threadName": record.threadName,
+            "thread": record.thread,
+            "name": record.name,
+            "lineno": record.lineno,
+            "funcname": record.funcName,
+            "levelname": record.levelname,
+            "msg": record.msg,
+            "repr": repr(record),
+        }
+
+        """
+        if hasattr(record, "extra"):
+            d["extra"] = record.extra
+
+        if hasattr(record, "parsl_dfk"):
+            d["parsl_dfk"] = record.parsl_dfk
+
+        if hasattr(record, "parsl_task_id"):
+            d["parsl_task_id"] = record.parsl_task_id
+
+        if hasattr(record, "parsl_try_id"):
+            d["parsl_try_id"] = record.parsl_try_id
+        """
+
+        # TODO: this is a bit horrible: i want *all* the extra to be
+        # logged, so that arbitrary bits of code can add arbitrary
+        # interesting columns.
+
+        d["formatted"] = self.format(record)
+        d["known_keys"] = repr(record.__dict__.keys())
+        for (k, v) in record.__dict__.items():
+            try:
+                d[k] = str(v)
+            except Exception as e:
+                # this is mostly for debugging
+                d[k] = "UNREPRESENTABLE: {e!r}"
+
+        json.dump(d, fp=self.f)  # this must be on one line!
+        print("", file=self.f)   # so that this newline has meaning...
+        self.f.flush()  # TODO: could be via self.flush() like stream handler?
+        # i was seeing the result of not-flushing in interchange.log, where
+        # the interchange shuts down by being killed.
+
 @typeguard.typechecked
 def set_file_logger(filename: str,
                     name: str = 'parsl',
@@ -81,7 +143,8 @@ def set_file_logger(filename: str,
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename)
+    # handler = logging.FileHandler(filename=filename)
+    handler = JSONHandler(filename=filename)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
