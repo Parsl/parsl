@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import threading
 from concurrent.futures import Future
 
@@ -101,3 +102,7 @@ class TaskRecord(TypedDict, total=False):
     """Restricts access to end-of-join behavior to ensure that joins
     only complete once, even if several joining Futures complete close
     together in time."""
+
+    logger: logging.LoggerAdapter
+    """For per-task log messages, with task id metadata added.
+    """
