@@ -42,6 +42,7 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
+from parsl.log_utils import LexicalSpan
 from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
@@ -1035,11 +1036,10 @@ class DataFlowKernel:
                     'func': func,
                     'kwargs': app_kwargs})
 
-        logger.debug("Gathering dependencies")
-        # Get the list of dependencies for the task
-        depends = self._gather_all_deps(app_args, app_kwargs)
-        logger.debug("Gathered dependencies")
-        task_record['depends'] = depends
+        with LexicalSpan(logger, "Gathering dependencies"):
+            # Get the list of dependencies for the task
+            depends = self._gather_all_deps(app_args, app_kwargs)
+            task_record['depends'] = depends
 
         depend_descs = []
         for d in depends:
@@ -1160,74 +1160,67 @@ class DataFlowKernel:
         """Clean-up by closing all of the components used by the DFK
         """
 
-        logger.info("DFK cleanup initiated")
+        with LexicalSpan(logger, "DFK cleanup"):
 
-        # this check won't detect two DFK cleanups happening from
-        # different threads extremely close in time because of
-        # non-atomic read/modify of self.cleanup_called
-        if self.cleanup_called:
-            raise Exception("attempt to clean up DFK when it has already been cleaned-up")
-        self.cleanup_called = True
+            # this check won't detect two DFK cleanups happening from
+            # different threads extremely close in time because of
+            # non-atomic read/modify of self.cleanup_called
+            if self.cleanup_called:
+                raise Exception("attempt to clean up DFK when it has already been cleaned-up")
+            self.cleanup_called = True
 
-        self.log_task_states()
+            self.log_task_states()
 
-        self.memoizer.close()
+            self.memoizer.close()
 
-        # Send final stats
-        self.usage_tracker.send_end_message()
-        self.usage_tracker.close()
+            # Send final stats
+            self.usage_tracker.send_end_message()
+            self.usage_tracker.close()
 
-        logger.info("Closing job status poller")
-        self.job_status_poller.close()
-        logger.info("Terminated job status poller")
+            with LexicalSpan(logger, "Closing job status poller"):
+                self.job_status_poller.close()
 
-        logger.info("Shutting down executors")
+            with LexicalSpan(logger, "Shutting down executors"):
+                for executor in self.executors.values():
+                    with LexicalSpan(logger, f"Shutting down executor {executor.label}"):
+                        # that ^ executor.label should be some structured attribute
+                        # for observability?
+                        executor.shutdown()
 
-        for executor in self.executors.values():
-            logger.info(f"Shutting down executor {executor.label}")
-            executor.shutdown()
-            logger.info(f"Shut down executor {executor.label}")
+            self.time_completed = datetime.datetime.now()
 
-        logger.info("Terminated executors")
-        self.time_completed = datetime.datetime.now()
+            if self.monitoring_radio:
+                logger.info("Sending final monitoring message")
+                self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
+                                           {'tasks_failed_count': self.task_state_counts[States.failed],
+                                            'tasks_completed_count': self.task_state_counts[States.exec_done],
+                                            "time_began": self.time_began,
+                                            'time_completed': self.time_completed,
+                                            'run_id': self.run_id, 'rundir': self.run_dir}))
 
-        if self.monitoring_radio:
-            logger.info("Sending final monitoring message")
-            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
-                                       {'tasks_failed_count': self.task_state_counts[States.failed],
-                                        'tasks_completed_count': self.task_state_counts[States.exec_done],
-                                        "time_began": self.time_began,
-                                        'time_completed': self.time_completed,
-                                        'run_id': self.run_id, 'rundir': self.run_dir}))
+            if self.monitoring:
+                with LexicalSpan(logger, "Terminating monitoring"):
+                    self.monitoring.close()
 
-        if self.monitoring:
-            logger.info("Terminating monitoring")
-            self.monitoring.close()
-            logger.info("Terminated monitoring")
+            with LexicalSpan(logger, "Terminating task launch pool"):
+                self._task_launch_pool.shutdown()
 
-        logger.info("Terminating task launch pool")
-        self._task_launch_pool.shutdown()
-        logger.info("Terminated task launch pool")
+            with LexicalSpan(logger, "Unregistering atexit hook"):
+                atexit.unregister(self.atexit_cleanup)
 
-        logger.info("Unregistering atexit hook")
-        atexit.unregister(self.atexit_cleanup)
-        logger.info("Unregistered atexit hook")
+            if DataFlowKernelLoader._dfk is self:
+                with LexicalSpan(logger, "Unregistering default DFK"):
+                    parsl.clear()
+            else:
+                logger.debug("Cleaning up non-default DFK - not unregistering")
 
-        if DataFlowKernelLoader._dfk is self:
-            logger.info("Unregistering default DFK")
-            parsl.clear()
-            logger.info("Unregistered default DFK")
-        else:
-            logger.debug("Cleaning up non-default DFK - not unregistering")
+            if self._logging_unregister_callback:
+                with LexicalSpan(logger, "Unregistering log handler"):
+                    self._logging_unregister_callback()
 
-        if self._logging_unregister_callback:
-            logger.info("Unregistering log handler")
-            self._logging_unregister_callback()
-            logger.info("Unregistered log handler")
-
-        # This message won't go to the default parsl.log, but other handlers
-        # should still see it.
-        logger.info("DFK cleanup complete")
+            # This message won't go to the default parsl.log, but other handlers
+            # should still see it.
+            logger.info("DFK cleanup complete")
 
     def checkpoint(self) -> None:
         self.memoizer.checkpoint_queue()

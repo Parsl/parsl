@@ -117,3 +117,37 @@ def initialize_cross_process_logs(rundir, logname):
         # TODO: feed in legacy configuration options
         os.makedirs(rundir, exist_ok=True)
         set_file_logger(f"{rundir}/{logname}.log", level=logging.DEBUG, name='')
+
+
+class LexicalSpan:
+    """A context manager for observing lexically scoped spans.
+
+    questions/notes:
+
+    1. should there be a uuid-style opaque identifier generated here?
+    probably yes.
+
+    2. how does this relate to enclosing spans?
+
+    3. using `with` syntax leads to more indentation. how does that affect
+    readability?
+    """
+
+    def __init__(self, logger: logging.Logger, description: str):
+        """description is human readable.
+        """
+        self.description = description
+        self._logger = logger
+
+    def __enter__(self):
+        self._logger.debug(f"{self.description}: start", stacklevel=2)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_value is None:
+            self._logger.debug(f"{self.description}: end", stacklevel=2)
+        else:
+            self._logger.debug(f"{self.description}: end with exception", stacklevel=2)
+            # the exception could be logged here or not. and other
+            # observability channels that store more structured stuff
+            # might like that - even if parsl.log doesn't like it.
