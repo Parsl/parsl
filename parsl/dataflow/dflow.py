@@ -275,7 +275,7 @@ class DataFlowKernel:
                 try:
                     name, _ = get_std_fname_mode(name, spec)
                 except Exception:
-                    logger.exception(f"Could not parse {name} specification {spec} for task {task_record['id']}")
+                    logger.exception(f"Task {task_record['id']}: Could not parse {name} specification {spec}")
                     name = ""
             return name
 
@@ -452,10 +452,10 @@ class DataFlowKernel:
             # on whatever the result of that retrying was (if any).
 
             outer_task_id = task_record['id']
-            logger.debug(f"Join callback for task {outer_task_id}, inner_app_future {inner_app_future}")
+            logger.debug(f"Task {outer_task_id}: join callback with inner_app_future {inner_app_future}")
 
             if task_record['status'] != States.joining:
-                logger.debug(f"Join callback for task {outer_task_id} skipping because task is not in joining state")
+                logger.debug(f"Task {outer_task_id}: join callback skipping because task is not in joining state")
                 return
 
             joinable = task_record['joins']
@@ -463,7 +463,7 @@ class DataFlowKernel:
             if isinstance(joinable, list):
                 for future in joinable:
                     if not future.done():
-                        logger.debug(f"A joinable future {future} is not done for task {outer_task_id} - skipping callback")
+                        logger.debug(f"Task {outer_task_id}: a joinable future {future} is not done - skipping callback")
                         return  # abandon this callback processing if joinables are not all done
 
             # now we know each joinable Future is done
@@ -527,9 +527,9 @@ class DataFlowKernel:
         task_id = task_record['id']
 
         if not task_record['app_fu'].done():
-            logger.error("Internal consistency error: app_fu is not done for task {}".format(task_id))
+            logger.error(f"Task {task_id}: internal consistency error: app_fu is not done")
         if not task_record['app_fu'] == future:
-            logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
+            logger.error(f"Task {task_id}: internal consistency error: callback future is not the app_fu in task structure")
 
         self.memoizer.update_checkpoint(task_record)
 
@@ -701,7 +701,7 @@ class DataFlowKernel:
 
         memo_fu = self.memoizer.check_memo(task_record)
         if memo_fu:
-            logger.info("Reusing cached result for task {}".format(task_id))
+            logger.info(f"Task {task_id}: reusing cached result")
             task_record['from_memo'] = True
             assert isinstance(memo_fu, Future)
             return memo_fu
@@ -744,7 +744,7 @@ class DataFlowKernel:
                 f"with executor id {exec_fu.parsl_executor_task_id}")
 
         else:
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
+            logger.info(f"Task {task_id} try {try_id} launched on executor {executor.label}")
 
         self._log_std_streams(task_record)
 
@@ -1231,19 +1231,19 @@ class DataFlowKernel:
 
         def log_std_stream(name: str, target) -> None:
             if target is None:
-                logger.info(f"{name} for task {tid} will not be redirected.")
+                logger.info(f"Task {tid}: {name} will not be redirected.")
             elif isinstance(target, str):
-                logger.info(f"{name} for task {tid} will be redirected to {target}")
+                logger.info(f"Task {tid}: {name} will be redirected to {target}")
             elif isinstance(target, os.PathLike):
-                logger.info(f"{name} for task {tid} will be redirected to {os.fspath(target)}")
+                logger.info(f"Task {tid}: {name} will be redirected to {os.fspath(target)}")
             elif isinstance(target, tuple) and len(target) == 2 and isinstance(target[0], str):
-                logger.info(f"{name} for task {tid} will be redirected to {target[0]} with mode {target[1]}")
+                logger.info(f"Task {tid}: {name} will be redirected to {target[0]} with mode {target[1]}")
             elif isinstance(target, tuple) and len(target) == 2 and isinstance(target[0], os.PathLike):
-                logger.info(f"{name} for task {tid} will be redirected to {os.fspath(target[0])} with mode {target[1]}")
+                logger.info(f"Task {tid}: {name} will be redirected to {os.fspath(target[0])} with mode {target[1]}")
             elif isinstance(target, DataFuture):
-                logger.info(f"{name} for task {tid} will staged to {target.file_obj.url}")
+                logger.info(f"Task {tid}: {name} will staged to {target.file_obj.url}")
             else:
-                logger.error(f"{name} for task {tid} has unknown specification: {target!r}")
+                logger.error(f"Task {tid}: {name} has unknown specification: {target!r}")
 
         log_std_stream("Standard out", task_record['app_fu'].stdout)
         log_std_stream("Standard error", task_record['app_fu'].stderr)
