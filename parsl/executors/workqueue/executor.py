@@ -31,6 +31,7 @@ from parsl.errors import OptionalModuleMissing
 from parsl.executors.errors import ExecutorError, InvalidResourceSpecification
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.log_utils import set_file_logger
 from parsl.monitoring.radios.base import RadioConfig
 from parsl.monitoring.radios.filesystem import FilesystemRadio
 from parsl.multiprocessing import SpawnContext, SpawnProcess
@@ -385,7 +386,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
     def _path_in_task(self, executor_task_id, *path_components):
         """Returns a filename specific to a task.
-        It is used for the following filename's:
+        It is used for the following filenames:
             (not given): The subdirectory per task that contains function, result, etc.
             'function': Pickled file that contains the function to be executed.
             'result': Pickled file that (will) contain the result of the function.
@@ -496,14 +497,17 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             logger.debug("Got tasks_lock to set WQ-level task entry")
             self.tasks[str(executor_task_id)] = fu
 
-        logger.debug("Creating executor task {} for function {} with args {}".format(executor_task_id, func, args))
+        logger.debug("Creating executor task %s for function %s with args %s", executor_task_id, func, args,
+                     extra={"parsl_executor_id": executor_task_id})
 
         function_file = self._path_in_task(executor_task_id, "function")
         result_file = self._path_in_task(executor_task_id, "result")
         map_file = self._path_in_task(executor_task_id, "map")
 
-        logger.debug("Creating executor task {} with function at: {}".format(executor_task_id, function_file))
-        logger.debug("Creating executor task {} with result to be found at: {}".format(executor_task_id, result_file))
+        logger.debug("Creating executor task %s with function at: %s", executor_task_id, function_file,
+                     extra={"parsl_executor_id": executor_task_id})
+        logger.debug("Creating executor task %s with result to be found at: %s", executor_task_id, result_file,
+                     extra={"parsl_executor_id": executor_task_id})
 
         self._serialize_function(function_file, func, args, kwargs)
 
@@ -519,7 +523,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             raise ExecutorError(self, "Workqueue Submit Process is not alive")
 
         # Create message to put into the message queue
-        logger.debug("Placing executor task {} on message queue".format(executor_task_id))
+        logger.debug("Placing executor task %s on message queue", executor_task_id, extra={"parsl_executor_id": executor_task_id})
         if category is None:
             category = func.__name__ if self.autocategory else 'parsl-default'
         self.task_queue.put_nowait(ParslTaskToWq(executor_task_id,
@@ -798,7 +802,7 @@ def _work_queue_submit_wait(*,
                             project_password_file: Optional[str],
                             project_name: Optional[str],
                             coprocess: bool) -> int:
-    """Thread to handle Parsl app submissions to the Work Queue objects.
+    """Process to handle Parsl app submissions to the Work Queue objects.
     Takes in Parsl functions submitted using submit(), and creates a
     Work Queue task with the appropriate specifications, which is then
     submitted to Work Queue. After tasks are completed, processes the
@@ -809,6 +813,9 @@ def _work_queue_submit_wait(*,
     means that any communication should be done using the multiprocessing
     module capabilities, rather than shared memory.
     """
+    # log initialisation of some kind? this logging has been lost since
+    # the move to SpawnProcess I think?
+    set_file_logger(os.path.join(wq_log_dir, "submitwait.log"))
     logger.debug("Starting WorkQueue Submit/Wait Process")
     setproctitle("parsl: Work Queue submit/wait")
 
@@ -890,7 +897,7 @@ def _work_queue_submit_wait(*,
                     logger.debug(command_str)
 
                     # Create WorkQueue task for the command
-                    logger.debug("Sending executor task {} with command: {}".format(task.id, command_str))
+                    logger.debug("Sending executor task %s with command: %s", task.id, command_str, extra={"parsl_executor_id": task.id})
                     t = wq.Task(command_str)
                 else:
                     t = wq.RemoteTask("run_parsl_task",
@@ -899,7 +906,7 @@ def _work_queue_submit_wait(*,
                                       os.path.basename(task.function_file),
                                       os.path.basename(task.result_file))
                     t.specify_exec_method("direct")
-                    logger.debug("Sending executor task {} to coprocess".format(task.id))
+                    logger.debug("Sending executor task %s to coprocess", task.id, extra={"parsl_executor_id": task.id})
 
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
@@ -945,7 +952,7 @@ def _work_queue_submit_wait(*,
             t.specify_tag(str(task.id))
             result_file_of_task_id[str(task.id)] = task.result_file
 
-            logger.debug("Executor task id: {}".format(task.id))
+            logger.debug("Executor task id: %s", task.id, extra={"parsl_executor_id": task.id})
 
             # Specify input/output files that need to be staged.
             # Absolute paths are assumed to be in shared filesystem, and thus
@@ -959,7 +966,7 @@ def _work_queue_submit_wait(*,
                         t.specify_output_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
 
             # Submit the task to the WorkQueue object
-            logger.debug("Submitting executor task {} to WorkQueue".format(task.id))
+            logger.debug("Submitting executor task %s to WorkQueue", task.id, extra={"parsl_executor_id": task.id})
             try:
                 wq_id = q.submit(t)
             except Exception as e:
@@ -970,7 +977,8 @@ def _work_queue_submit_wait(*,
                                                          reason="task could not be submited to work queue",
                                                          status=-1))
                 continue
-            logger.info("Executor task {} submitted as Work Queue task {}".format(task.id, wq_id))
+            logger.info("Executor task %s submitted as Work Queue task %s", task.id, wq_id,
+                        extra={"parsl_executor_id": task.id, "wq_task_id": wq_id})
 
         # If the queue is not empty wait on the WorkQueue queue for a task
         task_found = True

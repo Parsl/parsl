@@ -40,6 +40,8 @@ def load_dfk_from_config(filename: str) -> DataFlowKernel:
 
 @parsl.python_app
 def app(extra_payload: Any, parsl_resource_specification: Dict = {}) -> int:
+    import time
+    time.sleep(0.1)
     return 7
 
 
