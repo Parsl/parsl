@@ -374,14 +374,12 @@ class DataFlowKernel:
 
                 # record the final state for this try before we mutate for retries
                 self._update_task_state(task_record, States.fail_retryable)
-                self._send_task_info(task_record)
 
                 task_record['try_id'] += 1
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
                 self._update_task_state(task_record, States.pending)
-                self._send_task_info(task_record)
 
                 logger.info("Task {} marked for retry".format(task_id))
 
@@ -410,19 +408,16 @@ class DataFlowKernel:
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
                     self._update_task_state(task_record, States.joining)
-                    self._send_task_info(task_record)
                     joinable.add_done_callback(partial(self.handle_join_update, task_record))
                 elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
                     self._update_task_state(task_record, States.joining)
-                    self._send_task_info(task_record)
                     self.handle_join_update(task_record, None)
                 elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
                     self._update_task_state(task_record, States.joining)
-                    self._send_task_info(task_record)
                     for inner_future in joinable:
                         inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                 else:
@@ -555,7 +550,6 @@ class DataFlowKernel:
         self.memoizer.update_memo_result(task_record, result)
 
         self._update_task_state(task_record, new_state)
-        self._send_task_info(task_record)
 
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
@@ -573,14 +567,15 @@ class DataFlowKernel:
         self.memoizer.update_memo_exception(task_record, exception)
 
         self._update_task_state(task_record, new_state)
-        self._send_task_info(task_record)
 
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_exception(exception)
 
     def _update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
-        """Updates a task record state, and recording an appropriate change
-        to task state counters.
+        """Updates a task record state including accompanying consistency-keeping:
+
+        * record change in task state counters
+        * record change in monitoring
         """
 
         with self.task_state_counts_lock:
@@ -588,6 +583,8 @@ class DataFlowKernel:
                 self.task_state_counts[task_record['status']] -= 1
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
+
+        self._send_task_info(task_record)
 
     @staticmethod
     def _unwrap_remote_exception_wrapper(future: Future) -> Any:
@@ -741,7 +738,6 @@ class DataFlowKernel:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
 
         self._update_task_state(task_record, States.launched)
-        self._send_task_info(task_record)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
             logger.info(
@@ -1063,9 +1059,7 @@ class DataFlowKernel:
         app_fu.add_done_callback(partial(self.handle_app_update, task_record))
 
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
-
         self._update_task_state(task_record, States.pending)
-        self._send_task_info(task_record)
 
         assert task_id not in self.tasks
         self.tasks[task_id] = task_record
