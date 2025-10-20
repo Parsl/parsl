@@ -61,7 +61,7 @@ def test_priority_queue(try_assert):
             with open(htex.worker_logdir + "/interchange.log", "r") as f:
                 lines = f.readlines()
                 for line in lines:
-                    if f"Fetched {n} tasks so far" in line:
+                    if f"Put task {n} onto pending_task_queue" in line:
                         return True
             return False
 
