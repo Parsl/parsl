@@ -37,6 +37,7 @@ from parsl.executors.high_throughput.mpi_resource_management import (
     TaskScheduler,
 )
 from parsl.executors.high_throughput.probe import probe_addresses
+from parsl.log_utils import JSONHandler
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
@@ -151,7 +152,7 @@ class Manager:
             Number of seconds to drain after  TODO: could be a nicer timespec involving m,s,h qualifiers for user friendliness?
         """
 
-        logger.info("Manager initializing")
+        logger.info("Manager initializing", extra={"manager_id": uid})
 
         self._start_time = time.time()
 
@@ -307,7 +308,10 @@ class Manager:
         ix_sock.setsockopt(zmq.IDENTITY, self.uid.encode('utf-8'))
         ix_sock.setsockopt(zmq.LINGER, 0)
         ix_sock.connect(self._ix_url)
+
         logger.info("Manager task pipe connected to interchange")
+        # ^ not true - zmq returns before a connection has happened...
+        # so rephrase
 
         poller = zmq.Poller()
         poller.register(results_sock, zmq.POLLIN)
@@ -385,17 +389,21 @@ class Manager:
                     self._stop_event.set()
                 else:
                     task_recv_counter += len(tasks)
+
+                    # do I want to unroll this into separate per-task events? in observability
+                    # style, probably yes?
                     logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format(
                         [t['task_id'] for t in tasks], task_recv_counter
                     ))
 
                     for task in tasks:
+                        logger.debug("Putting HTEX task %s into scheduler", task['task_id'], extra={"htex_task_id": task['task_id']})
                         self.task_scheduler.put_task(task)
 
             elif socks.get(results_sock) == zmq.POLLIN:
                 meta_b = pickle.dumps({'type': 'result'})
                 ix_sock.send_multipart([meta_b, results_sock.recv()])
-                logger.debug("Result sent to interchange")
+                logger.debug("Result sent to interchange") # this code never gets to see the task ID? unlike on the send side?
 
             else:
                 logger.debug("No incoming tasks")
@@ -429,7 +437,7 @@ class Manager:
                 r = self.task_scheduler.get_result()
                 if r is None:
                     continue
-                logger.debug("Result received from worker")
+                logger.debug("Result received from worker") # i think this never sees the task ID because its serialised
                 notify_sock.send(r)
             except Exception:
                 logger.exception("Failed to send result to interchange")
@@ -444,14 +452,14 @@ class Manager:
         while not self._stop_event.wait(self.heartbeat_period):
             for worker_id, p in procs.items():
                 if not p.is_alive():
-                    logger.error("Worker {} has died".format(worker_id))
+                    logger.error("Worker {}: detected worker has died".format(worker_id), extra={"worker_id": worker_id})
                     try:
                         task = self._tasks_in_progress.pop(worker_id)
-                        logger.info("Worker {} was busy when it died".format(worker_id))
+                        logger.info("Worker {} was busy when it died".format(worker_id), extra={"worker_id": worker_id})
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            logger.info("Putting exception for executor task {} in the pending result queue".format(task['task_id']))
+                            logger.info("HTEX Task %s: Worker %s: Putting exception for task in the pending result queue", task['task_id'], worker_id, extra={"htex_task_id": task['task_id'], "worker_id": worker_id})
                             result_package = {'type': 'result',
                                               'task_id': task['task_id'],
                                               'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
@@ -459,10 +467,10 @@ class Manager:
                             self.pending_result_queue.put(pkl_package)
                             del pkl_package
                     except KeyError:
-                        logger.info("Worker {} was not busy when it died".format(worker_id))
+                        logger.info("Worker {} was not busy when it died".format(worker_id), extra={"worker_id": worker_id})
 
                     procs[worker_id] = self._start_worker(worker_id)
-                    logger.info("Worker {} has been restarted".format(worker_id))
+                    logger.info("Worker {} has been restarted".format(worker_id), extra={"worker_id": worker_id})
 
         logger.debug("Exiting")
 
@@ -542,8 +550,7 @@ class Manager:
 
         for worker_id in procs:
             p = procs[worker_id]
-            proc_info = f"(PID: {p.pid}, Worker ID: {worker_id})"
-            logger.debug(f"Signaling worker {p.name} (TERM). {proc_info}")
+            logger.debug(f"Worker {worker_id}: PID {p.pid}: Signaling worker {p.name} (TERM)", extra={"worker_id": worker_id})
             p.terminate()
 
         self.zmq_context.term()
@@ -555,16 +562,15 @@ class Manager:
             worker_id, p = procs.popitem()
             timeout = max(force_child_shutdown_at - time.monotonic(), 0.000001)
             p.join(timeout=timeout)
-            proc_info = f"(PID: {p.pid}, Worker ID: {worker_id})"
             if p.exitcode is not None:
                 logger.debug(
-                    "Worker joined successfully.  %s (exitcode: %s)", proc_info, p.exitcode
+                    "Worker %s: PID %s: joined successfully. exitcode: %s", worker_id, p.pid, p.exitcode, extra={"worker_id": worker_id}
                 )
 
             else:
                 logger.warning(
-                    f"Worker {p.name} ({worker_id}) failed to terminate in a timely"
-                    f" manner; sending KILL signal to process. {proc_info}"
+                    f"Worker {worker_id}: PID {p.pid}: worker {p.name} failed to terminate in a timely"
+                    f" manner; sending KILL signal to process.", extra={"worker_id": worker_id}
                 )
                 p.kill()
                 p.join()
@@ -655,7 +661,7 @@ def worker(
     import parsl.executors.high_throughput.monitoring_info as mi
     mi.result_queue = monitoring_queue
 
-    logger.info('Worker {} started'.format(worker_id))
+    logger.info('Worker {} started'.format(worker_id), extra={"worker_id": worker_id})
     if debug:
         logger.debug("Debug logging enabled")
 
@@ -712,7 +718,7 @@ def worker(
         # will be redundant, and ignore[unused-ignore] tells mypy to ignore
         # that this ignore is unneeded.
         os.sched_setaffinity(0, my_cores)  # type: ignore[attr-defined, unused-ignore]
-        logger.info("Set worker CPU affinity to {}".format(my_cores))
+        logger.info("Set worker CPU affinity to {}".format(my_cores), extra={"worker_id": worker_id})
 
     # If desired, pin to accelerator
     if accelerator is not None:
@@ -748,7 +754,7 @@ def worker(
             # an exception if the process doesn't exist
             os.kill(manager_pid, 0)
         except OSError:
-            logger.critical(f"Manager ({manager_pid}) died; worker {worker_id} shutting down")
+            logger.critical(f"Manager ({manager_pid}) died; worker {worker_id} shutting down", extra={"manager_pid": manager_pid, "worker_id": worker_id})
             return False
         else:
             return True
@@ -768,7 +774,7 @@ def worker(
 
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
-        logger.info("Received executor task {}".format(tid))
+        logger.info("HTEX task %s: received executor task", tid, extra={"htex_task_id": tid})
 
         with ready_worker_count.get_lock():
             ready_worker_count.value -= 1
@@ -795,18 +801,18 @@ def worker(
             result = exec_func(req['buffer'], *exec_args, **exec_kwargs)
             serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
-            logger.info('Caught an exception: {}'.format(e))
+            logger.info('Caught an exception: {}'.format(e), extra={"htex_task_id": tid})
             result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
             del serialized_result
         del req
 
-        logger.info("Completed executor task {}".format(tid))
+        logger.info("HTEX task %s: Completed task", tid, extra={"htex_task_id": tid})
         try:
             pkl_package = pickle.dumps(result_package)
         except Exception:
-            logger.exception("Caught exception while trying to pickle the result package")
+            logger.exception("Caught exception while trying to pickle the result package", extra={"htex_task_id": tid})
             pkl_package = pickle.dumps({'type': 'result', 'task_id': tid,
                                         'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))
                                         })
@@ -814,7 +820,7 @@ def worker(
         result_queue.put(pkl_package)
         del pkl_package, result_package
         tasks_in_progress.pop(worker_id)
-        logger.info("All processing finished for executor task {}".format(tid))
+        logger.info("HTEX task %s: All processing finished for task", tid, extra={"htex_task_id": tid})
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -830,13 +836,11 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
-                        "%(process)d %(threadName)s " \
-                        "[%(levelname)s]  %(message)s"
+        format_string = "%(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename)
+    handler = JSONHandler(filename)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
