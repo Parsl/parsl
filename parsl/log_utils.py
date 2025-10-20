@@ -97,3 +97,38 @@ def set_file_logger(filename: str,
         futures_logger.removeHandler(handler)
 
     return unregister_callback
+
+
+
+class LexicalSpan:
+    """A context manager for observing lexically scoped spans.
+
+    questions/notes:
+
+    1. should there be a uuid-style opaque identifier generated here?
+    probably yes.
+
+    2. how does this relate to enclosing spans?
+
+    3. using `with` syntax leads to more indentation. how does that affect
+    readability?
+    """
+
+    def __init__(self, description: str):
+        """description is human readable.
+        """
+        self.description = description
+
+    def __enter__(self):
+        logger.debug(f"{self.description}: start", stacklevel=2)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_value is None:
+            logger.debug(f"{self.description}: end", stacklevel=2)
+        else:
+            logger.debug(f"{self.description}: end with exception", stacklevel=2)
+            # the exception could be logged here or not. and other
+            # observability channels that store more structured stuff
+            # might like that - even if parsl.log doesn't like it.
+
