@@ -352,14 +352,8 @@ class DataFlowKernel:
                 task_record['fail_cost'] += 1
 
             if isinstance(e, DependencyError):
-                # was this sending two task log infos? if so would I see the row twice in the monitoring db?
-                self.update_task_state(task_record, States.dep_fail)
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
-                task_record['time_returned'] = datetime.datetime.now()
-                self._send_task_log_info(task_record)
-                self.memoizer.update_memo(task_record)
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                self._complete_task_exception(task_record, States.dep_fail, e)
 
             elif task_record['fail_cost'] <= self._config.retries:
 
@@ -379,12 +373,7 @@ class DataFlowKernel:
             else:
                 logger.exception("Task {} failed after {} retry attempts".format(task_id,
                                                                                  task_record['try_id']))
-                self.update_task_state(task_record, States.failed)
-                task_record['time_returned'] = datetime.datetime.now()
-                self._send_task_log_info(task_record)
-                self.memoizer.update_memo(task_record)
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                self._complete_task_exception(task_record, States.failed, e)
 
         else:
             if task_record['from_memo']:
@@ -422,13 +411,10 @@ class DataFlowKernel:
                     for inner_future in joinable:
                         inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                 else:
-                    self.update_task_state(task_record, States.failed)
-                    task_record['time_returned'] = datetime.datetime.now()
-                    self._send_task_log_info(task_record)
-                    self.memoizer.update_memo(task_record)
-                    with task_record['app_fu']._update_lock:
-                        task_record['app_fu'].set_exception(
-                            TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
+                    self._complete_task_exception(
+                        task_record,
+                        States.failed,
+                        TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
@@ -499,12 +485,7 @@ class DataFlowKernel:
                 # no need to update the fail cost because join apps are never
                 # retried
 
-                self.update_task_state(task_record, States.failed)
-                task_record['time_returned'] = datetime.datetime.now()
-                self.memoizer.update_memo(task_record)
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
-                self._send_task_log_info(task_record)
+                self._complete_task_exception(task_record, States.failed, e)
 
             else:
                 # all the joinables succeeded, so construct a result:
@@ -564,6 +545,25 @@ class DataFlowKernel:
 
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
+
+    def _complete_task_exception(self, task_record: TaskRecord, new_state: States, exception: BaseException) -> None:
+        """Set a task into a failure state
+        """
+        assert new_state in FINAL_STATES
+        assert new_state in FINAL_FAILURE_STATES
+        old_state = task_record['status']
+
+        self.update_task_state(task_record, new_state)
+
+        logger.info(f"Task {task_record['id']} failed ({old_state.name} -> {new_state.name})")
+        task_record['time_returned'] = datetime.datetime.now()
+
+        self.memoizer.update_memo(task_record)
+
+        self._send_task_log_info(task_record)
+
+        with task_record['app_fu']._update_lock:
+            task_record['app_fu'].set_exception(exception)
 
     def update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
         """Updates a task record state, and recording an appropriate change
