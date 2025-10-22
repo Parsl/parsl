@@ -107,6 +107,8 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
         return result_iterator()
 
     def shutdown(self, wait: bool = True, *, cancel_futures: bool = False) -> None:
+        if self._dfk is None:
+            return  # Do nothing. Nothing is active
         if cancel_futures:
             warn(message="Canceling on-going tasks is not supported in Parsl")
         if wait:
