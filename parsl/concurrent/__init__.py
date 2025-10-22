@@ -1,12 +1,11 @@
 """Interfaces modeled after Python's `concurrent library <https://docs.python.org/3/library/concurrent.html>`_"""
+import time
 from concurrent.futures import Executor
 from contextlib import AbstractContextManager
-from typing import Callable, Dict, Iterable, Iterator, Optional, Literal
+from typing import Callable, Dict, Iterable, Iterator, Literal, Optional
 from warnings import warn
-import time
 
-from parsl import load
-from parsl import Config, DataFlowKernel
+from parsl import Config, DataFlowKernel, load
 from parsl.app.python import PythonApp
 
 

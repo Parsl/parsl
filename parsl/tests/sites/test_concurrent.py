@@ -1,9 +1,8 @@
 """Tests of the interfaces to Python's concurrent library"""
-from pytest import mark, warns, raises
+from pytest import mark, raises, warns
 
-from parsl import Config, HighThroughputExecutor
+from parsl import Config, HighThroughputExecutor, load
 from parsl.concurrent import ParslPoolExecutor
-from parsl import load
 
 
 def f(x):
