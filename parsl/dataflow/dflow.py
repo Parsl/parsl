@@ -190,7 +190,7 @@ class DataFlowKernel:
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
-        self.dependency_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Dependency-Launch")
+        self._task_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Task-Launch")
 
         self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
             else SHALLOW_DEPENDENCY_RESOLVER
@@ -608,7 +608,7 @@ class DataFlowKernel:
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
-        self.dependency_launch_pool.submit(self._launch_if_ready_async, task_record)
+        self._task_launch_pool.submit(self._launch_if_ready_async, task_record)
 
     @wrap_with_logs
     def _launch_if_ready_async(self, task_record: TaskRecord) -> None:
@@ -1203,9 +1203,9 @@ class DataFlowKernel:
             self.monitoring.close()
             logger.info("Terminated monitoring")
 
-        logger.info("Terminating dependency launch pool")
-        self.dependency_launch_pool.shutdown()
-        logger.info("Terminated dependency launch pool")
+        logger.info("Terminating task launch pool")
+        self._task_launch_pool.shutdown()
+        logger.info("Terminated task launch pool")
 
         logger.info("Unregistering atexit hook")
         atexit.unregister(self.atexit_cleanup)
