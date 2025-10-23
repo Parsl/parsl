@@ -138,9 +138,6 @@ class Interchange:
 
         self.pending_task_queue: SortedList[Any] = SortedList(key=lambda tup: (tup[0], tup[1]))
 
-        # count of tasks that have been received from the submit side
-        self.task_counter = 0
-
         # count of tasks that have been sent out to worker pools
         self.count = 0
 
@@ -332,15 +329,15 @@ class Interchange:
             msg = self.task_incoming.recv_pyobj()
 
             # Process priority, higher number = lower priority
+            task_id = msg['task_id']
             resource_spec = msg['context'].get('resource_spec', {})
             priority = resource_spec.get('priority', float('inf'))
-            queue_entry = (-priority, -self.task_counter, msg)
+            queue_entry = (-priority, -task_id, msg)
 
-            logger.debug("putting message onto pending_task_queue")
+            logger.debug("Putting task %s onto pending_task_queue", task_id)
 
             self.pending_task_queue.add(queue_entry)
-            self.task_counter += 1
-            logger.debug(f"Fetched {self.task_counter} tasks so far")
+            logger.debug("Put task %s onto pending_task_queue", task_id)
 
     def process_manager_socket_message(
         self,
