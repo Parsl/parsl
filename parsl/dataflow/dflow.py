@@ -811,8 +811,10 @@ class DataFlowKernel:
 
         return tuple(newargs), kwargs, func
 
-    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable) -> Callable:
-        self._logger.debug("Adding output dependencies")
+    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable,
+                         task_record: TaskRecord) -> Callable:
+        tl = task_record['logger']
+        tl.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         app_fut._outputs = []
 
@@ -834,13 +836,13 @@ class DataFlowKernel:
                 # while the DataFuture-contained original will not be modified by any staging.
                 f_copy = file.cleancopy()
 
-                self._logger.debug("Submitting stage out for output file {}".format(repr(file)))
+                tl.debug("Submitting stage out for output file {}".format(repr(file)))
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
-                    self._logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
+                    tl.debug("Adding a dependency on stageout future for {}".format(repr(file)))
                     df = DataFuture(stageout_fut, file, tid=app_fut.tid)
                 else:
-                    self._logger.debug("No stageout dependency for {}".format(repr(file)))
+                    tl.debug("No stageout dependency for {}".format(repr(file)))
                     df = DataFuture(app_fut, file, tid=app_fut.tid)
 
                 # this is a hook for post-task stageout
@@ -849,7 +851,7 @@ class DataFlowKernel:
                 rewritable_func = self.data_manager.replace_task_stage_out(f_copy, rewritable_func, executor)
                 return rewritable_func, f_copy, df
             else:
-                self._logger.debug("Not performing output staging for: {}".format(repr(file)))
+                tl.debug("Not performing output staging for: {}".format(repr(file)))
                 return rewritable_func, file, DataFuture(app_fut, file, tid=app_fut.tid)
 
         for idx, file in enumerate(outputs):
@@ -1055,9 +1057,11 @@ class DataFlowKernel:
         # Transform remote input files to data futures
         app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
-        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
+        # could be mutating on the task_record now that is being passed in for
+        # logging scope?
+        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func, task_record)
 
-        self._logger.debug("Added output dependencies")
+        task_logger.debug("Added output dependencies")
 
         # Replace the function invocation in the TaskRecord with whatever file-staging
         # substitutions have been made.
@@ -1066,7 +1070,7 @@ class DataFlowKernel:
                     'func': func,
                     'kwargs': app_kwargs})
 
-        with LexicalSpan(self._logger, "Gathering dependencies"):
+        with LexicalSpan(task_logger, "Gathering dependencies"):
             # Get the list of dependencies for the task
             depends = self._gather_all_deps(app_args, app_kwargs)
             task_record['depends'] = depends
