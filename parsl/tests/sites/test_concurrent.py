@@ -68,4 +68,4 @@ def test_with_dfk():
     with load(config) as dfk, ParslPoolExecutor(dfk=dfk, executors=['test_executor']) as exc:
         future = exc.submit(f, 1)
         assert future.result() == 2
-        assert next(iter(exc._app_cache.values())).executors == ['test_executor'], 'Executors were not passed through'
+        assert exc.get_app(f).executors == ['test_executor']

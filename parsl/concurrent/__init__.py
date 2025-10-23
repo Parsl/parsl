@@ -63,7 +63,7 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
         """Number of functions currently registered with the executor"""
         return len(self._app_cache)
 
-    def _get_app(self, fn: Callable) -> PythonApp:
+    def get_app(self, fn: Callable) -> PythonApp:
         """Create a PythonApp for a function
 
         Args:
@@ -80,7 +80,7 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
     def submit(self, fn, *args, **kwargs):
         if self._dfk is None:
             raise RuntimeError('Executor has been shut down.')
-        app = self._get_app(fn)
+        app = self.get_app(fn)
         return app(*args, **kwargs)
 
     # TODO (wardlt): This override can go away when Parsl supports cancel
@@ -90,7 +90,7 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
             end_time = timeout + time.monotonic()
 
         # Submit the applications
-        app = self._get_app(fn)
+        app = self.get_app(fn)
         fs = [app(*args) for args in zip(*iterables)]
 
         # Yield the futures as completed
