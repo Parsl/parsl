@@ -13,6 +13,7 @@ Core
     parsl.app.app.join_app
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
+    parsl.concurrent.ParslPoolExecutor
     parsl.dataflow.dependency_resolvers.DependencyResolver
     parsl.dataflow.dependency_resolvers.DEEP_DEPENDENCY_RESOLVER
     parsl.dataflow.dependency_resolvers.SHALLOW_DEPENDENCY_RESOLVER

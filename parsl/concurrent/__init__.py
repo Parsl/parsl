@@ -24,7 +24,7 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
        The executor assumes you will start and stop the Parsl DFK outside the Executor.
 
     The futures returned by :meth:`submit` and :meth:`map` are Parsl futures and will work
-    with the same function chaining mechanisms as pa
+    with the same function chaining mechanisms as when using Parsl with decorators.
 
     .. code-block:: python
 
