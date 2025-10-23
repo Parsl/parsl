@@ -29,12 +29,15 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self, label: str = 'threads', max_threads: Optional[int] = 2,
-                 thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
+                 thread_name_prefix: str | None = None, storage_access: Optional[List[Staging]] = None,
                  working_dir: Optional[str] = None, remote_monitoring_radio: Optional[RadioConfig] = None):
         ParslExecutor.__init__(self)
         self.label = label
         self.max_threads = max_threads
-        self.thread_name_prefix = thread_name_prefix
+        if thread_name_prefix is None:
+            self.thread_name_prefix = "ThreadPoolExecutor-" + label
+        else:
+            self.thread_name_prefix = thread_name_prefix
 
         # we allow storage_access to be None now, which means something else to [] now
         # None now means that a default storage access list will be used, while
