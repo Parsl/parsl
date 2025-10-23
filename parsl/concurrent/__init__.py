@@ -97,6 +97,15 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
         return app
 
     def submit(self, fn, *args, **kwargs):
+        """Submits a callable to be executed with the given arguments.
+
+        Schedules the callable to be executed as ``fn(*args, **kwargs)`` and returns
+        a Future instance representing the execution of the callable.
+
+        Returns:
+            A Future representing the given call.
+        """
+
         if self._dfk is None:
             raise RuntimeError('Executor has been shut down.')
         app = self.get_app(fn)
@@ -104,6 +113,26 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
 
     # TODO (wardlt): This override can go away when Parsl supports cancel
     def map(self, fn: Callable, *iterables: Iterable, timeout: Optional[float] = None, chunksize: int = 1) -> Iterator:
+        """Returns an iterator equivalent to map(fn, iter).
+
+        Args:
+            fn: A callable that will take as many arguments as there are
+                passed iterables.
+            timeout: The maximum number of seconds to wait. If None, then there
+                is no limit on the wait time.
+            chunksize: If greater than one, the iterables will be chopped into
+                chunks of size chunksize and submitted to the process pool.
+                If set to one, the items in the list will be sent one at a time.
+
+        Returns:
+            An iterator equivalent to: map(func, ``*iterables``) but the calls may
+            be evaluated out-of-order.
+
+        Raises:
+            TimeoutError: If the entire result iterator could not be generated
+                before the given timeout.
+            Exception: If ``fn(*args)`` raises for any values.
+        """
         # This is a version of the CPython 3.9 `.map` implementation modified to not use `cancel`
         if timeout is not None:
             end_time = timeout + time.monotonic()
