@@ -1,6 +1,7 @@
 import functools
 import logging
 import threading
+import uuid
 from typing import Callable, Optional
 
 
@@ -18,16 +19,18 @@ def wrap_with_logs(fn: Optional[Callable] = None, target: str = __name__) -> Cal
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
             assert func is not None
+            uid = uuid.uuid4()
             thread = threading.current_thread()
             name = f"{func.__name__} on thread {thread.name}"
             logger = logging.getLogger(target)
 
             try:
+                logger.debug("Starting %s", name, extra={"wrap_id": uid})
                 r = func(*args, **kwargs)
-                logger.debug("Normal ending for {}".format(name))
+                logger.debug("Normal ending for %s", name, extra={"wrap_id": uid})
                 return r
             except Exception:
-                logger.error("Exceptional ending for {}".format(name), exc_info=True)
+                logger.error("Exceptional ending for %s", name, exc_info=True, extra={"wrap_id": uid})
                 raise
 
         return wrapped
