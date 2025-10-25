@@ -10,6 +10,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobState
+from parsl.log_utils import LexicalSpan
 from parsl.process_loggers import wrap_with_logs
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,9 @@ class ExecutorState(TypedDict):
     """True if this executor has not yet had a strategy poll.
     """
 
+
+# TODO: how does this get its DFK scope? pass it in at init, and avoid using a
+# module level logger entirely?
 
 class Strategy:
     """Scaling strategy.
@@ -184,16 +188,23 @@ class Strategy:
         logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(executors)} executors")
 
         for executor in executors:
-            label = executor.label
+            self._general_strategy_for_executor(executor, strategy_type)
+
+    @wrap_with_logs
+    def _general_strategy_for_executor(self, executor: BlockProviderExecutor, strategy_type: str) -> None:
+        label = executor.label
+        with LexicalSpan(logger, "strategizing for executor {label}"):
+            # TODO ability to add extra attributes here, usin with span as new_logger. and then logging
+            # to new_logger, a suitable adapter
 
             if executor.bad_state_is_set:
-                logger.info(f"Not strategizing for executor {label} because bad state is set")
-                continue
+                logger.info(f"Not strategizing for executor {label} because bad state is set", extra={"parsl_executor": label})
+                return
 
-            logger.debug(f"Strategizing for executor {label}")
+            logger.debug(f"Strategizing for executor {label}", extra={"parsl_executor": label})
 
             if self.executors[label]['first']:
-                logger.debug(f"Scaling out {executor.provider.init_blocks} initial blocks for {label}")
+                logger.debug(f"Scaling out {executor.provider.init_blocks} initial blocks for {label}", extra={"parsl_executor": label})
                 executor.scale_out_facade(executor.provider.init_blocks)
                 self.executors[label]['first'] = False
 
@@ -216,10 +227,12 @@ class Strategy:
             active_blocks = running + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}")
+            logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}",
+                         extra={"parsl_executor": label, "active_slots": active_slots, "active_tasks": active_tasks, "metric": "slot_ratio"})
 
             logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
-                label, active_tasks, running, pending))
+                label, active_tasks, running, pending),
+                         extra={"parsl_executor": label, "active_tasks": active_tasks, "blocks_running": running, "blocks_pending": pending})
 
             # reset idle timer if executor has active tasks
 
@@ -230,21 +243,24 @@ class Strategy:
             # No tasks.
             if active_tasks == 0:
                 # Case 1a
-                logger.debug("Strategy case 1: Executor has no active tasks")
+                logger.debug("Strategy case 1: Executor has no active tasks", extra={"parsl_executor": label})
 
                 # Fewer blocks that min_blocks
                 if active_blocks <= min_blocks:
-                    logger.debug("Strategy case 1a: Executor has no active tasks and minimum blocks. Taking no action.")
+                    logger.debug("Strategy case 1a: Executor has no active tasks and minimum blocks. Taking no action.",
+                                 extra={"parsl_executor": label})
                 # Case 1b
                 # More blocks than min_blocks. Scale in
                 else:
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
                     logger.debug(f"Strategy case 1b: Executor has no active tasks, and more ({active_blocks})"
-                                 f" than minimum blocks ({min_blocks})")
+                                 f" than minimum blocks ({min_blocks})",
+                                 extra={"parsl_executor": label, "blocks_active": active_blocks, "blocks_min": min_blocks})
 
                     if not self.executors[executor.label]['idle_since']:
-                        logger.debug(f"Starting idle timer for executor. If idle time exceeds {self.max_idletime}s, blocks will be scaled in")
+                        logger.debug(f"Starting idle timer for executor. If idle time exceeds {self.max_idletime}s, blocks will be scaled in",
+                                     extra={"parsl_executor": label, "max_idletime": self.max_idletime})
                         self.executors[executor.label]['idle_since'] = time.time()
                     idle_since = self.executors[executor.label]['idle_since']
                     assert idle_since is not None, "The `if` statement above this assert should have forced idle time to be not-None"
@@ -253,48 +269,54 @@ class Strategy:
                     if idle_duration > self.max_idletime:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
-                        logger.debug(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in")
+                        logger.debug(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in",
+                                     extra={"parsl_executor": label, "max_idletime": self.max_idletime})
                         executor.scale_in_facade(active_blocks - min_blocks)
 
                     else:
                         logger.debug(
                                 f"Idle time {idle_duration}s is less than max_idletime {self.max_idletime}s"
-                                f" for executor {label}; not scaling in")
+                                f" for executor {label}; not scaling in",
+                                extra={"parsl_executor": label, "max_idletime": self.max_idletime, "idle_duration": idle_duration})
 
             # Case 2
             # More tasks than the available slots.
             elif (float(active_slots) / active_tasks) < parallelism:
-                logger.debug("Strategy case 2: slots are overloaded - (slot_ratio = active_slots/active_tasks) < parallelism")
+                logger.debug("Strategy case 2: slots are overloaded - (slot_ratio = active_slots/active_tasks) < parallelism",
+                             extra={"parsl_executor": label})
 
                 # Case 2a
                 # We have the max blocks possible
                 if active_blocks >= max_blocks:
                     # Ignore since we already have the max nodes
-                    logger.debug(f"Strategy case 2a: active_blocks {active_blocks} >= max_blocks {max_blocks} so not scaling out")
+                    logger.debug(f"Strategy case 2a: active_blocks {active_blocks} >= max_blocks {max_blocks} so not scaling out",
+                                 extra={"parsl_executor": label, "blocks_active": active_blocks, "blocks_max": max_blocks})
                 # Case 2b
                 else:
-                    logger.debug(f"Strategy case 2b: active_blocks {active_blocks} < max_blocks {max_blocks} so scaling out")
+                    logger.debug(f"Strategy case 2b: active_blocks {active_blocks} < max_blocks {max_blocks} so scaling out",
+                                 extra={"parsl_executor": label, "blocks_active": active_blocks, "blocks_max": max_blocks})
                     excess_slots = math.ceil((active_tasks * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
-                    logger.debug(f"Requesting {excess_blocks} more blocks")
+                    logger.debug(f"Requesting {excess_blocks} more blocks", extra={"parsl_executor": label, "excess_blocks": excess_blocks})
                     executor.scale_out_facade(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
-                logger.debug("Strategy case 4a: No active slots but some active tasks - could scale out by a single block")
+                logger.debug("Strategy case 4a: No active slots but some active tasks - could scale out by a single block",
+                             extra={"parsl_executor": label})
 
                 # Case 4a
                 if active_blocks < max_blocks:
-                    logger.debug("Requesting single block")
+                    logger.debug("Requesting single block", extra={"parsl_executor": label})
 
                     executor.scale_out_facade(1)
                 else:
-                    logger.debug("Not requesting single block, because at maxblocks already")
+                    logger.debug("Not requesting single block, because at maxblocks already", extra={"parsl_executor": label})
 
             # Case 4b
             # More slots than tasks
             elif active_slots > 0 and active_slots > active_tasks:
-                logger.debug("Strategy case 4b: more slots than tasks")
+                logger.debug("Strategy case 4b: more slots than tasks", extra={"parsl_executor": label})
                 if strategy_type == 'htex':
                     # Scale in for htex
                     if isinstance(executor, HighThroughputExecutor):
@@ -302,14 +324,17 @@ class Strategy:
                             excess_slots = math.floor(active_slots - (active_tasks * parallelism))
                             excess_blocks = math.floor(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
-                            logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
+                            logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s",
+                                         extra={"parsl_executor": label, "excess_blocks": excess_blocks})
                             executor.scale_in_facade(excess_blocks, max_idletime=self.max_idletime)
                     else:
-                        logger.error("This strategy does not support scaling in except for HighThroughputExecutor - taking no action")
+                        logger.error("This strategy does not support scaling in except for HighThroughputExecutor - taking no action",
+                                     extra={"parsl_executor": label})
                 else:
-                    logger.debug("This strategy does not support scaling in")
+                    logger.debug("This strategy does not support scaling in", extra={"parsl_executor": label})
 
             # Case 3
             # tasks ~ slots
             else:
-                logger.debug("Strategy case 3: no changes necessary to current block load")
+                logger.debug("Strategy case 3: no changes necessary to current block load",
+                             extra={"parsl_executor": label, "strategy_case": "3"})  # TODO: label up other strategy cases

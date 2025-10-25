@@ -197,10 +197,10 @@ class BlockProviderExecutor(ParslExecutor):
             raise ScalingFailed(self, "No execution provider available")
         block_ids = []
         monitoring_status_changes = {}
-        logger.info(f"Scaling out by {n} blocks")
+        logger.info(f"Scaling out by {n} blocks", extra={"parsl_executor": self.label, "count": n})
         for _ in range(n):
             block_id = str(self._block_id_counter.get_id())
-            logger.info(f"Allocated block ID {block_id}")
+            logger.info(f"Allocated block ID {block_id}", extra={"parsl_executor": self.label, "block_id": block_id})
             try:
                 job_id = self._launch_block(block_id)
 
@@ -283,7 +283,16 @@ class BlockProviderExecutor(ParslExecutor):
         pass
 
     def send_monitoring_info(self, status: Dict) -> None:
-        # Send monitoring info for HTEX when monitoring enabled
+        """Send monitoring info for HTEX when monitoring enabled. also log this for observability."""
+
+        for bid, s in status.items():
+            logger.debug(f"block ID {bid}, new status {s}",
+                         extra={"parsl_dfk": self.run_id,
+                                "parsl_executor": self.label,
+                                "block_id": bid,
+                                "job_id": self.blocks_to_job_id.get(bid, None),
+                                "status": s.status_name})
+
         if self.submit_monitoring_radio:
             msg = self.create_monitoring_info(status)
             logger.debug("Sending block monitoring message: %r", msg)
