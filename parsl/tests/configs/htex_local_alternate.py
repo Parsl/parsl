@@ -25,8 +25,8 @@ from parsl.data_provider.zip import ZipFileStaging
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
 
-# imports for monitoring:
-from parsl.monitoring import MonitoringHub
+from parsl.monitoring.jsonhub import JSONHub
+# from parsl.monitoring import MonitoringHub
 from parsl.providers import LocalProvider
 
 working_dir = os.getcwd() + "/" + "test_htex_alternate"
@@ -58,10 +58,11 @@ def fresh_config():
         strategy='simple',
         app_cache=True, checkpoint_mode='task_exit',
         retries=2,
-        monitoring=MonitoringHub(
-                        monitoring_debug=False,
-                        resource_monitoring_interval=1,
-        ),
+        # monitoring=MonitoringHub(
+        #                monitoring_debug=False,
+        #                resource_monitoring_interval=1,
+        #),
+        monitoring=JSONHub(),
         usage_tracking=3,
         project_name="parsl htex_local_alternate test configuration"
     )

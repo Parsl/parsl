@@ -30,9 +30,11 @@ else:
 
 logger = logging.getLogger(__name__)
 
+class MonitoringHubInterface:
+    pass
 
 @typeguard.typechecked
-class MonitoringHub(RepresentationMixin):
+class MonitoringHub(RepresentationMixin, MonitoringHubInterface):
     def __init__(self,
                  hub_address: Any = None,  # unused, so no type enforcement
                  hub_port_range: Any = None,  # unused, so no type enforcement
