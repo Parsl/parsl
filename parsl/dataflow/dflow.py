@@ -43,9 +43,9 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.log_utils import LexicalSpan
-from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.monitoring import MonitoringHubInterface
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
@@ -189,7 +189,7 @@ class DataFlowKernel:
 
         # Monitoring
 
-        self.monitoring: Optional[MonitoringHub]
+        self.monitoring: Optional[MonitoringHubInterface]
         self.monitoring = config.monitoring
 
         self.monitoring_radio = None

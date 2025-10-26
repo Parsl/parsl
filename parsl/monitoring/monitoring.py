@@ -32,8 +32,23 @@ else:
 logger = logging.getLogger(__name__)
 
 
+class MonitoringHubInterface:
+    resource_msgs: Any
+    workflow_name: Any
+    workflow_version: Any
+    resource_monitoring_enabled: Any
+    resource_monitoring_interval: Any
+    monitoring_debug: Any
+
+    def start(self, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
 @typeguard.typechecked
-class MonitoringHub(RepresentationMixin):
+class MonitoringHub(RepresentationMixin, MonitoringHubInterface):
     def __init__(self,
                  hub_address: Any = None,  # unused, so no type enforcement
                  hub_port_range: Any = None,  # unused, so no type enforcement

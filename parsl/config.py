@@ -9,7 +9,7 @@ from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.monitoring import MonitoringHub
+from parsl.monitoring.monitoring import MonitoringHubInterface
 from parsl.usage_tracking.api import UsageInformation
 from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
 from parsl.usage_tracking.levels import LEVEL_3 as USAGE_TRACKING_LEVEL_3
@@ -119,7 +119,7 @@ class Config(RepresentationMixin, UsageInformation):
                  strategy: Optional[str] = 'simple',
                  strategy_period: Union[float, int] = 5,
                  max_idletime: float = 120.0,
-                 monitoring: Optional[MonitoringHub] = None,
+                 monitoring: Optional[MonitoringHubInterface] = None,
                  usage_tracking: int = 0,
                  project_name: Optional[str] = None,
                  initialize_logging: bool | Callable = True) -> None:
