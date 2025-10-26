@@ -46,9 +46,9 @@ from parsl.log_utils import LexicalSpan
 from parsl.logconfigs.base import LogConfig
 from parsl.logconfigs.file import FileLogging
 from parsl.logconfigs.remote import logging_wrapper
-from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.monitoring import MonitoringHubInterface
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
@@ -189,7 +189,7 @@ class DataFlowKernel:
 
         # Monitoring
 
-        self.monitoring: Optional[MonitoringHub]
+        self.monitoring: Optional[MonitoringHubInterface]
         self.monitoring = config.monitoring
 
         self.monitoring_radio = None
