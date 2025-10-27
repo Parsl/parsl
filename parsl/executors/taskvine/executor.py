@@ -327,6 +327,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         return os.path.join(self._function_data_dir.name, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
+        import cloudpickle
         """Processes the Parsl app by its arguments and submits the function
         information to the task queue, to be executed using the TaskVine
         system. The args and kwargs are processed for input and output files to
@@ -463,8 +464,15 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     function_context_args = resource_specification.get('function_context_args', [])
                     function_context_kwargs = resource_specification.get('function_context_kwargs', {})
                     function_context_file = os.path.join(self._function_data_dir.name, func.__name__, 'function_context')
-                    self._serialize_object_to_file(function_context_file, [function_context, function_context_args, function_context_kwargs])
+
+                    # DEBUG
+                    with open('/tmp/tmp.context.executor.function.module.file', 'w') as f:
+                        f.write(str(function_context.__module__))
+
+                    self._cloudpickle_serialize_object_to_file(function_context_file, [function_context, function_context_args, function_context_kwargs])
                     self._map_func_names_to_func_details[func.__name__].update({'function_context_file': function_context_file})
+                    # DEBUG
+                    shutil.copyfile(function_context_file, '/tmp/tmp.context.file')
                 else:
                     function_context_file = self._map_func_names_to_func_details[func.__name__]['function_context_file']
 
@@ -476,6 +484,21 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self._serialize_object_to_file(function_file, func)
             if exec_mode == 'serverless':
                 self._map_func_names_to_func_details[func.__name__]['is_serialized'] = True
+
+        # DEBUG
+        if exec_mode == 'serverless':
+            import copy
+            kwargs = copy.deepcopy(kwargs)
+            logger.info(f'ThanhDBG before trimming kwargs: {kwargs}')
+            # pop function context stuff, that should not propagate with the invocation function
+            if 'function_context' in kwargs['parsl_resource_specification']:
+                del kwargs['parsl_resource_specification']['function_context']
+            if 'function_context_args' in kwargs['parsl_resource_specification']:
+                del kwargs['parsl_resource_specification']['function_context_args']
+            if 'function_context_kwargs' in kwargs['parsl_resource_specification']:
+                del kwargs['parsl_resource_specification']['function_context_kwargs']
+            logger.info(f'ThanhDBG after trimming kwargs: {kwargs}')
+
         args_dict = {'args': args, 'kwargs': kwargs}
         self._serialize_object_to_file(argument_file, args_dict)
 
@@ -559,6 +582,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             written = 0
             while written < len(serialized_obj):
                 written += f_out.write(serialized_obj[written:])
+
+    def _cloudpickle_serialize_object_to_file(self, path, obj):
+        """Takes any object and serializes it to the file path."""
+        import cloudpickle
+        with open(path, 'wb') as f:
+            cloudpickle.dump(obj, f)
 
     def _construct_map_file(self, map_file, input_files, output_files):
         """ Map local filepath of parsl files to the filenames at the execution worker.
