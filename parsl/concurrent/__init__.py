@@ -23,7 +23,26 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
     2. Supplying an already-started Parsl :class:`~parsl.DataFlowKernel` (DFK).
        The executor assumes you will start and stop the Parsl DFK outside the Executor.
 
-    Note: Parsl does not support canceling tasks. The :meth:`map` method does not cancel work
+    The futures returned by :meth:`submit` and :meth:`map` are Parsl futures and will work
+    with the same function chaining mechanisms as when using Parsl with decorators.
+
+    .. code-block:: python
+
+        def f(x):
+            return x + 1
+
+        @python_app
+        def parity(x):
+            return 'odd' if x % 2 == 1 else 'even'
+
+        with ParslPoolExecutor(config=my_parsl_config) as executor:
+            future_1 = executor.submit(f, 1)
+            assert parity(future_1) == 'even'  # Function chaining, as expected
+
+            future_2 = executor.submit(f, future_1)
+            assert future_2.result() == 3  # Chaining works with `submit` too
+
+    Parsl does not support canceling tasks. The :meth:`map` method does not cancel work
     when one member of the run fails or a timeout is reached
     and :meth:`shutdown` does not cancel work on completion.
     """
@@ -63,7 +82,7 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
         """Number of functions currently registered with the executor"""
         return len(self._app_cache)
 
-    def _get_app(self, fn: Callable) -> PythonApp:
+    def get_app(self, fn: Callable) -> PythonApp:
         """Create a PythonApp for a function
 
         Args:
@@ -78,19 +97,48 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
         return app
 
     def submit(self, fn, *args, **kwargs):
+        """Submits a callable to be executed with the given arguments.
+
+        Schedules the callable to be executed as ``fn(*args, **kwargs)`` and returns
+        a Future instance representing the execution of the callable.
+
+        Returns:
+            A Future representing the given call.
+        """
+
         if self._dfk is None:
             raise RuntimeError('Executor has been shut down.')
-        app = self._get_app(fn)
+        app = self.get_app(fn)
         return app(*args, **kwargs)
 
     # TODO (wardlt): This override can go away when Parsl supports cancel
     def map(self, fn: Callable, *iterables: Iterable, timeout: Optional[float] = None, chunksize: int = 1) -> Iterator:
+        """Returns an iterator equivalent to map(fn, iter).
+
+        Args:
+            fn: A callable that will take as many arguments as there are
+                passed iterables.
+            timeout: The maximum number of seconds to wait. If None, then there
+                is no limit on the wait time.
+            chunksize: If greater than one, the iterables will be chopped into
+                chunks of size chunksize and submitted to the process pool.
+                If set to one, the items in the list will be sent one at a time.
+
+        Returns:
+            An iterator equivalent to: map(func, ``*iterables``) but the calls may
+            be evaluated out-of-order.
+
+        Raises:
+            TimeoutError: If the entire result iterator could not be generated
+                before the given timeout.
+            Exception: If ``fn(*args)`` raises for any values.
+        """
         # This is a version of the CPython 3.9 `.map` implementation modified to not use `cancel`
         if timeout is not None:
             end_time = timeout + time.monotonic()
 
         # Submit the applications
-        app = self._get_app(fn)
+        app = self.get_app(fn)
         fs = [app(*args) for args in zip(*iterables)]
 
         # Yield the futures as completed

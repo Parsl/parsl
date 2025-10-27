@@ -1,12 +1,24 @@
 """Tests of the interfaces to Python's concurrent library"""
 from pytest import mark, raises, warns
 
-from parsl import Config, HighThroughputExecutor, load
+from parsl import Config, HighThroughputExecutor, load, python_app
 from parsl.concurrent import ParslPoolExecutor
 
 
 def f(x):
     return x + 1
+
+
+def g(x):
+    return 2 * x
+
+
+@python_app
+def is_odd(x):
+    if x % 2 == 1:
+        return 1
+    else:
+        return 0
 
 
 def make_config():
@@ -68,4 +80,17 @@ def test_with_dfk():
     with load(config) as dfk, ParslPoolExecutor(dfk=dfk, executors=['test_executor']) as exc:
         future = exc.submit(f, 1)
         assert future.result() == 2
-        assert next(iter(exc._app_cache.values())).executors == ['test_executor'], 'Executors were not passed through'
+        assert exc.get_app(f).executors == ['test_executor']
+
+
+@mark.local
+def test_chaining():
+    """Make sure the executor functions can be chained together"""
+    config = make_config()
+
+    with ParslPoolExecutor(config) as exc:
+        future_odd = exc.submit(f, 10)
+        assert is_odd(future_odd).result()
+
+        future_even = exc.submit(g, future_odd)
+        assert not is_odd(future_even).result()
