@@ -131,7 +131,13 @@ def get_std_fname_mode(
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
         if len(stdfspec) != 2:
-            msg = (f"std descriptor {fdname} has incorrect tuple length "
+            # this is annotated as unreachable because the type annotation says
+            # it cannot be reached. Earlier versions of typeguard did not enforce
+            # that type annotation at runtime, though, and the parameters to this
+            # function come from the user.
+            # When typeguard lower bound is raised to around version 4, this
+            # unreachable can be removed.
+            msg = (f"std descriptor {fdname} has incorrect tuple length "  # type: ignore[unreachable]
                    f"{len(stdfspec)}")
             raise pe.BadStdStreamFile(msg)
         fname, mode = stdfspec
