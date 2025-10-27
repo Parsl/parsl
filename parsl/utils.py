@@ -125,10 +125,15 @@ def get_std_fname_mode(
     fdname: str,
     stdfspec: Union[os.PathLike, str, Tuple[str, str], Tuple[os.PathLike, str]]
 ) -> Tuple[str, str]:
+    import parsl.app.errors as pe
     if isinstance(stdfspec, (str, os.PathLike)):
         fname = stdfspec
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
+        if len(stdfspec) != 2:
+            msg = (f"std descriptor {fdname} has incorrect tuple length "
+                   f"{len(stdfspec)}")
+            raise pe.BadStdStreamFile(msg)
         fname, mode = stdfspec
 
     path = os.fspath(fname)
