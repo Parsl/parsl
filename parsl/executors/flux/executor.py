@@ -224,7 +224,7 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
         # add a ``weakref.finalize()`` function for joining the executor thread
         weakref.finalize(
             self,
-            lambda x, y: x.set() or y.join(),
+            lambda x, y: x.set() or y.join(),  # type: ignore[func-returns-value]
             self._stop_event,
             self._submission_thread,
         )
