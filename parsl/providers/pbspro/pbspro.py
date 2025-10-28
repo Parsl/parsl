@@ -96,7 +96,7 @@ class PBSProProvider(TorqueProvider):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = self.execute_wait("qstat -f -F json {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("qstat -x -f -F json {0}".format(job_id_list))
 
         # If qstat failed do not update job state
         if retcode != 0:
