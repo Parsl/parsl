@@ -1,6 +1,7 @@
 import inspect
 import logging
 import os
+import re
 import shlex
 import subprocess
 import threading
@@ -10,7 +11,6 @@ from types import TracebackType
 from typing import (
     IO,
     Any,
-    AnyStr,
     Callable,
     Dict,
     Generator,
@@ -131,7 +131,13 @@ def get_std_fname_mode(
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
         if len(stdfspec) != 2:
-            msg = (f"std descriptor {fdname} has incorrect tuple length "
+            # this is annotated as unreachable because the type annotation says
+            # it cannot be reached. Earlier versions of typeguard did not enforce
+            # that type annotation at runtime, though, and the parameters to this
+            # function come from the user.
+            # When typeguard lower bound is raised to around version 4, this
+            # unreachable can be removed.
+            msg = (f"std descriptor {fdname} has incorrect tuple length "  # type: ignore[unreachable]
                    f"{len(stdfspec)}")
             raise pe.BadStdStreamFile(msg)
         fname, mode = stdfspec
@@ -156,7 +162,7 @@ def wait_for_file(path: str, seconds: int = 10) -> Generator[None, None, None]:
 
 
 @contextmanager
-def time_limited_open(path: str, mode: str, seconds: int = 1) -> Generator[IO[AnyStr], None, None]:
+def time_limited_open(path: str, mode: str, seconds: int = 1) -> Generator[IO, None, None]:
     with wait_for_file(path, seconds):
         logger.debug("wait_for_file yielded")
     f = open(path, mode)
@@ -249,6 +255,9 @@ class RepresentationMixin:
             args = [getattr(self, a, default) for a in argspec.args[1:]]
         kwargs = {key: getattr(self, key, default) for key in defaults}
 
+        kwonlyargs = {key: getattr(self, key, default) for key in argspec.kwonlyargs}
+        kwargs.update(kwonlyargs)
+
         def assemble_multiline(args: List[str], kwargs: Dict[str, object]) -> str:
             def indent(text: str) -> str:
                 lines = text.splitlines()
@@ -339,6 +348,8 @@ class Timer:
         self._thread.start()
 
     def _wake_up_timer(self) -> None:
+        self.make_callback()
+
         while not self._kill_event.wait(self.interval):
             self.make_callback()
 
@@ -380,3 +391,115 @@ class AutoCancelTimer(threading.Timer):
         exc_tb: Optional[TracebackType]
     ) -> None:
         self.cancel()
+
+
+def sanitize_dns_label_rfc1123(raw_string: str) -> str:
+    """Convert input string to a valid RFC 1123 DNS label.
+
+    Parameters
+    ----------
+    raw_string : str
+        String to sanitize.
+
+    Returns
+    -------
+    str
+        Sanitized string.
+
+    Raises
+    ------
+    ValueError
+        If the string is empty after sanitization.
+    """
+    # Convert to lowercase and replace non-alphanumeric characters with hyphen
+    sanitized = re.sub(r'[^a-z0-9]', '-', raw_string.lower())
+
+    # Remove consecutive hyphens
+    sanitized = re.sub(r'-+', '-', sanitized)
+
+    # DNS label cannot exceed 63 characters
+    sanitized = sanitized[:63]
+
+    # Strip after trimming to avoid trailing hyphens
+    sanitized = sanitized.strip("-")
+
+    if not sanitized:
+        raise ValueError(f"Sanitized DNS label is empty for input '{raw_string}'")
+
+    return sanitized
+
+
+def sanitize_dns_subdomain_rfc1123(raw_string: str) -> str:
+    """Convert input string to a valid RFC 1123 DNS subdomain.
+
+    Parameters
+    ----------
+    raw_string : str
+        String to sanitize.
+
+    Returns
+    -------
+    str
+        Sanitized string.
+
+    Raises
+    ------
+    ValueError
+        If the string is empty after sanitization.
+    """
+    segments = raw_string.split('.')
+
+    sanitized_segments = []
+    for segment in segments:
+        if not segment:
+            continue
+        sanitized_segment = sanitize_dns_label_rfc1123(segment)
+        sanitized_segments.append(sanitized_segment)
+
+    sanitized = '.'.join(sanitized_segments)
+
+    # DNS subdomain cannot exceed 253 characters
+    sanitized = sanitized[:253]
+
+    # Strip after trimming to avoid trailing dots or hyphens
+    sanitized = sanitized.strip(".-")
+
+    if not sanitized:
+        raise ValueError(f"Sanitized DNS subdomain is empty for input '{raw_string}'")
+
+    return sanitized
+
+
+def execute_wait(cmd: str, walltime: Optional[int] = None) -> Tuple[int, str, str]:
+    ''' Synchronously execute a commandline string on the shell.
+
+    Args:
+        - cmd (string) : Commandline string to execute
+        - walltime (int) : walltime in seconds
+
+    Returns:
+        - retcode : Return code from the execution
+        - stdout  : stdout string
+        - stderr  : stderr string
+    '''
+    try:
+        logger.debug("Creating process with command '%s'", cmd)
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            preexec_fn=os.setpgrp
+        )
+        logger.debug("Created process with pid %s. Performing communicate", proc.pid)
+        (stdout, stderr) = proc.communicate(timeout=walltime)
+        retcode = proc.returncode
+        logger.debug("Process %s returned %s", proc.pid, proc.returncode)
+
+    except Exception:
+        logger.exception(f"Execution of command failed:\n{cmd}")
+        raise
+    else:
+        logger.debug("Execution of command in process %s completed normally", proc.pid)
+
+    return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))

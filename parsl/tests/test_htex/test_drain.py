@@ -3,7 +3,6 @@ import time
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
@@ -13,7 +12,9 @@ from parsl.providers import LocalProvider
 # based around the expected drain period: the drain period
 # is TIME_CONST seconds, and the single executed task will
 # last twice that many number of seconds.
-TIME_CONST = 1
+TIME_CONST = 4
+
+CONNECTED_MANAGERS_POLL_MS = 100
 
 
 def local_config():
@@ -26,7 +27,6 @@ def local_config():
                 cores_per_worker=1,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=1,
                     min_blocks=0,
                     max_blocks=0,
@@ -52,7 +52,7 @@ def test_drain(try_assert):
 
     # wait till we have a block running...
 
-    try_assert(lambda: len(htex.connected_managers()) == 1)
+    try_assert(lambda: len(htex.connected_managers()) == 1, check_period_ms=CONNECTED_MANAGERS_POLL_MS)
 
     managers = htex.connected_managers()
     assert managers[0]['active'], "The manager should be active"
@@ -63,7 +63,7 @@ def test_drain(try_assert):
     time.sleep(TIME_CONST)
 
     # this assert should happen *very fast* after the above delay...
-    try_assert(lambda: htex.connected_managers()[0]['draining'], timeout_ms=500)
+    try_assert(lambda: htex.connected_managers()[0]['draining'], timeout_ms=500, check_period_ms=CONNECTED_MANAGERS_POLL_MS)
 
     # and the test task should still be running...
     assert not fut.done(), "The test task should still be running"
@@ -76,4 +76,4 @@ def test_drain(try_assert):
     # connected managers.
     # As with the above draining assert, this should happen very fast after
     # the task ends.
-    try_assert(lambda: len(htex.connected_managers()) == 0, timeout_ms=500)
+    try_assert(lambda: len(htex.connected_managers()) == 0, timeout_ms=500, check_period_ms=CONNECTED_MANAGERS_POLL_MS)

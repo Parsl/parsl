@@ -14,6 +14,7 @@ from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.error_handlers import noop_error_handler, simple_error_handler
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
 
@@ -83,6 +84,13 @@ class BlockProviderExecutor(ParslExecutor):
         # of pending, active and recently terminated blocks
         self._status = {}  # type: Dict[str, JobStatus]
 
+        self.submit_monitoring_radio: Optional[MultiprocessingQueueRadioSender] = None
+
+    def start(self):
+        super().start()
+        if self.monitoring_messages:
+            self.submit_monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring_messages)
+
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
         returns a dictionary mapping each block id to the corresponding status
@@ -114,7 +122,7 @@ class BlockProviderExecutor(ParslExecutor):
         else:
             return self._provider.status_polling_interval
 
-    @abstractproperty
+    @abstractmethod
     def outstanding(self) -> int:
         """This should return the number of tasks that the executor has been given to run (waiting to run, and running now)"""
 
@@ -281,20 +289,20 @@ class BlockProviderExecutor(ParslExecutor):
             logger.debug("Sending block monitoring message: %r", msg)
             self.submit_monitoring_radio.send((MessageType.BLOCK_INFO, msg))
 
-    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
+    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[Dict[str, Any]]:
         """Create a monitoring message for each block based on the poll status.
         """
-        msg = []
-        for bid, s in status.items():
-            d: Dict[str, Any] = {}
-            d['run_id'] = self.run_id
-            d['status'] = s.status_name
-            d['timestamp'] = datetime.datetime.now()
-            d['executor_label'] = self.label
-            d['job_id'] = self.blocks_to_job_id.get(bid, None)
-            d['block_id'] = bid
-            msg.append(d)
-        return msg
+        return [
+            {
+                "run_id": self.run_id,
+                "status": s.status_name,
+                "timestamp": datetime.datetime.now(),
+                "executor_label": self.label,
+                "job_id": self.blocks_to_job_id.get(bid, None),
+                "block_id": bid
+            }
+            for bid, s in status.items()
+        ]
 
     def poll_facade(self) -> None:
         now = time.time()
@@ -347,7 +355,10 @@ class BlockProviderExecutor(ParslExecutor):
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
-                new_status[block_id] = JobStatus(JobState.CANCELLED)
-                del self._status[block_id]
+                logger.debug("Marking block %s as SCALED_IN", block_id)
+                s = JobStatus(JobState.SCALED_IN)
+                new_status[block_id] = s
+                self._status[block_id] = s
+                self._simulated_status[block_id] = s
             self.send_monitoring_info(new_status)
         return block_ids

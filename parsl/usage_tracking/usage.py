@@ -8,7 +8,7 @@ import uuid
 
 from parsl.dataflow.states import States
 from parsl.errors import ConfigurationError
-from parsl.multiprocessing import ForkProcess
+from parsl.multiprocessing import SpawnProcess
 from parsl.usage_tracking.api import get_parsl_usage
 from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
 from parsl.usage_tracking.levels import LEVEL_3 as USAGE_TRACKING_LEVEL_3
@@ -35,7 +35,7 @@ def async_process(fn: Callable[P, None]) -> Callable[P, None]:
     """ Decorator function to launch a function as a separate process """
 
     def run(*args, **kwargs):
-        proc = ForkProcess(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
+        proc = SpawnProcess(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
         proc.start()
         return proc
 
@@ -114,6 +114,7 @@ class UsageTracker:
                                                 sys.version_info.minor,
                                                 sys.version_info.micro)
         self.tracking_level = self.check_tracking_level()
+        self.project_name = self.config.project_name
         self.start_time = None
         logger.debug("Tracking level: {}".format(self.tracking_level))
 
@@ -153,6 +154,9 @@ class UsageTracker:
                    'platform.system': platform.system(),
                    'tracking_level': int(self.tracking_level)}
 
+        if self.project_name:
+            message['project_name'] = self.project_name
+
         if self.tracking_level >= 2:
             message['components'] = get_parsl_usage(self.dfk._config)
 
@@ -188,6 +192,10 @@ class UsageTracker:
                    'end': end_time,
                    'execution_time': end_time - self.start_time,
                    'components': [dfk_component] + get_parsl_usage(self.dfk._config)}
+
+        if self.project_name:
+            message['project_name'] = self.project_name
+
         logger.debug(f"Usage tracking end message (unencoded): {message}")
 
         return self.encode_message(message)
@@ -205,12 +213,14 @@ class UsageTracker:
 
     def send_start_message(self) -> None:
         if self.tracking_level:
+            logger.info("Sending start message for usage tracking")
             self.start_time = time.time()
             message = self.construct_start_message()
             self.send_UDP_message(message)
 
     def send_end_message(self) -> None:
         if self.tracking_level == 3:
+            logger.info("Sending end message for usage tracking")
             message = self.construct_end_message()
             self.send_UDP_message(message)
 
@@ -221,11 +231,15 @@ class UsageTracker:
         definitely either: going to behave broadly the same as to SIGKILL,
         or won't respond to SIGTERM.
         """
-        for proc in self.procs:
-            logger.debug("Joining usage tracking process %s", proc)
-            proc.join(timeout=timeout)
-            if proc.is_alive():
-                logger.warning("Usage tracking process did not end itself; sending SIGKILL")
-                proc.kill()
+        if self.tracking_level:
+            logger.info("Closing usage tracking")
 
-            proc.close()
+            for proc in self.procs:
+                logger.debug("Joining usage tracking process %s", proc)
+                proc.join(timeout=timeout)
+                if proc.is_alive():
+                    logger.warning("Usage tracking process did not end itself; sending SIGKILL")
+                    proc.kill()
+                    proc.join(timeout=timeout)
+
+                proc.close()

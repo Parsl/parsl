@@ -5,7 +5,6 @@ import pytest
 
 import parsl
 from parsl import File, python_app
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
@@ -29,7 +28,6 @@ def local_config():
                 max_workers_per_node=1,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=0,
                     max_blocks=_max_blocks,
                     min_blocks=_min_blocks,
@@ -39,6 +37,7 @@ def local_config():
         ],
         max_idletime=0.5,
         strategy='simple',
+        strategy_period=0.5,
     )
 
 
@@ -67,7 +66,7 @@ def test_scale_out(tmpd_cwd, try_assert):
     num_managers = len(dfk.executors['htex_local'].connected_managers())
 
     assert num_managers == 0, "Expected 0 managers at start"
-    assert dfk.executors['htex_local'].outstanding == 0, "Expected 0 tasks at start"
+    assert dfk.executors['htex_local'].outstanding() == 0, "Expected 0 tasks at start"
 
     ntasks = 10
     ready_path = tmpd_cwd / "workers_ready"
@@ -86,7 +85,7 @@ def test_scale_out(tmpd_cwd, try_assert):
     finish_path.touch()  # Approximation of Event, via files
     [x.result() for x in futs]
 
-    assert dfk.executors['htex_local'].outstanding == 0
+    assert dfk.executors['htex_local'].outstanding() == 0
 
     def assert_kernel():
         return len(dfk.executors['htex_local'].connected_managers()) == _min_blocks

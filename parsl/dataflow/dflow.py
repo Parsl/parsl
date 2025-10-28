@@ -6,8 +6,6 @@ import datetime
 import inspect
 import logging
 import os
-import pathlib
-import pickle
 import random
 import sys
 import threading
@@ -25,12 +23,11 @@ from typeguard import typechecked
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
-from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
-from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
+from parsl.dataflow.errors import DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -46,12 +43,13 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
-from parsl.providers.base import ExecutionProvider
 from parsl.usage_tracking.usage import UsageTracker
-from parsl.utils import Timer, get_all_checkpoints, get_std_fname_mode, get_version
+from parsl.utils import get_std_fname_mode, get_version
 
 logger = logging.getLogger(__name__)
 
@@ -92,14 +90,15 @@ class DataFlowKernel:
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
 
+        self._logging_unregister_callback: Optional[Callable[[], None]]
         if config.initialize_logging:
-            parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+            self._logging_unregister_callback = parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+        else:
+            self._logging_unregister_callback = None
 
         logger.info("Starting DataFlowKernel with config\n{}".format(config))
 
         logger.info("Parsl version: {}".format(get_version()))
-
-        self.checkpoint_lock = threading.Lock()
 
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_start_message()
@@ -113,10 +112,11 @@ class DataFlowKernel:
         self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
 
+        self.monitoring_radio = None
+
         if self.monitoring:
-            if self.monitoring.logdir is None:
-                self.monitoring.logdir = self.run_dir
             self.monitoring.start(self.run_dir, self.config.run_dir)
+            self.monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring.resource_msgs)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -161,22 +161,16 @@ class DataFlowKernel:
                 'host': gethostname(),
         }
 
-        if self.monitoring:
-            self.monitoring.send(MessageType.WORKFLOW_INFO,
-                                 workflow_info)
+        if self.monitoring_radio:
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
+                                       workflow_info))
 
-        if config.checkpoint_files is not None:
-            checkpoints = self.load_checkpoints(config.checkpoint_files)
-        elif config.checkpoint_files is None and config.checkpoint_mode is not None:
-            checkpoints = self.load_checkpoints(get_all_checkpoints(self.run_dir))
-        else:
-            checkpoints = {}
-
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
-        self.checkpointed_tasks = 0
-        self._checkpoint_timer = None
-        self.checkpoint_mode = config.checkpoint_mode
-        self.checkpointable_tasks: List[TaskRecord] = []
+        self.memoizer = Memoizer(memoize=config.app_cache,
+                                 checkpoint_mode=config.checkpoint_mode,
+                                 checkpoint_files=config.checkpoint_files,
+                                 checkpoint_period=config.checkpoint_period)
+        self.memoizer.run_dir = self.run_dir
+        self.memoizer.start()
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
@@ -187,26 +181,16 @@ class DataFlowKernel:
         self.executors: Dict[str, ParslExecutor] = {}
 
         self.data_manager = DataManager(self)
-        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads, label='_parsl_internal')
+        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads,
+                                                     label='_parsl_internal')
         self.add_executors(config.executors)
         self.add_executors([parsl_internal_executor])
-
-        if self.checkpoint_mode == "periodic":
-            if config.checkpoint_period is None:
-                raise ConfigurationError("Checkpoint period must be specified with periodic checkpoint mode")
-            else:
-                try:
-                    h, m, s = map(int, config.checkpoint_period.split(':'))
-                except Exception:
-                    raise ConfigurationError("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
-                checkpoint_period = (h * 3600) + (m * 60) + s
-                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
 
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
-        self.dependency_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Dependency-Launch")
+        self._task_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Task-Launch")
 
         self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
             else SHALLOW_DEPENDENCY_RESOLVER
@@ -236,9 +220,9 @@ class DataFlowKernel:
             raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
-        if self.monitoring:
+        if self.monitoring_radio:
             task_log_info = self._create_task_log_info(task_record)
-            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+            self.monitoring_radio.send((MessageType.TASK_INFO, task_log_info))
 
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
@@ -367,12 +351,9 @@ class DataFlowKernel:
             else:
                 task_record['fail_cost'] += 1
 
-            if task_record['status'] == States.dep_fail:
+            if isinstance(e, DependencyError):
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
-                task_record['time_returned'] = datetime.datetime.now()
-                self._send_task_log_info(task_record)
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                self._complete_task_exception(task_record, States.dep_fail, e)
 
             elif task_record['fail_cost'] <= self._config.retries:
 
@@ -392,59 +373,48 @@ class DataFlowKernel:
             else:
                 logger.exception("Task {} failed after {} retry attempts".format(task_id,
                                                                                  task_record['try_id']))
-                task_record['time_returned'] = datetime.datetime.now()
-                self.update_task_state(task_record, States.failed)
-                task_record['time_returned'] = datetime.datetime.now()
-                self._send_task_log_info(task_record)
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                self._complete_task_exception(task_record, States.failed, e)
 
         else:
             if task_record['from_memo']:
-                self._complete_task(task_record, States.memo_done, res)
-                self._send_task_log_info(task_record)
+                self._complete_task_result(task_record, States.memo_done, res)
+            elif not task_record['join']:
+                self._complete_task_result(task_record, States.exec_done, res)
             else:
-                if not task_record['join']:
-                    self._complete_task(task_record, States.exec_done, res)
+                # This is a join task, and the original task's function code has
+                # completed. That means that the future returned by that code
+                # will be available inside the executor future, so we can now
+                # record the inner app ID in monitoring, and add a completion
+                # listener to that inner future.
+
+                joinable = future.result()
+
+                # Fail with a TypeError if the joinapp python body returned
+                # something we can't join on.
+                if isinstance(joinable, Future):
+                    self.update_task_state(task_record, States.joining)
+                    task_record['joins'] = joinable
+                    task_record['join_lock'] = threading.Lock()
                     self._send_task_log_info(task_record)
+                    joinable.add_done_callback(partial(self.handle_join_update, task_record))
+                elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
+                    self.update_task_state(task_record, States.joining)
+                    task_record['joins'] = joinable
+                    task_record['join_lock'] = threading.Lock()
+                    self._send_task_log_info(task_record)
+                    self.handle_join_update(task_record, None)
+                elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
+                    self.update_task_state(task_record, States.joining)
+                    task_record['joins'] = joinable
+                    task_record['join_lock'] = threading.Lock()
+                    self._send_task_log_info(task_record)
+                    for inner_future in joinable:
+                        inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                 else:
-                    # This is a join task, and the original task's function code has
-                    # completed. That means that the future returned by that code
-                    # will be available inside the executor future, so we can now
-                    # record the inner app ID in monitoring, and add a completion
-                    # listener to that inner future.
-
-                    joinable = future.result()
-
-                    # Fail with a TypeError if the joinapp python body returned
-                    # something we can't join on.
-                    if isinstance(joinable, Future):
-                        self.update_task_state(task_record, States.joining)
-                        task_record['joins'] = joinable
-                        task_record['join_lock'] = threading.Lock()
-                        self._send_task_log_info(task_record)
-                        joinable.add_done_callback(partial(self.handle_join_update, task_record))
-                    elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
-                        self.update_task_state(task_record, States.joining)
-                        task_record['joins'] = joinable
-                        task_record['join_lock'] = threading.Lock()
-                        self._send_task_log_info(task_record)
-                        self.handle_join_update(task_record, None)
-                    elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
-                        self.update_task_state(task_record, States.joining)
-                        task_record['joins'] = joinable
-                        task_record['join_lock'] = threading.Lock()
-                        self._send_task_log_info(task_record)
-                        for inner_future in joinable:
-                            inner_future.add_done_callback(partial(self.handle_join_update, task_record))
-                    else:
-                        task_record['time_returned'] = datetime.datetime.now()
-                        self.update_task_state(task_record, States.failed)
-                        task_record['time_returned'] = datetime.datetime.now()
-                        self._send_task_log_info(task_record)
-                        with task_record['app_fu']._update_lock:
-                            task_record['app_fu'].set_exception(
-                                TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
+                    self._complete_task_exception(
+                        task_record,
+                        States.failed,
+                        TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
@@ -489,24 +459,18 @@ class DataFlowKernel:
 
             # now we know each joinable Future is done
             # so now look for any exceptions
-            exceptions_tids: List[Tuple[BaseException, Optional[str]]]
+            exceptions_tids: List[Tuple[BaseException, str]]
             exceptions_tids = []
             if isinstance(joinable, Future):
                 je = joinable.exception()
                 if je is not None:
-                    if hasattr(joinable, 'task_record'):
-                        tid = joinable.task_record['id']
-                    else:
-                        tid = None
+                    tid = self.render_future_description(joinable)
                     exceptions_tids = [(je, tid)]
             elif isinstance(joinable, list):
                 for future in joinable:
                     je = future.exception()
                     if je is not None:
-                        if hasattr(joinable, 'task_record'):
-                            tid = joinable.task_record['id']
-                        else:
-                            tid = None
+                        tid = self.render_future_description(future)
                         exceptions_tids.append((je, tid))
             else:
                 raise TypeError(f"Unknown joinable type {type(joinable)}")
@@ -521,10 +485,7 @@ class DataFlowKernel:
                 # no need to update the fail cost because join apps are never
                 # retried
 
-                self.update_task_state(task_record, States.failed)
-                task_record['time_returned'] = datetime.datetime.now()
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                self._complete_task_exception(task_record, States.failed, e)
 
             else:
                 # all the joinables succeeded, so construct a result:
@@ -537,11 +498,9 @@ class DataFlowKernel:
                         res.append(future.result())
                 else:
                     raise TypeError(f"Unknown joinable type {type(joinable)}")
-                self._complete_task(task_record, States.exec_done, res)
+                self._complete_task_result(task_record, States.exec_done, res)
 
             self._log_std_streams(task_record)
-
-            self._send_task_log_info(task_record)
 
     def handle_app_update(self, task_record: TaskRecord, future: AppFuture) -> None:
         """This function is called as a callback when an AppFuture
@@ -563,25 +522,12 @@ class DataFlowKernel:
         if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_record, future)
-
-        # Cover all checkpointing cases here:
-        # Do we need to checkpoint now, or queue for later,
-        # or do nothing?
-        if self.checkpoint_mode == 'task_exit':
-            self.checkpoint(tasks=[task_record])
-        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self.checkpoint_lock:
-                self.checkpointable_tasks.append(task_record)
-        elif self.checkpoint_mode is None:
-            pass
-        else:
-            raise InternalConsistencyError(f"Invalid checkpoint mode {self.checkpoint_mode}")
+        self.memoizer.update_checkpoint(task_record)
 
         self.wipe_task(task_id)
         return
 
-    def _complete_task(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
+    def _complete_task_result(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
         """Set a task into a completed state
         """
         assert new_state in FINAL_STATES
@@ -593,8 +539,31 @@ class DataFlowKernel:
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
+        self.memoizer.update_memo(task_record)
+
+        self._send_task_log_info(task_record)
+
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
+
+    def _complete_task_exception(self, task_record: TaskRecord, new_state: States, exception: BaseException) -> None:
+        """Set a task into a failure state
+        """
+        assert new_state in FINAL_STATES
+        assert new_state in FINAL_FAILURE_STATES
+        old_state = task_record['status']
+
+        self.update_task_state(task_record, new_state)
+
+        logger.info(f"Task {task_record['id']} failed ({old_state.name} -> {new_state.name})")
+        task_record['time_returned'] = datetime.datetime.now()
+
+        self.memoizer.update_memo(task_record)
+
+        self._send_task_log_info(task_record)
+
+        with task_record['app_fu']._update_lock:
+            task_record['app_fu'].set_exception(exception)
 
     def update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
         """Updates a task record state, and recording an appropriate change
@@ -639,7 +608,7 @@ class DataFlowKernel:
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
-        self.dependency_launch_pool.submit(self._launch_if_ready_async, task_record)
+        self._task_launch_pool.submit(self._launch_if_ready_async, task_record)
 
     @wrap_with_logs
     def _launch_if_ready_async(self, task_record: TaskRecord) -> None:
@@ -647,7 +616,7 @@ class DataFlowKernel:
         _launch_if_ready will launch the specified task, if it is ready
         to run (for example, without dependencies, and in pending state).
         """
-        exec_fu = None
+        exec_fu: Future
 
         task_id = task_record['id']
         with task_record['task_launch_lock']:
@@ -686,28 +655,24 @@ class DataFlowKernel:
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
-                # Raise a dependency exception
-                self.update_task_state(task_record, States.dep_fail)
-
-                self._send_task_log_info(task_record)
 
                 exec_fu = Future()
                 exec_fu.set_exception(DependencyError(exceptions_tids,
                                                       task_id))
 
-        if exec_fu:
-            assert isinstance(exec_fu, Future)
-            try:
-                exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
-            except Exception:
-                # this exception is ignored here because it is assumed that exception
-                # comes from directly executing handle_exec_update (because exec_fu is
-                # done already). If the callback executes later, then any exception
-                # coming out of the callback will be ignored and not propate anywhere,
-                # so this block attempts to keep the same behaviour here.
-                logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
+        assert isinstance(exec_fu, Future), "Every code path leading here needs to define exec_fu"
 
-            task_record['exec_fu'] = exec_fu
+        try:
+            exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
+        except Exception:
+            # this exception is ignored here because it is assumed that exception
+            # comes from directly executing handle_exec_update (because exec_fu is
+            # done already). If the callback executes later, then any exception
+            # coming out of the callback will be ignored and not propate anywhere,
+            # so this block attempts to keep the same behaviour here.
+            logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
+
+        task_record['exec_fu'] = exec_fu
 
     def launch_task(self, task_record: TaskRecord) -> Future:
         """Handle the actual submission of the task to the executor layer.
@@ -743,17 +708,19 @@ class DataFlowKernel:
         try_id = task_record['fail_count']
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+            if executor.remote_monitoring_radio is None:
+                raise RadioRequiredError()
+
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             (function, args, kwargs) = monitor_wrapper(f=function,
                                                        args=args,
                                                        kwargs=kwargs,
                                                        x_try_id=try_id,
                                                        x_task_id=task_id,
-                                                       monitoring_hub_url=self.monitoring.monitoring_hub_url,
+                                                       radio_config=executor.remote_monitoring_radio,
                                                        run_id=self.run_id,
                                                        logging_level=wrapper_logging_level,
                                                        sleep_dur=self.monitoring.resource_monitoring_interval,
-                                                       radio_mode=executor.radio_mode,
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 
@@ -923,13 +890,7 @@ class DataFlowKernel:
         dep_failures = []
 
         def append_failure(e: Exception, dep: Future) -> None:
-            # If this Future is associated with a task inside this DFK,
-            # then refer to the task ID.
-            # Otherwise make a repr of the Future object.
-            if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                tid = "task " + repr(dep.task_record['id'])
-            else:
-                tid = repr(dep)
+            tid = self.render_future_description(dep)
             dep_failures.extend([(e, tid)])
 
         # Replace item in args
@@ -987,7 +948,7 @@ class DataFlowKernel:
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
-               (AppFuture) [DataFutures,]
+            AppFuture
 
         """
 
@@ -1081,10 +1042,7 @@ class DataFlowKernel:
 
         depend_descs = []
         for d in depends:
-            if isinstance(d, AppFuture) or isinstance(d, DataFuture):
-                depend_descs.append("task {}".format(d.tid))
-            else:
-                depend_descs.append(repr(d))
+            depend_descs.append(self.render_future_description(d))
 
         if depend_descs != []:
             waiting_message = "waiting on {}".format(", ".join(depend_descs))
@@ -1143,55 +1101,22 @@ class DataFlowKernel:
 
         logger.info("End of summary")
 
-    def _create_remote_dirs_over_channel(self, provider: ExecutionProvider, channel: Channel) -> None:
-        """Create script directories across a channel
-
-        Parameters
-        ----------
-        provider: Provider obj
-           Provider for which scripts dirs are being created
-        channel: Channel obj
-           Channel over which the remote dirs are to be created
-        """
-        run_dir = self.run_dir
-        if channel.script_dir is None:
-
-            # This case will be detected as unreachable by mypy, because of
-            # the type of script_dir, which is str, not Optional[str].
-            # The type system doesn't represent the initialized/uninitialized
-            # state of a channel so cannot represent that a channel needs
-            # its script directory set or not.
-
-            channel.script_dir = os.path.join(run_dir, 'submit_scripts')  # type: ignore[unreachable]
-
-            # Only create dirs if we aren't on a shared-fs
-            if not channel.isdir(run_dir):
-                parent, child = pathlib.Path(run_dir).parts[-2:]
-                remote_run_dir = os.path.join(parent, child)
-                channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
-                provider.script_dir = os.path.join(run_dir, 'local_submit_scripts')
-
-        channel.makedirs(channel.script_dir, exist_ok=True)
-
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
-            if self.monitoring:
-                executor.hub_address = self.monitoring.hub_address
-                executor.hub_zmq_port = self.monitoring.hub_zmq_port
-                executor.submit_monitoring_radio = self.monitoring.radio
+            if self.monitoring and executor.remote_monitoring_radio is not None:
+                executor.monitoring_messages = self.monitoring.resource_msgs
+                logger.debug("Starting monitoring receiver for executor %s "
+                             "with remote monitoring radio config %s",
+                             executor.label, executor.remote_monitoring_radio)
+
+                executor.monitoring_receiver = executor.remote_monitoring_radio.create_receiver(resource_msgs=executor.monitoring_messages,
+                                                                                                run_dir=executor.run_dir)
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
-
-                    if hasattr(executor.provider, 'channels'):
-                        logger.debug("Creating script_dir across multiple channels")
-                        for channel in executor.provider.channels:
-                            self._create_remote_dirs_over_channel(executor.provider, channel)
-                    else:
-                        self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
             executor.start()
@@ -1230,12 +1155,9 @@ class DataFlowKernel:
 
     @wrap_with_logs
     def cleanup(self) -> None:
-        """DataFlowKernel cleanup.
-
-        This involves releasing all resources explicitly.
-
-        We call scale_in on each of the executors and call executor.shutdown.
+        """Clean-up by closing all of the components used by the DFK
         """
+
         logger.info("DFK cleanup initiated")
 
         # this check won't detect two DFK cleanups happening from
@@ -1247,20 +1169,11 @@ class DataFlowKernel:
 
         self.log_task_states()
 
-        # Checkpointing takes priority over the rest of the tasks
-        # checkpoint if any valid checkpoint method is specified
-        if self.checkpoint_mode is not None:
-            self.checkpoint()
-
-            if self._checkpoint_timer:
-                logger.info("Stopping checkpoint timer")
-                self._checkpoint_timer.close()
+        self.memoizer.close()
 
         # Send final stats
-        logger.info("Sending end message for usage tracking")
         self.usage_tracker.send_end_message()
         self.usage_tracker.close()
-        logger.info("Closed usage tracking")
 
         logger.info("Closing job status poller")
         self.job_status_poller.close()
@@ -1273,42 +1186,26 @@ class DataFlowKernel:
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")
 
-            if hasattr(executor, 'provider'):
-                if hasattr(executor.provider, 'script_dir'):
-                    logger.info(f"Closing channel(s) for {executor.label}")
-
-                    if hasattr(executor.provider, 'channels'):
-                        for channel in executor.provider.channels:
-                            logger.info(f"Closing channel {channel}")
-                            channel.close()
-                            logger.info(f"Closed channel {channel}")
-                    else:
-                        assert hasattr(executor.provider, 'channel'), "If provider has no .channels, it must have .channel"
-                        logger.info(f"Closing channel {executor.provider.channel}")
-                        executor.provider.channel.close()
-                        logger.info(f"Closed channel {executor.provider.channel}")
-
-                    logger.info(f"Closed executor channel(s) for {executor.label}")
-
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
 
-        if self.monitoring:
+        if self.monitoring_radio:
             logger.info("Sending final monitoring message")
-            self.monitoring.send(MessageType.WORKFLOW_INFO,
-                                 {'tasks_failed_count': self.task_state_counts[States.failed],
-                                  'tasks_completed_count': self.task_state_counts[States.exec_done],
-                                  "time_began": self.time_began,
-                                  'time_completed': self.time_completed,
-                                  'run_id': self.run_id, 'rundir': self.run_dir})
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
+                                       {'tasks_failed_count': self.task_state_counts[States.failed],
+                                        'tasks_completed_count': self.task_state_counts[States.exec_done],
+                                        "time_began": self.time_began,
+                                        'time_completed': self.time_completed,
+                                        'run_id': self.run_id, 'rundir': self.run_dir}))
 
+        if self.monitoring:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
 
-        logger.info("Terminating dependency launch pool")
-        self.dependency_launch_pool.shutdown()
-        logger.info("Terminated dependency launch pool")
+        logger.info("Terminating task launch pool")
+        self._task_launch_pool.shutdown()
+        logger.info("Terminated task launch pool")
 
         logger.info("Unregistering atexit hook")
         atexit.unregister(self.atexit_cleanup)
@@ -1321,145 +1218,17 @@ class DataFlowKernel:
         else:
             logger.debug("Cleaning up non-default DFK - not unregistering")
 
+        if self._logging_unregister_callback:
+            logger.info("Unregistering log handler")
+            self._logging_unregister_callback()
+            logger.info("Unregistered log handler")
+
+        # This message won't go to the default parsl.log, but other handlers
+        # should still see it.
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
-        """Checkpoint the dfk incrementally to a checkpoint file.
-
-        When called, every task that has been completed yet not
-        checkpointed is checkpointed to a file.
-
-        Kwargs:
-            - tasks (List of task records) : List of task ids to checkpoint. Default=None
-                                         if set to None, we iterate over all tasks held by the DFK.
-
-        .. note::
-            Checkpointing only works if memoization is enabled
-
-        Returns:
-            Checkpoint dir if checkpoints were written successfully.
-            By default the checkpoints are written to the RUNDIR of the current
-            run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
-        """
-        with self.checkpoint_lock:
-            if tasks:
-                checkpoint_queue = tasks
-            else:
-                checkpoint_queue = self.checkpointable_tasks
-                self.checkpointable_tasks = []
-
-            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
-            checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
-            checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
-
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir, exist_ok=True)
-
-            with open(checkpoint_dfk, 'wb') as f:
-                state = {'rundir': self.run_dir,
-                         'task_count': self.task_count
-                         }
-                pickle.dump(state, f)
-
-            count = 0
-
-            with open(checkpoint_tasks, 'ab') as f:
-                for task_record in checkpoint_queue:
-                    task_id = task_record['id']
-
-                    app_fu = task_record['app_fu']
-
-                    if app_fu.done() and app_fu.exception() is None:
-                        hashsum = task_record['hashsum']
-                        if not hashsum:
-                            continue
-                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
-
-                        # We are using pickle here since pickle dumps to a file in 'ab'
-                        # mode behave like a incremental log.
-                        pickle.dump(t, f)
-                        count += 1
-                        logger.debug("Task {} checkpointed".format(task_id))
-
-            self.checkpointed_tasks += count
-
-            if count == 0:
-                if self.checkpointed_tasks == 0:
-                    logger.warning("No tasks checkpointed so far in this run. Please ensure caching is enabled")
-                else:
-                    logger.debug("No tasks checkpointed in this pass.")
-            else:
-                logger.info("Done checkpointing {} tasks".format(count))
-
-            return checkpoint_dir
-
-    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
-        """Load a checkpoint file into a lookup table.
-
-        The data being loaded from the pickle file mostly contains input
-        attributes of the task: func, args, kwargs, env...
-        To simplify the check of whether the exact task has been completed
-        in the checkpoint, we hash these input params and use it as the key
-        for the memoized lookup table.
-
-        Args:
-            - checkpointDirs (list) : List of filepaths to checkpoints
-              Eg. ['runinfo/001', 'runinfo/002']
-
-        Returns:
-            - memoized_lookup_table (dict)
-        """
-        memo_lookup_table = {}
-
-        for checkpoint_dir in checkpointDirs:
-            logger.info("Loading checkpoints from {}".format(checkpoint_dir))
-            checkpoint_file = os.path.join(checkpoint_dir, 'tasks.pkl')
-            try:
-                with open(checkpoint_file, 'rb') as f:
-                    while True:
-                        try:
-                            data = pickle.load(f)
-                            # Copy and hash only the input attributes
-                            memo_fu: Future = Future()
-                            assert data['exception'] is None
-                            memo_fu.set_result(data['result'])
-                            memo_lookup_table[data['hash']] = memo_fu
-
-                        except EOFError:
-                            # Done with the checkpoint file
-                            break
-            except FileNotFoundError:
-                reason = "Checkpoint file was not found: {}".format(
-                    checkpoint_file)
-                logger.error(reason)
-                raise BadCheckpoint(reason)
-            except Exception:
-                reason = "Failed to load checkpoint: {}".format(
-                    checkpoint_file)
-                logger.error(reason)
-                raise BadCheckpoint(reason)
-
-            logger.info("Completed loading checkpoint: {0} with {1} tasks".format(checkpoint_file,
-                                                                                  len(memo_lookup_table.keys())))
-        return memo_lookup_table
-
-    @typeguard.typechecked
-    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Future]:
-        """Load checkpoints from the checkpoint files into a dictionary.
-
-        The results are used to pre-populate the memoizer's lookup_table
-
-        Kwargs:
-             - checkpointDirs (list) : List of run folder to use as checkpoints
-               Eg. ['runinfo/001', 'runinfo/002']
-
-        Returns:
-             - dict containing, hashed -> future mappings
-        """
-        if checkpointDirs:
-            return self._load_checkpoints(checkpointDirs)
-        else:
-            return {}
+    def checkpoint(self) -> None:
+        self.memoizer.checkpoint()
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
@@ -1496,6 +1265,18 @@ class DataFlowKernel:
                 taskrecord['func_name'],
                 '' if label is None else '_{}'.format(label),
                 kw))
+
+    def render_future_description(self, dep: Future) -> str:
+        """Renders a description of the future in the context of the
+        current DFK.
+        """
+        if isinstance(dep, AppFuture) and dep.task_record['dfk'] == self:
+            tid = "task " + repr(dep.task_record['id'])
+        elif isinstance(dep, DataFuture):
+            tid = "DataFuture from task " + repr(dep.tid)
+        else:
+            tid = repr(dep)
+        return tid
 
 
 class DataFlowKernelLoader:

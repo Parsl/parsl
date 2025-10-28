@@ -3,24 +3,20 @@ from __future__ import annotations
 import logging
 import multiprocessing.synchronize as ms
 import os
-import queue
-import time
-from multiprocessing import Event, Process
+import warnings
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
+from typing import Any, Optional, Union
 
 import typeguard
 
-from parsl.log_utils import set_file_logger
-from parsl.monitoring.errors import MonitoringHubStartError
-from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MultiprocessingQueueRadioSender
-from parsl.monitoring.router import router_starter
-from parsl.monitoring.types import AddressedMonitoringMessage
-from parsl.multiprocessing import ForkProcess, SizedQueue
-from parsl.process_loggers import wrap_with_logs
-from parsl.serialize import deserialize
-from parsl.utils import RepresentationMixin, setproctitle
+from parsl.monitoring.types import TaggedMonitoringMessage
+from parsl.multiprocessing import (
+    SpawnEvent,
+    SpawnProcess,
+    SpawnQueue,
+    join_terminate_close_proc,
+)
+from parsl.utils import RepresentationMixin
 
 _db_manager_excepts: Optional[Exception]
 
@@ -38,34 +34,30 @@ logger = logging.getLogger(__name__)
 @typeguard.typechecked
 class MonitoringHub(RepresentationMixin):
     def __init__(self,
-                 hub_address: str,
-                 hub_port: Optional[int] = None,
-                 hub_port_range: Tuple[int, int] = (55050, 56000),
+                 hub_address: Any = None,  # unused, so no type enforcement
+                 hub_port_range: Any = None,  # unused, so no type enforcement
+                 hub_port: Any = None,  # unused, so no type enforcement
 
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
                  logging_endpoint: Optional[str] = None,
-                 logdir: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
                  resource_monitoring_interval: float = 30):  # in seconds
         """
         Parameters
         ----------
-        hub_address : str
-             The ip address at which the workers will be able to reach the Hub.
-        hub_port : int
-             The UDP port to which workers will be able to deliver messages to
-             the monitoring router.
-             Note that despite the similar name, this is not related to
-             hub_port_range.
-             Default: None
-        hub_port_range : tuple(int, int)
-             The port range for a ZMQ channel from an executor process
-             (for example, the interchange in the High Throughput Executor)
-             to deliver monitoring messages to the monitoring router.
-             Note that despite the similar name, this is not related to hub_port.
-             Default: (55050, 56000)
+        hub_address : unused
+        hub_port : unused
+             Unused, but probably retained until 2026-06-01 to give deprecation warning.
+             These two values previously configured UDP parameters when UDP was used
+             for monitoring messages from workers. These are now configured on the
+             relevant UDPRadio.
+        hub_port_range : unused
+             Unused, but probably retained until 2026-06-01 to give deprecation warning.
+             This value previously configured one ZMQ channel inside the
+             HighThroughputExecutor. That ZMQ channel is now configured by the
+             interchange_port_range parameter of HighThroughputExecutor.
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -74,8 +66,6 @@ class MonitoringHub(RepresentationMixin):
              The database connection url for monitoring to log the information.
              These URLs follow RFC-1738, and can include username, password, hostname, database name.
              Default: sqlite, in the configured run_dir.
-        logdir : str
-             Parsl log directory paths. Logs and temp files go here. Default: '.'
         monitoring_debug : Bool
              Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
@@ -92,12 +82,30 @@ class MonitoringHub(RepresentationMixin):
         if _db_manager_excepts:
             raise _db_manager_excepts
 
+        # The following three parameters need to exist as attributes to be
+        # output by RepresentationMixin.
+        if hub_address is not None:
+            message = "Instead of MonitoringHub.hub_address, specify UDPRadio(address=...)"
+            warnings.warn(message, DeprecationWarning)
+            logger.warning(message)
+
         self.hub_address = hub_address
+
+        if hub_port is not None:
+            message = "Instead of MonitoringHub.hub_port, specify UDPRadio(port=...)"
+            warnings.warn(message, DeprecationWarning)
+            logger.warning(message)
+
         self.hub_port = hub_port
+
+        if hub_port_range is not None:
+            message = "Instead of MonitoringHub.hub_port_range, Use HighThroughputExecutor.interchange_port_range"
+            warnings.warn(message, DeprecationWarning)
+            logger.warning(message)
+
         self.hub_port_range = hub_port_range
 
         self.logging_endpoint = logging_endpoint
-        self.logdir = logdir
         self.monitoring_debug = monitoring_debug
 
         self.workflow_name = workflow_name
@@ -110,205 +118,43 @@ class MonitoringHub(RepresentationMixin):
 
         logger.debug("Starting MonitoringHub")
 
-        if self.logdir is None:
-            self.logdir = "."
-
         if self.logging_endpoint is None:
             self.logging_endpoint = f"sqlite:///{os.fspath(config_run_dir)}/monitoring.db"
 
-        os.makedirs(self.logdir, exist_ok=True)
+        os.makedirs(dfk_run_dir, exist_ok=True)
 
         self.monitoring_hub_active = True
 
-        # This annotation is incompatible with typeguard 4.x instrumentation
-        # of local variables: Queue is not subscriptable at runtime, as far
-        # as typeguard is concerned. The more general Queue annotation works,
-        # but does not restrict the contents of the Queue. Using TYPE_CHECKING
-        # here allows the stricter definition to be seen by mypy, and the
-        # simpler definition to be seen by typeguard. Hopefully at some point
-        # in the future, Queue will allow runtime subscripts.
+        self.resource_msgs: Queue[TaggedMonitoringMessage]
+        self.resource_msgs = SpawnQueue()
 
-        if TYPE_CHECKING:
-            comm_q: Queue[Union[Tuple[int, int], str]]
-        else:
-            comm_q: Queue
+        self.dbm_exit_event: ms.Event
+        self.dbm_exit_event = SpawnEvent()
 
-        comm_q = SizedQueue(maxsize=10)
-
-        self.exception_q: Queue[Tuple[str, str]]
-        self.exception_q = SizedQueue(maxsize=10)
-
-        self.priority_msgs: Queue[Tuple[Any, int]]
-        self.priority_msgs = SizedQueue()
-
-        self.resource_msgs: Queue[AddressedMonitoringMessage]
-        self.resource_msgs = SizedQueue()
-
-        self.node_msgs: Queue[AddressedMonitoringMessage]
-        self.node_msgs = SizedQueue()
-
-        self.block_msgs: Queue[AddressedMonitoringMessage]
-        self.block_msgs = SizedQueue()
-
-        self.router_exit_event: ms.Event
-        self.router_exit_event = Event()
-
-        self.router_proc = ForkProcess(target=router_starter,
-                                       kwargs={"comm_q": comm_q,
-                                               "exception_q": self.exception_q,
-                                               "priority_msgs": self.priority_msgs,
-                                               "node_msgs": self.node_msgs,
-                                               "block_msgs": self.block_msgs,
-                                               "resource_msgs": self.resource_msgs,
-                                               "exit_event": self.router_exit_event,
-                                               "hub_address": self.hub_address,
-                                               "udp_port": self.hub_port,
-                                               "zmq_port_range": self.hub_port_range,
-                                               "logdir": self.logdir,
-                                               "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                               },
-                                       name="Monitoring-Router-Process",
-                                       daemon=True,
-                                       )
-        self.router_proc.start()
-
-        self.dbm_proc = ForkProcess(target=dbm_starter,
-                                    args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
-                                    kwargs={"logdir": self.logdir,
-                                            "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                            "db_url": self.logging_endpoint,
-                                            },
-                                    name="Monitoring-DBM-Process",
-                                    daemon=True,
-                                    )
+        self.dbm_proc = SpawnProcess(target=dbm_starter,
+                                     args=(self.resource_msgs,),
+                                     kwargs={"run_dir": dfk_run_dir,
+                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                             "db_url": self.logging_endpoint,
+                                             "exit_event": self.dbm_exit_event,
+                                             },
+                                     name="Monitoring-DBM-Process",
+                                     daemon=True,
+                                     )
         self.dbm_proc.start()
-        logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
-
-        self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs, dfk_run_dir),
-                                       name="Monitoring-Filesystem-Process",
-                                       daemon=True
-                                       )
-        self.filesystem_proc.start()
-        logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
-
-        self.radio = MultiprocessingQueueRadioSender(self.block_msgs)
-
-        try:
-            comm_q_result = comm_q.get(block=True, timeout=120)
-            comm_q.close()
-            comm_q.join_thread()
-        except queue.Empty:
-            logger.error("Hub has not completed initialization in 120s. Aborting")
-            raise MonitoringHubStartError()
-
-        if isinstance(comm_q_result, str):
-            logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
-            raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
-
-        udp_port, zmq_port = comm_q_result
-
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
-
+        logger.info("Started DBM process %s", self.dbm_proc.pid)
         logger.info("Monitoring Hub initialized")
-
-        self.hub_zmq_port = zmq_port
-
-    # TODO: tighten the Any message format
-    def send(self, mtype: MessageType, message: Any) -> None:
-        logger.debug("Sending message type {}".format(mtype))
-        self.radio.send((mtype, message))
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")
-        exception_msgs = []
-        while True:
-            try:
-                exception_msgs.append(self.exception_q.get(block=False))
-                logger.error("There was a queued exception (Either router or DBM process got exception much earlier?)")
-            except queue.Empty:
-                break
         if self.monitoring_hub_active:
             self.monitoring_hub_active = False
-            if exception_msgs:
-                for exception_msg in exception_msgs:
-                    logger.error(
-                        "{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(
-                            exception_msg[0],
-                            exception_msg[1]
-                        )
-                    )
-                self.router_proc.terminate()
-                self.dbm_proc.terminate()
-                self.filesystem_proc.terminate()
-            logger.info("Setting router termination event")
-            self.router_exit_event.set()
-            logger.info("Waiting for router to terminate")
-            self.router_proc.join()
-            self.router_proc.close()
-            logger.debug("Finished waiting for router termination")
-            if len(exception_msgs) == 0:
-                logger.debug("Sending STOP to DBM")
-                self.priority_msgs.put(("STOP", 0))
-            else:
-                logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
             logger.debug("Waiting for DB termination")
-            self.dbm_proc.join()
-            self.dbm_proc.close()
+            self.dbm_exit_event.set()
+            join_terminate_close_proc(self.dbm_proc)
             logger.debug("Finished waiting for DBM termination")
 
-            # should this be message based? it probably doesn't need to be if
-            # we believe we've received all messages
-            logger.info("Terminating filesystem radio receiver process")
-            self.filesystem_proc.terminate()
-            self.filesystem_proc.join()
-            self.filesystem_proc.close()
-
             logger.info("Closing monitoring multiprocessing queues")
-            self.exception_q.close()
-            self.exception_q.join_thread()
-            self.priority_msgs.close()
-            self.priority_msgs.join_thread()
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
-            self.node_msgs.close()
-            self.node_msgs.join_thread()
-            self.block_msgs.close()
-            self.block_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
-
-
-@wrap_with_logs
-def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
-    logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
-                             name="monitoring_filesystem_radio",
-                             level=logging.INFO)
-
-    logger.info("Starting filesystem radio receiver")
-    setproctitle("parsl: monitoring filesystem receiver")
-    base_path = f"{run_dir}/monitor-fs-radio/"
-    tmp_dir = f"{base_path}/tmp/"
-    new_dir = f"{base_path}/new/"
-    logger.debug(f"Creating new and tmp paths under {base_path}")
-
-    os.makedirs(tmp_dir, exist_ok=True)
-    os.makedirs(new_dir, exist_ok=True)
-
-    while True:  # this loop will end on process termination
-        logger.debug("Start filesystem radio receiver loop")
-
-        # iterate over files in new_dir
-        for filename in os.listdir(new_dir):
-            try:
-                logger.info(f"Processing filesystem radio file {filename}")
-                full_path_filename = f"{new_dir}/{filename}"
-                with open(full_path_filename, "rb") as f:
-                    message = deserialize(f.read())
-                logger.debug(f"Message received is: {message}")
-                assert isinstance(message, tuple)
-                q.put(cast(AddressedMonitoringMessage, message))
-                os.remove(full_path_filename)
-            except Exception:
-                logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
-
-        time.sleep(1)  # whats a good time for this poll?

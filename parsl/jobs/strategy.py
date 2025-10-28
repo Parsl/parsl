@@ -185,6 +185,11 @@ class Strategy:
 
         for executor in executors:
             label = executor.label
+
+            if executor.bad_state_is_set:
+                logger.info(f"Not strategizing for executor {label} because bad state is set")
+                continue
+
             logger.debug(f"Strategizing for executor {label}")
 
             if self.executors[label]['first']:
@@ -193,7 +198,7 @@ class Strategy:
                 self.executors[label]['first'] = False
 
             # Tasks that are either pending completion
-            active_tasks = executor.outstanding
+            active_tasks = executor.outstanding()
 
             status = executor.status_facade
 
@@ -213,12 +218,8 @@ class Strategy:
 
             logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}")
 
-            if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, pending, executor.connected_workers))
-            else:
-                logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
-                    label, active_tasks, running, pending))
+            logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
+                label, active_tasks, running, pending))
 
             # reset idle timer if executor has active tasks
 
@@ -298,8 +299,8 @@ class Strategy:
                     # Scale in for htex
                     if isinstance(executor, HighThroughputExecutor):
                         if active_blocks > min_blocks:
-                            excess_slots = math.ceil(active_slots - (active_tasks * parallelism))
-                            excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
+                            excess_slots = math.floor(active_slots - (active_tasks * parallelism))
+                            excess_blocks = math.floor(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
                             logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
                             executor.scale_in_facade(excess_blocks, max_idletime=self.max_idletime)

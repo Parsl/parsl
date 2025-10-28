@@ -5,7 +5,6 @@ import time
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
@@ -22,7 +21,6 @@ def fresh_config(run_dir, strategy, db_url):
                 cores_per_worker=1,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=1,
                     # min and max are set to 0 to ensure that we don't get
                     # a block from ongoing strategy scaling, only from
@@ -36,8 +34,6 @@ def fresh_config(run_dir, strategy, db_url):
         strategy=strategy,
         strategy_period=0.1,
         monitoring=MonitoringHub(
-                        hub_address="localhost",
-                        hub_port=55055,
                         logging_endpoint=db_url
         )
     )
@@ -78,6 +74,6 @@ def test_row_counts(tmpd_cwd, strategy):
         (c, ) = result.first()
         assert c == 1, "There should be a single pending status"
 
-        result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'CANCELLED' AND run_id = :run_id"), binds)
+        result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'SCALED_IN' AND run_id = :run_id"), binds)
         (c, ) = result.first()
         assert c == 1, "There should be a single cancelled status"

@@ -101,17 +101,6 @@ class BaseContext(metaclass=ABCMeta):
         """
         self._ctx.destroy(linger)
 
-    def recreate(self, linger: Optional[int] = None):
-        """Destroy then recreate the context.
-
-        Parameters
-        ----------
-        linger : int, optional
-            If specified, set LINGER on sockets prior to closing them.
-        """
-        self.destroy(linger)
-        self._ctx = zmq.Context()
-
 
 class ServerContext(BaseContext):
     """CurveZMQ server context
@@ -160,6 +149,9 @@ class ServerContext(BaseContext):
             except zmq.ZMQError as e:
                 raise ValueError("Invalid CurveZMQ key format") from e
             sock.setsockopt(zmq.CURVE_SERVER, True)  # Must come before bind
+
+        # This flag enables IPV6 in addition to IPV4
+        sock.setsockopt(zmq.IPV6, True)
         return sock
 
     def term(self):
@@ -171,11 +163,6 @@ class ServerContext(BaseContext):
         if self.auth_thread:
             self.auth_thread.stop()
         super().destroy(linger)
-
-    def recreate(self, linger: Optional[int] = None):
-        super().recreate(linger)
-        if self.auth_thread:
-            self.auth_thread = self._start_auth_thread()
 
 
 class ClientContext(BaseContext):
@@ -202,4 +189,5 @@ class ClientContext(BaseContext):
                 sock.setsockopt(zmq.CURVE_SERVERKEY, server_public_key)
             except zmq.ZMQError as e:
                 raise ValueError("Invalid CurveZMQ key format") from e
+        sock.setsockopt(zmq.IPV6, True)
         return sock

@@ -5,13 +5,14 @@ on:
     types:
       - opened
       - synchronize
+  merge_group:
 
 jobs:
   main-test-suite:
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-    runs-on: ubuntu-20.04
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
@@ -60,7 +61,7 @@ jobs:
         export PARSL_TEST_PRESERVE_NUM_RUNS=7
 
         make test
-        ln -s .pytest/parsltest-current test_runinfo
+        ln -s pytest-parsl/parsltest-current test_runinfo
 
     - name: Documentation checks
       run: |
@@ -80,11 +81,11 @@ jobs:
         # database manager log file or monitoring router log file. It would be better if
         # the tests themselves failed immediately when there was a monitoring error, but
         # in the absence of that, this is a dirty way to check.
-        bash -c '! grep ERROR .pytest/parsltest-current/runinfo*/*/database_manager.log'
-        bash -c '! grep ERROR .pytest/parsltest-current/runinfo*/*/monitoring_router.log'
+        bash -c '! grep ERROR pytest-parsl/parsltest-current/runinfo*/*/database_manager.log'
+        bash -c '! grep ERROR pytest-parsl/parsltest-current/runinfo*/*/monitoring_router.log'
 
         # temporary; until test-matrixification
-        rm -f .pytest/parsltest-current test_runinfo
+        rm -f pytest-parsl/parsltest-current test_runinfo
 
     - name: Checking parsl-visualize
       run: |
@@ -105,6 +106,6 @@ jobs:
         name: runinfo-${{ matrix.python-version }}-${{ steps.job-info.outputs.as-ascii }}-${{ github.sha }}
         path: |
           runinfo/
-          .pytest/
+          pytest-parsl/
           ci_job_info.txt
         compression-level: 9

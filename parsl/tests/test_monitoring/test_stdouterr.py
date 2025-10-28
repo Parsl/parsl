@@ -35,10 +35,7 @@ def fresh_config(run_dir):
         ],
         strategy='simple',
         strategy_period=0.1,
-        monitoring=MonitoringHub(
-                        hub_address="localhost",
-                        hub_port=55055,
-        )
+        monitoring=MonitoringHub(),
     )
 
 
@@ -103,11 +100,14 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd, caplog):
         kwargs = {stream: stdx}
         stdapp(**kwargs).result()
 
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR
+
     engine = sqlalchemy.create_engine(c.monitoring.logging_endpoint)
     with engine.begin() as connection:
 
         def count_rows(table: str):
-            result = connection.execute(f"SELECT COUNT(*) FROM {table}")
+            result = connection.execute(sqlalchemy.text(f"SELECT COUNT(*) FROM {table}"))
             (c, ) = result.first()
             return c
 
@@ -121,7 +121,7 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd, caplog):
         assert count_rows("try") == 1
 
         # ... and has the expected name.
-        result = connection.execute(f"SELECT task_{stream} FROM task")
+        result = connection.execute(sqlalchemy.text(f"SELECT task_{stream} FROM task"))
         (c, ) = result.first()
 
         if isinstance(expected_stdx, str):

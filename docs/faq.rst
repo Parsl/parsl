@@ -209,7 +209,7 @@ For instance, with conda, follow this `cheatsheet <https://conda.io/docs/_downlo
    source activate <my_env>
 
    # Install packages:
-   conda install <ipyparallel, dill, boto3...>
+   conda install <dill, boto3...>
 
 
 How do I run code that uses Python2.X?
@@ -257,15 +257,15 @@ There are a few common situations in which a Parsl script might hang:
 
      .. code-block:: python
 
-        from libsubmit.providers import Cobalt
         from parsl.config import Config
+        from parsl.providers import SlurmProvider
         from parsl.executors import HighThroughputExecutor
 
         config = Config(
             executors=[
                 HighThroughputExecutor(
-                    label='ALCF_theta_local',
-                    provider=Cobalt(),
+                    label='htex',
+                    provider=SlurmProvider(),
                     worer_port_range=('50000,55000'),
                     interchange_port_range=('50000,55000')
                 )
@@ -366,7 +366,7 @@ How can my tasks survive ``WorkerLost`` and ``ManagerLost`` at the end of a batc
 When a batch job ends, pilot workers will be terminated by the batch system,
 and any tasks running there will fail. With `HighThroughputExecutor`,
 this failure will be reported as a `parsl.executors.high_throughput.errors.WorkerLost` or
-`parsl.executors.high_throughput.interchange.ManagerLost` in the task future.
+`parsl.executors.high_throughput.errors.ManagerLost` in the task future.
 
 To mitigate against this:
 

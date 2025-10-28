@@ -28,9 +28,12 @@ import parsl.utils as putils
 from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.errors import ExecutorError
+from parsl.executors.errors import ExecutorError, InvalidResourceSpecification
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.monitoring.radios.base import RadioConfig
+from parsl.monitoring.radios.filesystem import FilesystemRadio
+from parsl.multiprocessing import SpawnContext, SpawnProcess
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import CondorProvider, LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -39,16 +42,18 @@ from parsl.utils import setproctitle
 
 from .errors import WorkQueueFailure, WorkQueueTaskFailure
 
+IMPORT_EXCEPTION = None
 try:
-    import work_queue as wq
-    from work_queue import (
+    from ndcctools import work_queue as wq
+    from ndcctools.work_queue import (
         WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT,
         WORK_QUEUE_DEFAULT_PORT,
         WorkQueue,
     )
-except ImportError:
+except ImportError as e:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0
+    IMPORT_EXCEPTION = e
 else:
     _work_queue_enabled = True
 
@@ -224,8 +229,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             specifiation for each task).
     """
 
-    radio_mode = "filesystem"
-
     @typeguard.typechecked
     def __init__(self,
                  label: str = "WorkQueueExecutor",
@@ -252,16 +255,17 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
                  coprocess: bool = False,
-                 scaling_cores_per_worker: int = 1):
+                 scaling_cores_per_worker: int = 1,
+                 remote_monitoring_radio: Optional[RadioConfig] = None):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
-            raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
+            raise OptionalModuleMissing(['work_queue'], f"WorkQueueExecutor requires the work_queue module. More info: {IMPORT_EXCEPTION}")
 
         self.scaling_cores_per_worker = scaling_cores_per_worker
         self.label = label
-        self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
-        self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
+        self.task_queue: multiprocessing.Queue = SpawnContext.Queue()
+        self.collector_queue: multiprocessing.Queue = SpawnContext.Queue()
         self.address = address
         self.port = port
         self.executor_task_counter = -1
@@ -282,7 +286,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
         self.max_retries = max_retries
-        self.should_stop = multiprocessing.Value(c_bool, False)
+        self.should_stop = SpawnContext.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
         self.worker_executable = worker_executable
@@ -305,6 +309,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
+        if remote_monitoring_radio is not None:
+            self.remote_monitoring_radio = remote_monitoring_radio
+        else:
+            self.remote_monitoring_radio = FilesystemRadio()
+
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
         # commands than in htex
@@ -314,6 +323,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the Work Queue system.
         """
+        super().start()
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
@@ -333,7 +343,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Starting WorkQueueExecutor")
 
-        self._port_mailbox = multiprocessing.Queue()
+        port_mailbox = SpawnContext.Queue()
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
@@ -351,12 +361,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "wq_log_dir": self.wq_log_dir,
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name,
-                                 "port_mailbox": self._port_mailbox,
+                                 "port_mailbox": port_mailbox,
                                  "coprocess": self.coprocess
                                  }
-        self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
-                                                      name="WorkQueue-Submit-Process",
-                                                      kwargs=submit_process_kwargs)
+        self.submit_process = SpawnProcess(target=_work_queue_submit_wait,
+                                           name="WorkQueue-Submit-Process",
+                                           kwargs=submit_process_kwargs)
 
         self.collector_thread = threading.Thread(target=self._collect_work_queue_results,
                                                  name="WorkQueue-collector-thread")
@@ -366,7 +376,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.submit_process.start()
         self.collector_thread.start()
 
-        self._chosen_port = self._port_mailbox.get(timeout=60)
+        self._chosen_port = port_mailbox.get(timeout=60)
 
         logger.debug(f"Chosen listening port is {self._chosen_port}")
 
@@ -419,7 +429,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 message = "Task resource specification only accepts these types of resources: {}".format(
                         ', '.join(acceptable_fields))
                 logger.error(message)
-                raise ExecutorError(self, message)
+                raise InvalidResourceSpecification(keys, message)
 
             # this checks that either all of the required resource types are specified, or
             # that none of them are: the `required_resource_types` are not actually required,
@@ -430,9 +440,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
-                raise ExecutorError(self, "Task resource specification requires "
-                                          "three resources to be specified simultaneously: cores, memory, and disk. "
-                                          "Try setting autolabel=True if you are unsure of the resource usage")
+                raise InvalidResourceSpecification(keys,
+                                                   "Task resource specification requires "
+                                                   "three resources to be specified simultaneously: cores, memory, and disk. "
+                                                   "Try setting autolabel=True if you are unsure of the resource usage")
 
             for k in keys:
                 if k == 'cores':
@@ -663,7 +674,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
-    @property
     def outstanding(self) -> int:
         """Count the number of outstanding slots required. This is inefficiently
         implemented and probably could be replaced with a counter.
@@ -696,12 +706,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 
-        # Remove the workers that are still going
-        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
-        if self.provider:
-            logger.debug("Cancelling blocks")
-            self.provider.cancel(kill_ids)
-
         logger.debug("Joining on submit process")
         self.submit_process.join()
         self.submit_process.close()
@@ -714,6 +718,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.task_queue.join_thread()
         self.collector_queue.close()
         self.collector_queue.join_thread()
+
+        super().shutdown()
 
         logger.debug("Work Queue shutdown completed")
 
@@ -976,7 +982,7 @@ def _work_queue_submit_wait(*,
                 continue
             # When a task is found:
             executor_task_id = t.tag
-            logger.debug("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
+            logger.info("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
             result_file = result_file_of_task_id.pop(t.tag)
 
             # A tasks completes 'succesfully' if it has result file.

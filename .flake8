@@ -17,7 +17,6 @@ exclude = test_import_fail.py,
 # F821: undefined name
 per-file-ignores = parsl/monitoring/visualization/*:E741,
   # test_ssh_errors.py really is broken
-  parsl/tests/integration/test_channels/test_ssh_errors.py:F821,
 
   # tests often import fresh_config into their namespace as local_config
   # but then do not use it directly, because tests/conftests.py

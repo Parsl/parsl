@@ -6,6 +6,7 @@ The helper to use depends on the network environment around the submitter,
 so some experimentation will probably be needed to choose the correct one.
 """
 
+import ipaddress
 import logging
 import platform
 import socket
@@ -17,7 +18,7 @@ try:
 except ImportError:
     fcntl = None  # type: ignore[assignment]
 import struct
-from typing import Callable, List, Set
+from typing import Callable, List, Set, Union
 
 import psutil
 import typeguard
@@ -156,3 +157,19 @@ def get_any_address() -> str:
     if addr == '':
         raise Exception('Cannot find address of the local machine.')
     return addr
+
+
+def tcp_url(address: str, port: Union[str, int, None] = None) -> str:
+    """Construct a tcp url safe for IPv4 and IPv6"""
+    port_suffix = f":{port}" if port else ""
+    if address == "*":
+        return "tcp://*" + port_suffix
+
+    ip_addr = ipaddress.ip_address(address)
+
+    if ip_addr.version == 6 and port_suffix:
+        url = f"tcp://[{address}]{port_suffix}"
+    else:
+        url = f"tcp://{address}{port_suffix}"
+
+    return url

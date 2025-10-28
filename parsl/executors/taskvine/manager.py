@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import uuid
 
+import parsl
 from parsl.executors.taskvine import exec_parsl_function
 from parsl.executors.taskvine.utils import VineTaskToParsl, run_parsl_function
 from parsl.process_loggers import wrap_with_logs
@@ -44,10 +45,16 @@ def _set_manager_attributes(m, config):
     # Enable peer transfer feature between workers if specified
     if config.enable_peer_transfers:
         m.enable_peer_transfers()
+    else:
+        m.disable_peer_transfers()
 
     # Set catalog report to parsl if project name exists
     if m.name:
         m.set_property("framework", "parsl")
+
+    if config.tune_parameters is not None:
+        for k, v in config.tune_parameters.items():
+            m.tune(k, v)
 
 
 def _prepare_environment_serverless(manager_config, env_cache_dir, poncho_create_script):
@@ -249,7 +256,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                      run_parsl_function,
                                                                      poncho_env=poncho_env_path,
                                                                      init_command=manager_config.init_command,
-                                                                     add_env=add_env)
+                                                                     add_env=add_env,
+                                                                     hoisting_modules=[parsl.serialize, run_parsl_function])
 
                     # Configure the library if provided
                     if manager_config.library_config:

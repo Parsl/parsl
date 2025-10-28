@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.base import ExecutionProvider
@@ -11,7 +10,7 @@ from parsl.providers.errors import (
     ScriptPathError,
     SubmitException,
 )
-from parsl.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin, execute_wait
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +31,11 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
-    move_files : Optional[Bool]
-        Should files be moved? By default, Parsl will try to figure this out itself (= None).
-        If True, then will always move. If False, will never move.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     """
 
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
                  init_blocks=1,
@@ -48,9 +43,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  max_blocks=1,
                  worker_init='',
                  cmd_timeout=30,
-                 parallelism=1,
-                 move_files=None):
-        self.channel = channel
+                 parallelism=1):
         self._label = 'local'
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
@@ -61,7 +54,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.parallelism = parallelism
         self.script_dir = None
         self.cmd_timeout = cmd_timeout
-        self.move_files = move_files
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -83,7 +75,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             if job_dict['status'] and job_dict['status'].terminal:
                 # We already checked this and it can't change after that
                 continue
-            # Script path should point to remote path if _should_move_files() is True
             script_path = job_dict['script_path']
 
             alive = self._is_alive(job_dict)
@@ -123,22 +114,18 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    def _is_alive(self, job_dict):
-        retcode, stdout, stderr = self.channel.execute_wait(
-            'ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
-                job_dict['remote_pid']), self.cmd_timeout)
-        for line in stdout.split('\n'):
-            if line.startswith("STATUS:"):
-                status = line.split("STATUS:")[1].strip()
-                if status == "0":
-                    return True
-                else:
-                    return False
+    @staticmethod
+    def _is_alive(job_dict) -> bool:
+        try:
+            os.kill(job_dict['remote_pid'], 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            pass  # exists; just no permissions to send signal
+        return True
 
     def _job_file_path(self, script_path: str, suffix: str) -> str:
         path = '{0}{1}'.format(script_path, suffix)
-        if self._should_move_files():
-            path = self.channel.pull_file(path, self.script_dir)
         return path
 
     def _read_job_file(self, script_path: str, suffix: str) -> str:
@@ -216,9 +203,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         job_id = None
         remote_pid = None
-        if self._should_move_files():
-            logger.debug("Pushing start script")
-            script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         logger.debug("Launching")
         # We need to capture the exit code and the streams, so we put them in files. We also write
@@ -234,18 +218,19 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         #      cancel the task later.
         #
         # We need to do the >/dev/null 2>&1 so that bash closes stdout, otherwise
-        # channel.execute_wait hangs reading the process stdout until all the
+        # execute_wait hangs reading the process stdout until all the
         # background commands complete.
         cmd = '/bin/bash -c \'echo - >{0}.ec && {{ {{ bash {0} 1>{0}.out 2>{0}.err ; ' \
               'echo $? > {0}.ec ; }} >/dev/null 2>&1 & echo "PID:$!" ; }}\''.format(script_path)
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+        retcode, stdout, stderr = execute_wait(cmd, self.cmd_timeout)
         if retcode != 0:
             raise SubmitException(job_name, "Launch command exited with code {0}".format(retcode),
                                   stdout, stderr)
         for line in stdout.split('\n'):
             if line.startswith("PID:"):
-                remote_pid = line.split("PID:")[1].strip()
-                job_id = remote_pid
+                job_id = line.split("PID:")[1].strip()
+                remote_pid = int(job_id)
+                break
         if job_id is None:
             raise SubmitException(job_name, "Channel failed to start remote command/retrieve PID")
 
@@ -253,9 +238,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                                   'remote_pid': remote_pid, 'script_path': script_path}
 
         return job_id
-
-    def _should_move_files(self):
-        return (self.move_files is None and not isinstance(self.channel, LocalChannel)) or (self.move_files)
 
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
@@ -272,7 +254,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             job_dict['cancelled'] = True
             logger.debug("Terminating job/process ID: {0}".format(job))
             cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(job_dict['remote_pid'])
-            retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+            retcode, stdout, stderr = execute_wait(cmd, self.cmd_timeout)
             if retcode != 0:
                 logger.warning("Failed to kill PID: {} and child processes on {}".format(job_dict['remote_pid'],
                                                                                          self.label))

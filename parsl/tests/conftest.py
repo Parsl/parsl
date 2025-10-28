@@ -58,7 +58,7 @@ def tmpd_cwd_session(pytestconfig):
 
     config = re.sub(r"[^A-z0-9_-]+", "_", pytestconfig.getoption('config')[0])
     cwd = pathlib.Path(os.getcwd())
-    pytest_dir = cwd / ".pytest"
+    pytest_dir = cwd / "pytest-parsl"
     pytest_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     test_dir_prefix = "parsltest-"
@@ -145,10 +145,6 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'sshd_required: Marks tests that require a SSHD'
-    )
-    config.addinivalue_line(
-        'markers',
         'multiple_cores_required: Marks tests that require multiple cores, such as htex affinity'
     )
     config.addinivalue_line(
@@ -162,6 +158,22 @@ def pytest_configure(config):
     config.addinivalue_line(
         'markers',
         'executor_supports_std_stream_tuples: Marks tests that require tuple support for stdout/stderr'
+    )
+    config.addinivalue_line(
+        'markers',
+        'shared_fs: Marks tests that require a shared_fs between the workers are the test client'
+    )
+    config.addinivalue_line(
+        'markers',
+        'issue_3620: Marks tests that do not work correctly on GlobusComputeExecutor (ref: issue 3620)'
+    )
+    config.addinivalue_line(
+        'markers',
+        'workqueue: Marks local tests that require a working Work Queue installation'
+    )
+    config.addinivalue_line(
+        'markers',
+        'taskvine: Marks local tests that require a working Task Vine installation'
     )
 
 
@@ -394,15 +406,17 @@ def try_assert():
         timeout_ms: float = 5000,
         attempts: int = 0,
         check_period_ms: int = 20,
+        factor: float = 2,
     ):
         tb = create_traceback(start=1)
-        timeout_s = abs(timeout_ms) / 1000.0
         check_period_s = abs(check_period_ms) / 1000.0
         if attempts > 0:
             for _attempt_no in range(attempts):
+                fraction = random.random()
+                time.sleep(fraction * check_period_s)  # jitter
+                check_period_s *= factor ** fraction
                 if test_func():
                     return
-                time.sleep(check_period_s)
             else:
                 att_fail = (
                     f"\n  (Still failing after attempt limit [{attempts}], testing"
@@ -411,12 +425,16 @@ def try_assert():
                 exc = AssertionError(f"{str(fail_msg)}{att_fail}".strip())
                 raise exc.with_traceback(tb)
 
-        elif timeout_s > 0:
+        elif timeout_ms > 0:
+            timeout_s = abs(timeout_ms) / 1000.0
             end = time.monotonic() + timeout_s
             while time.monotonic() < end:
+                fraction = random.random()
+                wait_for = fraction * check_period_s  # jitter
+                time.sleep(min(wait_for, end - time.monotonic()))
+                check_period_s *= factor ** fraction
                 if test_func():
                     return
-                time.sleep(check_period_s)
             att_fail = (
                 f"\n  (Still failing after timeout [{timeout_ms}ms], with attempts "
                 f"every {check_period_ms}ms)"

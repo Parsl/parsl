@@ -1,61 +1,70 @@
-import argparse
 import logging
-import time
-import uuid
+import pickle
+from contextlib import ExitStack
+from typing import Optional
 
 import zmq
-from zmq.utils.monitor import recv_monitor_message
 
-from parsl.addresses import get_all_addresses
+from parsl import curvezmq
 
 logger = logging.getLogger(__name__)
 
 
-def probe_addresses(addresses, task_port, timeout=120):
+def probe_addresses(
+    zmq_context: curvezmq.ClientContext,
+    addresses: str,
+    timeout_ms: int = 120_000,
+    identity: Optional[bytes] = None,
+):
     """
-    Parameters
-    ----------
+    Given a single-line CSV list of addresses, return the first proven valid address.
 
-    addresses: [string]
-        List of addresses as strings
-    task_port: int
-        Task port on the interchange
-    timeout: int
-        Timeout in seconds
+    This function will connect to each address in ``addresses`` (a comma-separated
+    list of URLs) and attempt to send a CONNECTION_PROBE packet.  Returns the first
+    address that receives a response.
 
-    Returns
-    -------
-    None or string address
+    If no address receives a response within the ``timeout_ms`` (specified in
+    milliseconds), then raise ``ConnectionError``.
+
+    :param zmq_context: A ZMQ Context; the call-site may provide an encrypted ZMQ
+        context for assurance that the returned address is the expected and correct
+        endpoint
+    :param addresses: a comma-separated string of addresses to attempt.  Example:
+        ``tcp://127.0.0.1:1234,tcp://[3812::03aa]:5678``
+    :param timeout_ms: how long to wait for a response from the probes.  The probes
+        are initiated and await concurrently, so this timeout will be the total wall
+        time in the worst case of "no addresses are valid."
+    :param identity: a ZMQ connection identity; used for logging connection probes
+        at the interchange
+    :raises: ``ConnectionError`` if no addresses are determined valid
+    :returns: a single address, the first one that received a response
     """
-    context = zmq.Context()
-    addr_map = {}
-    for addr in addresses:
-        socket = context.socket(zmq.DEALER)
-        socket.setsockopt(zmq.LINGER, 0)
-        url = "tcp://{}:{}".format(addr, task_port)
-        logger.debug("Trying to connect back on {}".format(url))
-        socket.connect(url)
-        addr_map[addr] = {'sock': socket,
-                          'mon_sock': socket.get_monitor_socket(events=zmq.EVENT_CONNECTED)}
+    if not addresses:
+        raise ValueError("No address to probe!")
 
-    start_t = time.time()
+    sock_map = {}
+    urls = addresses.split(",")
+    with ExitStack() as stk:
+        poller = zmq.Poller()
+        for url in urls:
+            logger.debug("Testing ZMQ connection to url: %s", url)
+            s: zmq.Socket = stk.enter_context(zmq_context.socket(zmq.DEALER))
+            s.setsockopt(zmq.LINGER, 0)
+            s.setsockopt(zmq.IPV6, True)
+            if identity:
+                s.setsockopt(zmq.IDENTITY, identity)
+            stk.enter_context(s.connect(url))
+            poller.register(s, zmq.POLLIN)
+            sock_map[s] = url
 
-    first_connected = None
-    while time.time() < start_t + timeout and not first_connected:
-        for addr in addr_map:
-            try:
-                recv_monitor_message(addr_map[addr]['mon_sock'], zmq.NOBLOCK)
-                first_connected = addr
-                logger.info("Connected to interchange on {}".format(first_connected))
-                break
-            except zmq.Again:
-                pass
-            time.sleep(0.01)
+            s.send(pickle.dumps({'type': 'connection_probe'}))
 
-    for addr in addr_map:
-        addr_map[addr]['sock'].close()
+        for sock, evt in poller.poll(timeout=timeout_ms):
+            sock.recv()  # clear the buffer for good netizenry
+            return sock_map.get(sock)
 
-    return first_connected
+    addys = ", ".join(urls)  # just slightly more human friendly
+    raise ConnectionError(f"No viable ZMQ url from: {addys}")
 
 
 class TestWorker:
@@ -71,8 +80,7 @@ class TestWorker:
 
         address = probe_addresses(addresses, port)
         print("Viable address :", address)
-        self.task_incoming.connect("tcp://{}:{}".format(address, port))
-        print("Here")
+        self.task_incoming.connect(tcp_url(address, port))
 
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
@@ -84,6 +92,10 @@ class TestWorker:
 
 
 if __name__ == "__main__":
+    import argparse
+    import uuid
+
+    from parsl.addresses import get_all_addresses, tcp_url
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port", required=True,

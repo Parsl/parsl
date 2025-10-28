@@ -20,7 +20,7 @@ from parsl.app.errors import BashExitFailure, RemoteExceptionWrapper
 from parsl.app.python import timeout
 from parsl.data_provider.files import File
 from parsl.executors.base import ParslExecutor
-from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize import deserialize, pack_apply_message
 from parsl.serialize.errors import DeserializationError, SerializationError
 from parsl.utils import RepresentationMixin
 
@@ -133,6 +133,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.resource = resource
         self._uid = RPEX.lower()
         self.bulk_mode = bulk_mode
+        self._terminate = mt.Event()
         self.working_dir = working_dir
         self.pilot_kwargs = rpex_pilot_kwargs
         self.future_tasks: Dict[str, Future] = {}
@@ -214,6 +215,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         """Create the Pilot component and pass it.
         """
         logger.info("starting RadicalPilotExecutor")
+        super().start()
         logger.info('Parsl: {0}'.format(parsl.__version__))
         logger.info('RADICAL pilot: {0}'.format(rp.version))
         self.session = rp.Session(cfg={'base': self.run_dir},
@@ -439,11 +441,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def _pack_and_apply_message(self, func, args, kwargs):
         try:
-            buffer = pack_res_spec_apply_message(func,
-                                                 args,
-                                                 kwargs,
-                                                 resource_specification={},
-                                                 buffer_threshold=1024 * 1024)
+            buffer = pack_apply_message(func, args, kwargs, buffer_threshold=1 << 20)
             task_func = rp.utils.serialize_bson(buffer)
         except TypeError:
             raise SerializationError(func.__name__)
@@ -532,7 +530,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         bulk = list()
 
-        while True:
+        while not self._terminate.is_set():
 
             now = time.time()  # time of last submission
 
@@ -550,6 +548,9 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     bulk.append(task)
 
                 if len(bulk) >= self._max_bulk_size:
+                    break
+
+                if self._terminate.is_set():
                     break
 
             if bulk:
@@ -588,7 +589,17 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all RADICAL-Pilot components."""
         logger.info("RadicalPilotExecutor is terminating...")
+
+        self._terminate.set()
+
+        # ensure we are in the bulk submssion mode
+        if self.bulk_mode:
+            self._bulk_thread.join()
+
         self.session.close(download=True)
+
+        super().shutdown()
+
         logger.info("RadicalPilotExecutor is terminated.")
 
         return True

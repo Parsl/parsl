@@ -10,7 +10,7 @@ Installation
 
 Parsl is available on `PyPI <https://pypi.org/project/parsl/>`_ and `conda-forge <https://anaconda.org/conda-forge/parsl>`_. 
 
-Parsl requires Python3.8+ and has been tested on Linux and macOS.
+Parsl requires Python3.10+ and has been tested on Linux.
 
 
 Installation using Pip
@@ -31,8 +31,8 @@ Installation using Conda
 
 1. Create and activate a new conda environment::
 
-     $ conda create --name parsl_py38 python=3.8
-     $ source activate parsl_py38
+     $ conda create --name parsl_py310 python=3.10
+     $ source activate parsl_py310
 
 2. Install Parsl::
 
@@ -70,7 +70,7 @@ We describe these components briefly here, and link to more details in the `User
 
 .. note::
 
-    Parsl's documentation includes `templates for many supercomputers <userguide/configuring.html>`_.
+    Parsl's documentation includes `templates for many supercomputers <userguide/configuring/examples.html>`_.
     Even though you may not need to write a configuration from a blank slate,
     understanding the basic terminology below will be very useful.
 
@@ -112,7 +112,7 @@ with hello world Python and Bash apps.
     with open('hello-stdout', 'r') as f:
         print(f.read())
 
-Learn more about the types of Apps and their options `here <userguide/apps.html>`__.
+Learn more about the types of Apps and their options `here <userguide/apps/index.html>`__.
 
 Executors
 ^^^^^^^^^
@@ -127,7 +127,7 @@ You can dynamically set the number of workers based on available memory and
 pin each worker to specific GPUs or CPU cores
 among other powerful features.
 
-Learn more about Executors `here <userguide/execution.html#executors>`__.
+Learn more about Executors `here <userguide/configuration/execution.html#executors>`__.
 
 Execution Providers
 ^^^^^^^^^^^^^^^^^^^
@@ -141,7 +141,7 @@ Another key role of Providers is defining how to start an Executor on a remote c
 Often, this simply involves specifying the correct Python environment and
 (described below) how to launch the Executor on each acquired computers.
 
-Learn more about Providers `here <userguide/execution.html#execution-providers>`__.
+Learn more about Providers `here <userguide/configuration/execution.html#execution-providers>`__.
 
 Launchers
 ^^^^^^^^^
@@ -151,7 +151,7 @@ A common example is an :class:`~parsl.launchers.launchers.MPILauncher`, which us
 for starting a single program on multiple computing nodes.
 Like Providers, Parsl comes packaged with Launchers for most supercomputers and clouds.
 
-Learn more about Launchers `here <userguide/execution.html#launchers>`__.
+Learn more about Launchers `here <userguide/configuration/execution.html#launchers>`__.
 
 
 Benefits of a Data-Flow Kernel
@@ -164,7 +164,7 @@ and performs the many other functions needed to execute complex workflows.
 The flexibility and performance of the DFK enables applications with
 intricate dependencies between tasks to execute on thousands of parallel workers.
 
-Start with the Tutorial or the `parallel patterns <userguide/workflow.html>`_
+Start with the Tutorial or the `parallel patterns <userguide/workflows/workflow.html>`_
 to see the complex types of workflows you can make with Parsl.
 
 Starting Parsl
@@ -176,12 +176,17 @@ This script runs on a system that must stay on-line until all of your tasks comp
 much computing power, such as the login node for a supercomputer.
 
 The :class:`~parsl.config.Config` object holds definitions of Executors and the Providers and Launchers they rely on.
-An example which launches 512 workers on 128 nodes of the Polaris supercomputer looks like
+An example which launches 4 workers on 1 node of the Polaris supercomputer looks like
 
 .. code-block:: python
 
+    from parsl import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.providers import PBSProProvider
+    from parsl.launchers import MpiExecLauncher
+
     config = Config(
-        retires=1,  # Restart task if they fail once
+        retries=1,  # Restart task if they fail once
         executors=[
             HighThroughputExecutor(
                 available_accelerators=4,  # Maps one worker per GPU
@@ -191,13 +196,13 @@ An example which launches 512 workers on 128 nodes of the Polaris supercomputer 
                     account="example",
                     worker_init="module load conda; conda activate parsl",
                     walltime="1:00:00",
-                    queue="prod",
+                    queue="debug",
                     scheduler_options="#PBS -l filesystems=home:eagle",  # Change if data on other filesystem
                     launcher=MpiExecLauncher(
                         bind_cmd="--cpu-bind", overrides="--depth=64 --ppn 1"
                     ),  # Ensures 1 manger per node and allows it to divide work to all 64 cores
                     select_options="ngpus=4",
-                    nodes_per_block=128,
+                    nodes_per_block=1,
                     cpus_per_node=64,
                 ),
             ),
@@ -205,7 +210,7 @@ An example which launches 512 workers on 128 nodes of the Polaris supercomputer 
     )
 
 
-The documentation has examples for other supercomputers `here <userguide/configuring.html>`__.
+The documentation has examples for other supercomputers `here <userguide/configuration/examples.html>`_.
 
 The next step is to load the configuration
 
@@ -236,7 +241,7 @@ for reporting purposes.
 
 As an NSF-funded project, our ability to track usage metrics is important for continued funding. 
 
-You can opt-in by setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). 
+You can opt-in by setting ``usage_tracking=3`` in the configuration object (`parsl.config.Config`). 
 
 To read more about what information is collected and how it is used see :ref:`label-usage-tracking`.
 

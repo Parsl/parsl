@@ -191,8 +191,8 @@
         "name": "The Python Package Index",
         "url": "https://pypi.org"
     },
-    "runtimePlatform": "Python 3.8",
+    "runtimePlatform": "Python 3.10",
     "url": "https://github.com/Parsl/parsl",
     "developmentStatus": "active",
-    "programmingLanguage": "Python :: 3.8"
+    "programmingLanguage": "Python :: 3.10"
 }

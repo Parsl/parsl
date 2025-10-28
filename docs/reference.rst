@@ -13,7 +13,7 @@ Core
     parsl.app.app.join_app
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
-    parsl.monitoring.MonitoringHub
+    parsl.concurrent.ParslPoolExecutor
     parsl.dataflow.dependency_resolvers.DependencyResolver
     parsl.dataflow.dependency_resolvers.DEEP_DEPENDENCY_RESOLVER
     parsl.dataflow.dependency_resolvers.SHALLOW_DEPENDENCY_RESOLVER
@@ -32,6 +32,8 @@ Configuration
     parsl.addresses.address_by_interface
     parsl.addresses.address_by_query
     parsl.addresses.address_by_route
+    parsl.addresses.get_all_addresses
+    parsl.addresses.get_any_address
     parsl.utils.get_all_checkpoints
     parsl.utils.get_last_checkpoint
 
@@ -77,6 +79,17 @@ Executors
     parsl.executors.taskvine.TaskVineExecutor
     parsl.executors.FluxExecutor
     parsl.executors.radical.RadicalPilotExecutor
+    parsl.executors.GlobusComputeExecutor
+
+Manager Selectors
+=================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.executors.high_throughput.manager_selector.RandomManagerSelector
+    parsl.executors.high_throughput.manager_selector.BlockIdManagerSelector
 
 Launchers
 =========
@@ -93,6 +106,7 @@ Launchers
     parsl.launchers.SrunMPILauncher
     parsl.launchers.GnuParallelLauncher
     parsl.launchers.MpiExecLauncher
+    parsl.launchers.MpiRunLauncher
     parsl.launchers.JsrunLauncher
     parsl.launchers.WrappedLauncher
 
@@ -104,7 +118,6 @@ Providers
     :nosignatures:
 
     parsl.providers.AWSProvider
-    parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
     parsl.providers.GoogleCloudProvider
     parsl.providers.GridEngineProvider
@@ -159,18 +172,28 @@ Exceptions
     parsl.providers.errors.ScaleOutFailed
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
-    parsl.channels.errors.ChannelError
-    parsl.channels.errors.BadHostKeyException
-    parsl.channels.errors.BadScriptPath
-    parsl.channels.errors.BadPermsScriptPath
-    parsl.channels.errors.FileExists
-    parsl.channels.errors.AuthException
-    parsl.channels.errors.SSHException
-    parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
-    parsl.executors.high_throughput.interchange.ManagerLost
+    parsl.executors.high_throughput.errors.ManagerLost
     parsl.serialize.errors.DeserializationError
     parsl.serialize.errors.SerializationError
+
+
+Monitoring
+==========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.monitoring.MonitoringHub
+    parsl.monitoring.radios.base.MonitoringRadioReceiver
+    parsl.monitoring.radios.base.MonitoringRadioSender
+    parsl.monitoring.radios.base.RadioConfig
+    parsl.monitoring.radios.filesystem.FilesystemRadio
+    parsl.monitoring.radios.htex.HTEXRadio
+    parsl.monitoring.radios.udp.UDPRadio
+    parsl.monitoring.radios.multiprocessing.MultiprocessingQueueRadio
+
 
 Internal
 ========
@@ -191,3 +214,13 @@ Internal
     parsl.jobs.job_status_poller.JobStatusPoller
     parsl.jobs.strategy.Strategy
     parsl.utils.Timer
+
+Task Vine configuration
+=======================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.executors.taskvine.TaskVineManagerConfig
+    parsl.executors.taskvine.TaskVineFactoryConfig
