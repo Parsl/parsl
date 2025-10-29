@@ -133,7 +133,7 @@ class ServerContext(BaseContext):
         auth_thread.start()
         # Only allow certs that are in the cert dir
         assert self.cert_dir  # For mypy
-        auth_thread.configure_curve(domain="*", location=self.cert_dir)
+        auth_thread.configure_curve(domain="*", location=str(self.cert_dir))
         return auth_thread
 
     def socket(self, socket_type: int, *args, **kwargs) -> zmq.Socket:

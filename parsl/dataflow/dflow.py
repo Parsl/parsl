@@ -3,6 +3,7 @@ from __future__ import annotations
 import atexit
 import concurrent.futures as cf
 import datetime
+import functools
 import inspect
 import logging
 import os
@@ -13,6 +14,7 @@ import time
 from concurrent.futures import Future
 from functools import partial
 from getpass import getuser
+from hashlib import md5
 from socket import gethostname
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from uuid import uuid4
@@ -83,7 +85,6 @@ class DataFlowKernel:
             A specification of all configuration options. For more details see the
             :class:~`parsl.config.Config` documentation.
         """
-
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
@@ -117,6 +118,9 @@ class DataFlowKernel:
         if self.monitoring:
             self.monitoring.start(self.run_dir, self.config.run_dir)
             self.monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring.resource_msgs)
+            self.file_provenance = self.monitoring.file_provenance
+        else:
+            self.file_provenance = False
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -229,13 +233,15 @@ class DataFlowKernel:
         Create the dictionary that will be included in the log.
         """
         info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'fail_cost', 'status',
-                           'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
+                           'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor',
+                           'environment']
 
         # mypy cannot verify that these task_record[k] references are valid:
         # They are valid if all entries in info_to_monitor are declared in the definition of TaskRecord
         # This type: ignore[literal-required] asserts that fact.
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}  # type: ignore[literal-required]
-
+        task_log_info['task_args'] = str(task_record['args'])
+        task_log_info['task_kwargs'] = str(task_record['kwargs'])
         task_log_info['run_id'] = self.run_id
         task_log_info['try_id'] = task_record['try_id']
         task_log_info['timestamp'] = datetime.datetime.now()
@@ -284,6 +290,122 @@ class DataFlowKernel:
                                                     if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
 
         return task_log_info
+
+    def _send_file_log_info(self, file: Union[File, DataFuture],
+                            task_record: TaskRecord, is_output: bool) -> None:
+        """ Generate a message for the monitoring db about a file. """
+        if self.monitoring_radio and self.file_provenance:
+            file_log_info = self._create_file_log_info(file, task_record)
+            # make sure the task_id is None for inputs
+            if not is_output:
+                file_log_info['task_id'] = None
+            self.monitoring_radio.send((MessageType.FILE_INFO, file_log_info))
+
+    def _create_file_log_info(self, file: Union[File, DataFuture],
+                              task_record: TaskRecord) -> Dict[str, Any]:
+        """
+        Create the dictionary that will be included in the monitoring db.
+        """
+        # set file info if needed
+        if isinstance(file, DataFuture):
+            fo = file.file_obj
+        else:
+            fo = file
+        if fo.scheme == 'file' and os.path.isfile(fo.filepath):
+            if not fo.timestamp:
+                fo.timestamp = datetime.datetime.fromtimestamp(os.stat(fo.filepath).st_ctime, tz=datetime.timezone.utc)
+            if not fo.size:
+                fo.size = os.stat(fo.filepath).st_size
+            if not fo.md5sum:
+                fo.md5sum = md5(open(fo, 'rb').read()).hexdigest()
+
+        file_log_info = {'file_name': file.filename,
+                         'file_id': str(file.uu_id),
+                         'run_id': self.run_id,
+                         'task_id': task_record['id'],
+                         'try_id': task_record['try_id'],
+                         'timestamp': file.timestamp,
+                         'size': file.size,
+                         'md5sum': file.md5sum
+                         }
+        return file_log_info
+
+    def register_as_input(self, f: Union[File, DataFuture],
+                          task_record: TaskRecord):
+        """ Register a file as an input to a task. """
+        if self.monitoring_radio and self.file_provenance:
+            self._send_file_log_info(f, task_record, False)
+            file_input_info = self._create_file_io_info(f, task_record)
+            self.monitoring_radio.send((MessageType.INPUT_FILE, file_input_info))
+
+    def register_as_output(self, f: Union[File, DataFuture],
+                           task_record: TaskRecord):
+        """ Register a file as an output of a task. """
+        if self.monitoring_radio and self.file_provenance:
+            self._send_file_log_info(f, task_record, True)
+            file_output_info = self._create_file_io_info(f, task_record)
+            self.monitoring_radio.send((MessageType.OUTPUT_FILE, file_output_info))
+
+    def _create_file_io_info(self, file: Union[File, DataFuture],
+                             task_record: TaskRecord) -> Dict[str, Any]:
+        """
+        Create the dictionary that will be included in the monitoring db
+        """
+        file_io_info = {'file_id': str(file.uu_id),
+                        'run_id': self.run_id,
+                        'task_id': task_record['id'],
+                        'try_id': task_record['try_id'],
+                        }
+        return file_io_info
+
+    def _register_env(self, environ: ParslExecutor) -> None:
+        """ Capture the environment information for the monitoring db. """
+        if self.monitoring_radio and self.file_provenance:
+            environ_info = self._create_env_log_info(environ)
+            self.monitoring_radio.send((MessageType.ENVIRONMENT_INFO, environ_info))
+
+    def _create_env_log_info(self, environ: ParslExecutor) -> Dict[str, Any]:
+        """
+        Create the dictionary that will be included in the monitoring db
+        """
+        env_log_info = {'run_id': environ.run_id,
+                        'environment_id': str(environ.uu_id),
+                        'label': environ.label
+                        }
+
+        env_log_info['address'] = getattr(environ, 'address', None)
+        provider = getattr(environ, 'provider', None)
+        if provider is not None:
+            env_log_info['provider'] = provider.label
+            env_log_info['launcher'] = str(type(getattr(provider, 'launcher', None)))
+            env_log_info['worker_init'] = getattr(provider, 'worker_init', None)
+        return env_log_info
+
+    def log_info(self, msg: str) -> None:
+        """Log an info message to the monitoring db."""
+        if self.monitoring_radio:
+            if self.file_provenance:
+                misc_msg = self._create_misc_log_info(msg)
+                if misc_msg is None:
+                    logger.info("Could not turn message into a str, so not sending message to monitoring db")
+                else:
+                    self.monitoring_radio.send((MessageType.MISC_INFO, misc_msg))
+            else:
+                logger.info("File provenance is not enabled, so not sending message to monitoring db")
+        else:
+            logger.info("Monitoring is not enabled, so not sending message to monitoring db")
+
+    def _create_misc_log_info(self, msg: Any) -> Union[None, Dict[str, Any]]:
+        """
+        Create the dictionary that will be included in the monitoring db
+        """
+        try:  # exception should only be raised if msg cannot be cast to a str
+            return {'run_id': self.run_id,
+                    'timestamp': datetime.datetime.now(),
+                    'info': str(msg)
+                    }
+        except Exception:
+            return None
 
     def _count_deps(self, depends: Sequence[Future]) -> int:
         """Count the number of unresolved futures in the list depends.
@@ -742,8 +864,8 @@ class DataFlowKernel:
 
         return exec_fu
 
-    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any],
-                                                                                                                   Callable]:
+    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable,
+                        task_record: TaskRecord) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
         """Look for inputs of the app that are files. Give the data manager
         the opportunity to replace a file with a data future for that file,
         for example wrapping the result of a staging action.
@@ -763,6 +885,7 @@ class DataFlowKernel:
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
+            self.register_as_input(f, task_record)
 
         for kwarg, f in kwargs.items():
             # stdout and stderr files should not be staging in (they will be staged *out*
@@ -770,16 +893,22 @@ class DataFlowKernel:
             if kwarg in ['stdout', 'stderr']:
                 continue
             (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
+            if isinstance(f, (File, DataFuture)):
+                self.register_as_input(f, task_record)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
             (newargs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
+            if isinstance(f, (File, DataFuture)):
+                self.register_as_input(f, task_record)
 
         return tuple(newargs), kwargs, func
 
-    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable) -> Callable:
+    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture,
+                         func: Callable, task_id: int, task_record: TaskRecord) -> Callable:
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
+
         app_fut._outputs = []
 
         # Pass over all possible outputs: the outputs kwarg, stdout and stderr
@@ -804,19 +933,22 @@ class DataFlowKernel:
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
                     logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
-                    df = DataFuture(stageout_fut, file, tid=app_fut.tid)
+                    df = DataFuture(stageout_fut, file, app_fut.tid, track_provenance=self.file_provenance)
                 else:
                     logger.debug("No stageout dependency for {}".format(repr(file)))
-                    df = DataFuture(app_fut, file, tid=app_fut.tid)
+                    df = DataFuture(app_fut, file, app_fut.tid, track_provenance=self.file_provenance)
 
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
                 # in the not-very-tested stageout system?
                 rewritable_func = self.data_manager.replace_task_stage_out(f_copy, rewritable_func, executor)
+                df.add_done_callback(functools.partial(self.register_output_file, app_fut))
                 return rewritable_func, f_copy, df
             else:
                 logger.debug("Not performing output staging for: {}".format(repr(file)))
-                return rewritable_func, file, DataFuture(app_fut, file, tid=app_fut.tid)
+                df = DataFuture(app_fut, file, app_fut.tid, track_provenance=self.file_provenance)
+                df.add_done_callback(functools.partial(self.register_output_file, app_fut))
+                return rewritable_func, file, df
 
         for idx, file in enumerate(outputs):
             func, outputs[idx], o = stageout_one_file(file, func)
@@ -999,8 +1131,9 @@ class DataFlowKernel:
                        'time_returned': None,
                        'try_time_launched': None,
                        'try_time_returned': None,
-                       'resource_specification': resource_specification}
-
+                       'resource_specification': resource_specification,
+                       'environment': str(self.executors[executor].uu_id)}
+        self._register_env(self.executors[executor])
         self.update_task_state(task_record, States.unsched)
 
         for kw in ['stdout', 'stderr']:
@@ -1017,9 +1150,9 @@ class DataFlowKernel:
         task_record['app_fu'] = app_fu
 
         # Transform remote input files to data futures
-        app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
+        app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func, task_record)
 
-        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
+        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func, task_id, task_record)
 
         logger.debug("Added output dependencies")
 
@@ -1277,6 +1410,13 @@ class DataFlowKernel:
         else:
             tid = repr(dep)
         return tid
+
+    def register_output_file(self, a_fut: AppFuture, fut: Future):
+        """Callback for registering output file information"""
+        if isinstance(fut, DataFuture):
+            self.register_as_output(fut.file_obj, a_fut.task_record)
+        else:
+            raise ValueError("Invalid type given, must be DataFuture, but was {}".format(type(fut)))
 
 
 class DataFlowKernelLoader:

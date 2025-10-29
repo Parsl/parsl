@@ -5,8 +5,10 @@ to transfer the file as well as to give the appropriate filepath depending
 on where (client-side, remote-side, intermediary-side) the File.filepath is
 being called from.
 """
+import datetime
 import logging
 import os
+import uuid
 from typing import Optional, Union
 from urllib.parse import urlparse
 
@@ -28,8 +30,9 @@ class File:
     """
 
     @typeguard.typechecked
-    def __init__(self, url: Union[os.PathLike, str]):
-        """Construct a File object from a url string.
+    def __init__(self, url: Union[os.PathLike, str], file_uuid: Optional[uuid.UUID] = None,
+                 timestamp: Optional[datetime.datetime] = None):
+        """Construct a File object from an url string.
 
         Args:
            - url (string or PathLike) : url of the file e.g.
@@ -38,6 +41,8 @@ class File:
               - 'file:///scratch/proj101/input.txt'
               - 'globus://go#ep1/~/data/input.txt'
               - 'globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/home/johndoe/data/input.txt'
+           - file_uuid (uuid.UUID) : unique identifier for the file, default is `None`
+           - timestamp (datetime.datetime) : creation timestamp for the file, default is `None`
         """
         self.url = str(url)
         parsed_url = urlparse(self.url)
@@ -45,7 +50,13 @@ class File:
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
+        # let the DFK set these values, if needed
+        self.size: Optional[int] = None
+        self.md5sum: Optional[str] = None
+        self.timestamp = timestamp
+
         self.local_path: Optional[str] = None
+        self.uu_id = uuid.uuid4() if file_uuid is None else file_uuid
 
     def cleancopy(self) -> "File":
         """Returns a copy of the file containing only the global immutable state,
@@ -53,7 +64,7 @@ class File:
            object will be as the original object was when it was constructed.
         """
         logger.debug("Making clean copy of File object {}".format(repr(self)))
-        return File(self.url)
+        return File(self.url, self.uu_id, self.timestamp)
 
     def __str__(self) -> str:
         return self.filepath
@@ -67,6 +78,7 @@ class File:
             f"netloc={self.netloc}",
             f"path={self.path}",
             f"filename={self.filename}",
+            f"uuid={self.uu_id}",
         ]
         if self.local_path is not None:
             content.append(f"local_path={self.local_path}")
