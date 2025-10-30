@@ -58,7 +58,7 @@ def _set_manager_attributes(m, config):
             m.tune(k, v)
 
     # DEBUG
-    m.tune("watch-library-logfiles", 1)
+    #m.tune("watch-library-logfiles", 1)
 
 
 def _prepare_environment_serverless(manager_config, env_cache_dir, poncho_create_script):
@@ -287,13 +287,13 @@ def _taskvine_submit_wait(ready_task_queue=None,
                             function_context_list = cloudpickle.load(f)
 
                     # DEBUG
-                    with open('/tmp/tmp.context.manager.print.context.file.file', 'w') as f:
-                        f.write(str(task.function_context_file))
-                    with open('/tmp/tmp.context.manager.file', 'w') as f:
-                        f.write(str(function_context_list))
-                    logger.info(f'ThanhDBG {function_context_list}')
-                    with open('/tmp/tmp.context.manager.function.module.file', 'w') as f:
-                        f.write(str(function_context_list[0].__module__))
+                    #with open('/tmp/tmp.context.manager.print.context.file.file', 'w') as f:
+                    #    f.write(str(task.function_context_file))
+                    #with open('/tmp/tmp.context.manager.file', 'w') as f:
+                    #    f.write(str(function_context_list))
+                    #logger.info(f'ThanhDBG {function_context_list}')
+                    #with open('/tmp/tmp.context.manager.function.module.file', 'w') as f:
+                    #    f.write(str(function_context_list[0].__module__))
                     #logger.info('ThanhDBG' + function_context_list[0].__module__)
 
                     # Don't automatically add environment so manager can declare and cache the vine file associated with the environment file
@@ -343,9 +343,9 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     kwargs = all_args['kwargs']
 
                     # DEBUG
-                    with open('/tmp/manager.check.args.kwargs.function.call.file', 'w') as f:
-                        f.write(str(args))
-                        f.write(str(kwargs))
+                    #with open('/tmp/manager.check.args.kwargs.function.call.file', 'w') as f:
+                    #    f.write(str(args))
+                    #    f.write(str(kwargs))
 
                     t = FunctionCall(libs_installed[task.func_name], task.func_name, *args, **kwargs)
                 except Exception as e:
