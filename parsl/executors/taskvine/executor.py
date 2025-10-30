@@ -245,7 +245,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         if self.use_tmp_dir_for_staging:
             tmp_prefix = f'{self.label}-{getpass.getuser()}-{datetime.now().strftime("%Y%m%d%H%M%S%f")}-'
-            self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix)
+            self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix).name
         else:
             self._function_data_dir = os.path.join(log_dir, 'function')
 
@@ -257,7 +257,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # factory logs go with manager logs regardless
         self.factory_config.scratch_dir = self.manager_config.vine_log_dir
-        logger.debug(f"Function data directory: {self._function_data_dir.name}, log directory: {log_dir}")
+        logger.debug(f"Function data directory: {self._function_data_dir}, log directory: {log_dir}")
         logger.debug(
             f"TaskVine manager log directory: {self.manager_config.vine_log_dir}, "
             f"factory log directory: {self.factory_config.scratch_dir}")
@@ -324,7 +324,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             'map': Pickled file with a dict between local parsl names, and remote taskvine names.
         """
         task_dir = "{:04d}".format(executor_task_id)
-        return os.path.join(self._function_data_dir.name, task_dir, *path_components)
+        return os.path.join(self._function_data_dir, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
         import cloudpickle
@@ -446,8 +446,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # arguments, result, and map of input and output files
         if exec_mode == 'serverless':
             if 'function_file' not in self._map_func_names_to_func_details[func.__name__]:
-                function_file = os.path.join(self._function_data_dir.name, func.__name__, 'function')
-                os.makedirs(os.path.join(self._function_data_dir.name, func.__name__))
+                function_file = os.path.join(self._function_data_dir, func.__name__, 'function')
+                os.makedirs(os.path.join(self._function_data_dir, func.__name__))
                 self._map_func_names_to_func_details[func.__name__].update({'function_file': function_file, 'is_serialized': False})
             else:
                 function_file = self._map_func_names_to_func_details[func.__name__]['function_file']
@@ -463,7 +463,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     function_context = resource_specification.get('function_context')
                     function_context_args = resource_specification.get('function_context_args', [])
                     function_context_kwargs = resource_specification.get('function_context_kwargs', {})
-                    function_context_file = os.path.join(self._function_data_dir.name, func.__name__, 'function_context')
+                    function_context_file = os.path.join(self._function_data_dir, func.__name__, 'function_context')
 
                     # DEBUG
                     with open('/tmp/tmp.context.executor.function.module.file', 'w') as f:
