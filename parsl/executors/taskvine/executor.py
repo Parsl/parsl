@@ -86,7 +86,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         use_tmp_dir_for_staging: bool
             Whether to use tmp dir for staging functions, arguments, and results.
-            Default is True.
+            Default is False.
 
         manager_config: TaskVineManagerConfig
             Configuration for the TaskVine manager.
@@ -109,7 +109,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  label: str = "TaskVineExecutor",
                  worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']] = 'factory',
                  function_exec_mode: Union[Literal['regular'], Literal['serverless']] = 'regular',
-                 use_tmp_dir_for_staging: bool = True,
+                 use_tmp_dir_for_staging: bool = False,
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = None,
