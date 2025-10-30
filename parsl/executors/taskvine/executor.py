@@ -407,7 +407,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._executor_task_counter += 1
 
         # Create a per task directory for the function, argument, map, and result files
-        os.mkdirs(self._path_in_task(executor_task_id), exist_ok=True)
+        os.makedirs(self._path_in_task(executor_task_id), exist_ok=True)
 
         input_files = []
         output_files = []
