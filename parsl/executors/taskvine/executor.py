@@ -248,7 +248,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix).name
         else:
             self._function_data_dir = os.path.join(log_dir, 'function')
-        logging.debug(f'Function data dir is {self._function_data_dir}')
 
         # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
         # Parsl does not.

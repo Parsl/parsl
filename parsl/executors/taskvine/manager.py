@@ -57,9 +57,6 @@ def _set_manager_attributes(m, config):
         for k, v in config.tune_parameters.items():
             m.tune(k, v)
 
-    # DEBUG
-    #m.tune("watch-library-logfiles", 1)
-
 
 def _prepare_environment_serverless(manager_config, env_cache_dir, poncho_create_script):
     # Return path to a packaged poncho environment
@@ -172,6 +169,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
     means that any communication should be done using the multiprocessing
     module capabilities, rather than shared memory.
     """
+    import cloudpickle
     logger.debug("Starting TaskVine Submit/Wait Process")
     setproctitle("parsl: TaskVine submit/wait")
 
@@ -281,20 +279,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     function_context_list = None
 
                     if task.function_context_file:
-                        #function_context_list = _deserialize_object_from_file(task.function_context_file)
-                        import cloudpickle
                         with open(task.function_context_file, 'rb') as f:
                             function_context_list = cloudpickle.load(f)
-
-                    # DEBUG
-                    #with open('/tmp/tmp.context.manager.print.context.file.file', 'w') as f:
-                    #    f.write(str(task.function_context_file))
-                    #with open('/tmp/tmp.context.manager.file', 'w') as f:
-                    #    f.write(str(function_context_list))
-                    #logger.info(f'ThanhDBG {function_context_list}')
-                    #with open('/tmp/tmp.context.manager.function.module.file', 'w') as f:
-                    #    f.write(str(function_context_list[0].__module__))
-                    #logger.info('ThanhDBG' + function_context_list[0].__module__)
 
                     # Don't automatically add environment so manager can declare and cache the vine file associated with the environment file
                     add_env = False
@@ -341,11 +327,6 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     all_args = _deserialize_object_from_file(task.argument_file)
                     args = all_args['args']
                     kwargs = all_args['kwargs']
-
-                    # DEBUG
-                    #with open('/tmp/manager.check.args.kwargs.function.call.file', 'w') as f:
-                    #    f.write(str(args))
-                    #    f.write(str(kwargs))
 
                     t = FunctionCall(libs_installed[task.func_name], task.func_name, *args, **kwargs)
                 except Exception as e:
