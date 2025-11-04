@@ -264,6 +264,13 @@ def monitor(pid: int,
     next_send = time.time()
     accumulate_dur = 5.0  # TODO: make configurable?
 
+    logging.debug("Sending first resource message")
+    try:
+        d = accumulate_and_prepare()
+        radio.send((MessageType.RESOURCE_INFO, d))
+    except Exception:
+        logging.exception("Exception getting the resource usage. Not sending first usage to Hub", exc_info=True)
+
     while not terminate_event.is_set() and pm.is_running():
         logging.debug("start of monitoring loop")
         try:

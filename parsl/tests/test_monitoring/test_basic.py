@@ -142,7 +142,7 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
         if isinstance(config.executors[0], ThreadPoolExecutor):
             assert c == 0, "Thread pool executors should not be recording resources"
         else:
-            assert c >= 1, "Task execution should have created some resource records"
+            assert c >= 2, "Task execution should have created at least first and last resource records"
 
 
 @pytest.mark.local
