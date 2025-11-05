@@ -97,6 +97,7 @@ site_test:  ## Run the site tests
 .PHONY: perf_test
 perf_test:  ## Run `parsl-perf` (--config .../local_threads.py)
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
+	parsl-perf --iterate 1,2,3 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
 test: clean_coverage isort lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test config_local_test perf_test ## run all tests
