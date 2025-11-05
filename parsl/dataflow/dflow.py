@@ -539,7 +539,7 @@ class DataFlowKernel:
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
-        self.memoizer.update_memo(task_record)
+        self.memoizer.update_memo_result(task_record, result)
 
         self._send_task_log_info(task_record)
 
@@ -558,7 +558,7 @@ class DataFlowKernel:
         logger.info(f"Task {task_record['id']} failed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
-        self.memoizer.update_memo(task_record)
+        self.memoizer.update_memo_exception(task_record, exception)
 
         self._send_task_log_info(task_record)
 
