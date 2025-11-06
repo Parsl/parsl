@@ -327,7 +327,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         return os.path.join(self._function_data_dir, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
-        import cloudpickle
         """Processes the Parsl app by its arguments and submits the function
         information to the task queue, to be executed using the TaskVine
         system. The args and kwargs are processed for input and output files to
@@ -466,20 +465,26 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     function_context_kwargs = resource_specification.get('function_context_kwargs', {})
                     function_context_file = os.path.join(self._function_data_dir, func.__name__, 'function_context')
 
-                    self._cloudpickle_serialize_object_to_file(function_context_file, [function_context, function_context_args, function_context_kwargs])
+                    self._cloudpickle_serialize_object_to_file(function_context_file,
+                                                               [function_context,
+                                                                function_context_args,
+                                                                function_context_kwargs])
                     self._map_func_names_to_func_details[func.__name__].update({'function_context_file': function_context_file})
                 else:
                     function_context_file = self._map_func_names_to_func_details[func.__name__]['function_context_file']
                 function_context_input_files = resource_specification.get('function_context_input_files', {})
 
-        logger.debug("Creating executor task {} with function at: {}, argument at: {}, and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
+        logger.debug("Creating executor task {} with function at: {}, argument at: {}, and result to be found at: {}".format(executor_task_id,
+                                                                                                                             function_file,
+                                                                                                                             argument_file,
+                                                                                                                             result_file))
 
         # Serialize function object and arguments, separately
         if exec_mode == 'regular' or not self._map_func_names_to_func_details[func.__name__]['is_serialized']:
             self._serialize_object_to_file(function_file, func)
             if exec_mode == 'serverless':
                 self._map_func_names_to_func_details[func.__name__]['is_serialized'] = True
-        
+
         # Delete references of function context information from resource_specification
         # as they are not needed to be transferred to remote nodes.
         # They are restored when the kwargs serialization is done.
@@ -488,10 +493,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             function_context_args = kwargs['parsl_resource_specification'].pop('function_context_args', [])
             function_context_kwargs = kwargs['parsl_resource_specification'].pop('function_context_kwargs', {})
             function_context_input_files = kwargs['parsl_resource_specification'].pop('function_context_input_files', {})
-        
+
         args_dict = {'args': args, 'kwargs': kwargs}
         self._serialize_object_to_file(argument_file, args_dict)
-        
+
         if exec_mode == 'serverless':
             if function_context:
                 kwargs['parsl_resource_specification']['function_context'] = function_context

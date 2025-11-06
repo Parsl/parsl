@@ -293,7 +293,6 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                      hoisting_modules=[parsl.serialize, run_parsl_function],
                                                                      exec_mode='direct',
                                                                      library_context_info=function_context_list)
-                    
 
                     # Configure the library if provided
                     if manager_config.library_config:
