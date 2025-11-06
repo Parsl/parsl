@@ -169,7 +169,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
     means that any communication should be done using the multiprocessing
     module capabilities, rather than shared memory.
     """
-    import cloudpickle  # type: ignore
+    import cloudpickle  # type: ignore[import-not-found]
     logger.debug("Starting TaskVine Submit/Wait Process")
     setproctitle("parsl: TaskVine submit/wait")
 
