@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any 
 
 
 class ParslTaskToVine:
@@ -9,13 +9,14 @@ class ParslTaskToVine:
                  func_name: str,                   # name of the Parsl function
                  exec_mode: str,                   # execution mode of function, out of {regular, python, serverless}
                  category: str,                    # category of Parsl function
-                 input_files: list,                # list of input files to this function
-                 output_files: list,               # list of output files to this function
+                 input_files: List[str],                # list of input files to this function
+                 output_files: List[str],               # list of output files to this function
                  map_file: Optional[str],          # pickled file containing mapping of local to remote names of files
                  function_file: Optional[str],     # pickled file containing the function information
                  argument_file: Optional[str],     # pickled file containing the arguments to the function call
                  result_file: Optional[str],       # path to the pickled result object of the function execution
-                 function_context_file: Optional[list],  # path to the pickled list of function context details for serverless functions
+                 function_context_file: Optional[List[Any]],  # path to the pickled list of function context details for serverless functions
+                 function_context_input_files: Dict[str, str],     # a dictionary of input files to the function context, mapping from local path names to remote path names
                  cores: Optional[float],           # number of cores to allocate
                  memory: Optional[int],            # amount of memory in MBs to allocate
                  disk: Optional[int],              # amount of disk in MBs to allocate
@@ -35,6 +36,7 @@ class ParslTaskToVine:
         self.input_files = input_files
         self.output_files = output_files
         self.function_context_file = function_context_file
+        self.function_context_input_files = function_context_input_files
         self.cores = cores
         self.memory = memory
         self.disk = disk

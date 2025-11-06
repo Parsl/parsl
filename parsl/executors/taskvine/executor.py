@@ -441,6 +441,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         result_file = None
         map_file = None
         function_context_file = None
+        function_context_input_files = {}
 
         # Get path to files that will contain the pickled function,
         # arguments, result, and map of input and output files
@@ -469,6 +470,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     self._map_func_names_to_func_details[func.__name__].update({'function_context_file': function_context_file})
                 else:
                     function_context_file = self._map_func_names_to_func_details[func.__name__]['function_context_file']
+                function_context_input_files = resource_specification.get('function_context_input_files', {})
 
         logger.debug("Creating executor task {} with function at: {}, argument at: {}, and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
 
@@ -485,6 +487,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             function_context = kwargs['parsl_resource_specification'].pop('function_context', None)
             function_context_args = kwargs['parsl_resource_specification'].pop('function_context_args', [])
             function_context_kwargs = kwargs['parsl_resource_specification'].pop('function_context_kwargs', {})
+            function_context_input_files = kwargs['parsl_resource_specification'].pop('function_context_input_files', {})
         
         args_dict = {'args': args, 'kwargs': kwargs}
         self._serialize_object_to_file(argument_file, args_dict)
@@ -496,6 +499,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 kwargs['parsl_resource_specification']['function_context_args'] = function_context_args
             if function_context_kwargs:
                 kwargs['parsl_resource_specification']['function_context_kwargs'] = function_context_kwargs
+            if function_context_input_files:
+                kwargs['parsl_resource_specification']['function_context_input_files'] = function_context_input_files
 
         # Construct the map file of local filenames at worker
         self._construct_map_file(map_file, input_files, output_files)
@@ -524,6 +529,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                     argument_file=argument_file,
                                     result_file=result_file,
                                     function_context_file=function_context_file,
+                                    function_context_input_files=function_context_input_files,
                                     cores=cores,
                                     memory=memory,
                                     disk=disk,

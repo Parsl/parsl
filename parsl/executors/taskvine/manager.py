@@ -318,6 +318,12 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     else:
                         logger.debug('Created minimal library task with no environment.')
 
+                    # add input files to library if exists
+                    if task.function_context_input_files:
+                        for file_local_name, file_remote_name in task.function_context_input_files.items():
+                            function_context_vine_file = m.declare_file(file_local_name, cache=True, peer_transfer=True)
+                            serverless_lib.add_input(function_context_vine_file, file_remote_name)
+
                     m.install_library(serverless_lib)
                     libs_installed[task.func_name] = lib_name
                 try:
