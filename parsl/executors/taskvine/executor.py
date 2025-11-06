@@ -591,7 +591,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
     def _cloudpickle_serialize_object_to_file(self, path, obj):
         """Takes any object and serializes it to the file path."""
-        import cloudpickle
+        import cloudpickle  # type: ignore
         with open(path, 'wb') as f:
             cloudpickle.dump(obj, f)
 
