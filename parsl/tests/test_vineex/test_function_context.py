@@ -27,7 +27,7 @@ def f_context(y, input_file_names):
 
 
 @python_app
-def f_compute(x):
+def f_compute(x, parsl_resource_specification={}):
     from parsl.executors.taskvine.utils import load_variable_in_serverless
     y = load_variable_in_serverless('y')
     return y + x + 1
