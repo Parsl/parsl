@@ -37,7 +37,6 @@ def f_compute(x):
 @require_taskvine
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
-@pytest.mark.parametrize('fresh_config', [fresh_config])
 def test_function_context_computation(num_tasks, fresh_config, current_config_name):
     if current_config_name != 'taskvine_ex':
         pytest.skip("Skip tests as these are exclusively for TaskVineExecutor.")
