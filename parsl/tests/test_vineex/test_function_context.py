@@ -13,11 +13,13 @@ except ImportError:
 else:
     TASKVINE_AVAIL = True
 
-
 require_taskvine = pytest.mark.skipif(
         not TASKVINE_AVAIL,
-        reason="Tests use features exclusive to TaskVineExecutor")
+        reason="Tests use features exclusive to TaskVineExecutor.")
 
+use_only_taskvine = pytest.mark.skipif(
+        'current_config_name != taskvine_ex',
+        reason="Tests use features exclusive to TaskVineExecutor.")
 
 def f_context(y, input_file_names):
     bases = []
@@ -36,6 +38,7 @@ def f_compute(x):
 
 
 @require_taskvine
+@use_only_taskvine
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
 @pytest.mark.parametrize('fresh_config', [fresh_config])

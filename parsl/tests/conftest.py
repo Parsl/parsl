@@ -454,3 +454,11 @@ def randomstring():
         return "".join(random.choice(alphabet) for _ in range(length))
 
     return func
+
+
+@pytest.fixture(scope="session")
+def current_config_name(pytestconfig):
+    config_path = pytestconfig.getoption("config")
+    if config_path:
+        return os.path.basename(config_path).split('.')[0]
+    return ""
