@@ -6,6 +6,18 @@ import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.taskvine_ex import fresh_config
 
+try:
+    import ndcctools.taskvine
+except:
+    TASKVINE_AVAIL = False
+else:
+    TASKVINE_AVAIL = True
+
+
+require_taskvine = pytest.mark.skipif(
+        not TASKVINE_AVAIL,
+        reason="Tests use features exclusive to TaskVineExecutor")
+
 
 def f_context(y, input_file_names):
     bases = []
@@ -23,13 +35,14 @@ def f_compute(x):
     return y + x + 1
 
 
+@require_taskvine
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
 @pytest.mark.parametrize('fresh_config', [fresh_config])
 def test_function_context_computation(num_tasks, fresh_config):
+    input_file_names = ['input1.test_taskvine_context.data', 'input2.test_taskvine_context.data']
     try:
         with parsl.load(fresh_config):
-            input_file_names = ['input1.test_taskvine_context.data', 'input2.test_taskvine_context.data']
             input_data = [7, 8]
             for i, file_name in enumerate(input_file_names):
                 with open(file_name, 'w') as f:
