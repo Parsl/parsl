@@ -42,7 +42,8 @@ def test_function_context_computation(num_tasks, current_config_name):
         pytest.skip("Skip tests as these are exclusively for TaskVineExecutor.")
     input_file_names = ['input1.test_taskvine_context.data', 'input2.test_taskvine_context.data']
     try:
-        with parsl.load(fresh_config):
+        config = fresh_config()
+        with parsl.load(config):
             input_data = [7, 8]
             for i, file_name in enumerate(input_file_names):
                 with open(file_name, 'w') as f:
