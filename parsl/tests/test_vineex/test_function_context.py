@@ -4,7 +4,6 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.taskvine_ex import fresh_config
 
 try:
     import ndcctools.taskvine  # noqa: F401
@@ -42,32 +41,30 @@ def test_function_context_computation(num_tasks, current_config_name):
         pytest.skip("Skip tests as these are exclusively for TaskVineExecutor.")
     input_file_names = ['input1.test_taskvine_context.data', 'input2.test_taskvine_context.data']
     try:
-        config = fresh_config()
-        with parsl.load(config):
-            input_data = [7, 8]
-            for i, file_name in enumerate(input_file_names):
-                with open(file_name, 'w') as f:
-                    print(input_data[i], file=f)
+        input_data = [7, 8]
+        for i, file_name in enumerate(input_file_names):
+            with open(file_name, 'w') as f:
+                print(input_data[i], file=f)
 
-            futs = []
-            x = 5
-            y = 1
-            function_context_input_files = {}
-            for v in input_file_names:
-                function_context_input_files[v] = v
-            for _ in range(num_tasks):
-                futs.append(f_compute(x,
-                                      parsl_resource_specification={
-                                          'exec_mode': 'serverless',
-                                          'function_context': f_context,
-                                          'function_context_args': [y, input_file_names],
-                                          'function_context_input_files': function_context_input_files}))
-            total_sum = 0
-            for i in range(num_tasks):
-                total_sum += futs[i].result()
+        futs = []
+        x = 5
+        y = 1
+        function_context_input_files = {}
+        for v in input_file_names:
+            function_context_input_files[v] = v
+        for _ in range(num_tasks):
+            futs.append(f_compute(x,
+                                  parsl_resource_specification={
+                                      'exec_mode': 'serverless',
+                                      'function_context': f_context,
+                                      'function_context_args': [y, input_file_names],
+                                      'function_context_input_files': function_context_input_files}))
+        total_sum = 0
+        for i in range(num_tasks):
+            total_sum += futs[i].result()
 
-            expected = (f_compute(x) + f_context(y, input_file_names)['y']) * num_tasks
-            assert total_sum == expected
+        expected = (f_compute(x) + f_context(y, input_file_names)['y']) * num_tasks
+        assert total_sum == expected
     finally:
         for file_name in input_file_names:
             os.remove(file_name)
