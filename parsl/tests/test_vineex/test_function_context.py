@@ -33,6 +33,10 @@ def f_compute(x, parsl_resource_specification={}):
     return y + x + 1
 
 
+def f_local_compute(x):
+    return x + 1
+
+
 @require_taskvine
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
@@ -64,7 +68,7 @@ def test_function_context_computation(num_tasks, current_config_name):
         for i in range(num_tasks):
             total_sum += futs[i].result()
 
-        expected = (f_compute(x) + f_context(y, input_file_names)['y']) * num_tasks
+        expected = (f_local_compute(x) + f_context(y, input_file_names)['y']) * num_tasks
         assert total_sum == expected
     finally:
         for file_name in input_file_names:
