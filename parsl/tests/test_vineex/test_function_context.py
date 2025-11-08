@@ -25,7 +25,7 @@ def f_compute(x):
 
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
-@pytest.mark.parametrize('fresh_config', [fresh_config]
+@pytest.mark.parametrize('fresh_config', [fresh_config])
 def test_function_context_computation(num_tasks, fresh_config):
     try:
         with parsl.load(fresh_config):
