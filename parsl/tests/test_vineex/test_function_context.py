@@ -21,6 +21,7 @@ use_only_taskvine = pytest.mark.skipif(
         'current_config_name != taskvine_ex',
         reason="Tests use features exclusive to TaskVineExecutor.")
 
+
 def f_context(y, input_file_names):
     bases = []
     for file_name in input_file_names:
