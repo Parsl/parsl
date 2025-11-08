@@ -7,8 +7,8 @@ from parsl.app.app import python_app
 from parsl.tests.configs.taskvine_ex import fresh_config
 
 try:
-    import ndcctools.taskvine
-except:
+    import ndcctools.taskvine  # noqa: F401
+except ImportError:
     TASKVINE_AVAIL = False
 else:
     TASKVINE_AVAIL = True
