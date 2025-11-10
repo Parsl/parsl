@@ -200,16 +200,16 @@ def total_tasks_plot(df_task, df_status, columns=20):
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
 
-dag_state_colors = {"pending": (1, 'rgb(168, 168, 168)'),
-                    "launched": (2, 'rgb(100, 255, 255)'),
-                    "running": (3, 'rgb(0, 0, 255)'),
-                    "dep_fail": (4, 'rgb(255, 128, 255)'),
-                    "failed": (5, 'rgb(200, 0, 0)'),
-                    "exec_done": (6, 'rgb(0, 200, 0)'),
-                    "memo_done": (7, 'rgb(64, 200, 64)'),
-                    "fail_retryable": (8, 'rgb(200, 128,128)'),
-                    "joining": (9, 'rgb(128, 128, 255)'),
-                    "running_ended": (10, 'rgb(64, 64, 255)')
+dag_state_colors = {"pending": (0, 'rgb(168, 168, 168)'),
+                    "launched": (1, 'rgb(100, 255, 255)'),
+                    "running": (2, 'rgb(0, 0, 255)'),
+                    "dep_fail": (3, 'rgb(255, 128, 255)'),
+                    "failed": (4, 'rgb(200, 0, 0)'),
+                    "exec_done": (5, 'rgb(0, 200, 0)'),
+                    "memo_done": (6, 'rgb(64, 200, 64)'),
+                    "fail_retryable": (7, 'rgb(200, 128,128)'),
+                    "joining": (8, 'rgb(128, 128, 255)'),
+                    "running_ended": (9, 'rgb(64, 64, 255)')
                     }
 
 
