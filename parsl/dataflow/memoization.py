@@ -191,14 +191,6 @@ class Memoizer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def checkpoint_queue(self) -> None:
-        """Called by the DFK when the user calls dfk.checkpoint(). This
-        indicates that the checkpoint system should explicitly process any
-        outstanding checkpoint writes.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
     def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
         """Asks the checkpoint system for a result recorded for the described
         task. ``check_memo`` should return a `Future` that will be used as
@@ -536,6 +528,11 @@ class BasicMemoizer(Memoizer):
         with self._checkpoint_lock:
             self._checkpoint_these_tasks(self.checkpointable_tasks)
             self.checkpointable_tasks = []
+
+    def checkpoint(self) -> None:
+        """This is the user-facing interface to manual checkpointing.
+        """
+        self.checkpoint_queue()
 
     def _checkpoint_these_tasks(self, checkpoint_queue: List[CheckpointCommand]) -> None:
         """Play a sequence of CheckpointCommands into a checkpoint file.
