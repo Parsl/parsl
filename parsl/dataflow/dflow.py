@@ -1201,13 +1201,6 @@ class DataFlowKernel:
         # should still see it.
         logger.info("DFK cleanup complete")
 
-    # TODO: this should maybe go away: manual explicit checkponting is
-    # a property of the (upcoming) BasicMemoizer, not of a memoisation
-    # plugin in general -- configure a BasicMemoizer separately from the
-    # DFK and call checkpoint on that...
-    def checkpoint(self) -> None:
-        self.memoizer.checkpoint_queue()
-
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
         tid = task_record['id']

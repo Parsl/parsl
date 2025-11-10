@@ -136,9 +136,6 @@ class Memoizer:
     def start(self, *, run_dir: str) -> None:
         raise NotImplementedError
 
-    def checkpoint_queue(self) -> None:
-        raise NotImplementedError
-
     def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
         raise NotImplementedError
 
@@ -460,6 +457,11 @@ class BasicMemoizer(Memoizer):
         with self.checkpoint_lock:
             self._checkpoint_these_tasks(self.checkpointable_tasks)
             self.checkpointable_tasks = []
+
+    def checkpoint(self) -> None:
+        """This is the user-facing interface to manual checkpointing.
+        """
+        self.checkpoint_queue()
 
     def _checkpoint_these_tasks(self, checkpoint_queue: List[CheckpointCommand]) -> None:
         """Play a sequence of CheckpointCommands into a checkpoint file.
