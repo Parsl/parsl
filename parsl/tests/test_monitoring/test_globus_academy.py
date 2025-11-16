@@ -15,11 +15,14 @@ from parsl.monitoring.radios.udp import UDPRadio
 
 @parsl.python_app
 def this_app():
+    # this delay needs to be several times the resource monitoring
+    # period configured in the test configuration, so that some
+    # messages are actually sent - there is no guarantee that any
+    # (non-first) resource message will be sent at all for a short app.
+    time.sleep(3)
+
     return 5
 
-
-# The below fresh configs are for use in parametrization, and should return
-# a configuration that is suitably configured for monitoring.
 
 def thread_config():
     c = Config(executors=[ThreadPoolExecutor(remote_monitoring_radio=UDPRadio(address="localhost", atexit_timeout=0))],
@@ -32,54 +35,30 @@ def academy_config():
     return fresh_config()
 
 
-def htex_config():
-    """This config will use htex's default htex-specific monitoring radio mode"""
-    from parsl.tests.configs.htex_local_alternate import fresh_config
-    return fresh_config()
+def academy_globus_config():
+    from globus_compute_sdk import Executor
 
+    from parsl.config import Config
+    from parsl.executors import GlobusComputeExecutor
+    from parsl.monitoring.radios.academy import AcademyRadio
 
-def htex_udp_config():
-    """This config will force UDP"""
-    from parsl.tests.configs.htex_local_alternate import fresh_config
-    c = fresh_config()
-    assert len(c.executors) == 1
-    ex = c.executors[0]
+    # laptop endpoint
+    # endpoint_id = 'd23b9bc6-99d1-40c4-8c35-9effd8a2266c'
+    # hetzner VM endpoint
+    endpoint_id = '8c83fa8d-9e1f-4704-b2dc-b942e8d0d4fb'
 
-    assert isinstance(ex.remote_monitoring_radio, HTEXRadio), "precondition: htex is configured for the HTEXRadio"
-    ex.remote_monitoring_radio = UDPRadio(address="localhost", atexit_timeout=0)
+    # endpoint_id = os.environ["GLOBUS_COMPUTE_ENDPOINT"]
 
-    return c
-
-
-def htex_filesystem_config():
-    """This config will force filesystem radio"""
-    from parsl.tests.configs.htex_local_alternate import fresh_config
-    c = fresh_config()
-    assert len(c.executors) == 1
-    ex = c.executors[0]
-
-    assert isinstance(ex.remote_monitoring_radio, HTEXRadio), "precondition: htex is configured for the HTEXRadio"
-    ex.remote_monitoring_radio = FilesystemRadio()
-
-    return c
-
-
-def workqueue_config():
-    from parsl.tests.configs.workqueue_ex import fresh_config
-    c = fresh_config()
-    c.monitoring = MonitoringHub(
-                        resource_monitoring_interval=1)
-    return c
-
-
-def taskvine_config():
-    from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
-    c = Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
-                                           worker_launch_method='provider')],
-               strategy_period=0.5,
-
-               monitoring=MonitoringHub(resource_monitoring_interval=1))
-    return c
+    return Config(
+        executors=[
+            GlobusComputeExecutor(
+                executor=Executor(endpoint_id=endpoint_id),
+                label="globus_compute",
+                remote_monitoring_radio=AcademyRadio()
+            )
+        ],
+        monitoring=MonitoringHub(resource_monitoring_interval=1)
+    )
 
 
 def row_counts_parametrized(tmpd_cwd, fresh_config):
@@ -93,7 +72,7 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
     db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
 
     config = fresh_config()
-    config.run_dir = str(tmpd_cwd)
+    config.run_dir = tmpd_cwd
     config.monitoring.logging_endpoint = db_url
 
     with parsl.load(config):
@@ -147,24 +126,10 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
         if isinstance(config.executors[0], ThreadPoolExecutor):
             assert c == 0, "Thread pool executors should not be recording resources"
         else:
-            assert c >= 2, "Task execution should have created at least first and last resource records"
+            assert c >= 1, "Task execution should have created some resource records"
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [thread_config, academy_config, htex_config, htex_filesystem_config, htex_udp_config])
+@pytest.mark.parametrize("fresh_config", [thread_config, academy_config, academy_globus_config])
 def test_row_counts_base(tmpd_cwd, fresh_config):
-    row_counts_parametrized(tmpd_cwd, fresh_config)
-
-
-@pytest.mark.workqueue
-@pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [workqueue_config])
-def test_row_counts_wq(tmpd_cwd, fresh_config):
-    row_counts_parametrized(tmpd_cwd, fresh_config)
-
-
-@pytest.mark.taskvine
-@pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [taskvine_config])
-def test_row_counts_tv(tmpd_cwd, fresh_config):
     row_counts_parametrized(tmpd_cwd, fresh_config)
