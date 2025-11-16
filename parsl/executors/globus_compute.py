@@ -9,6 +9,7 @@ import typeguard
 from parsl.data_provider.staging import Staging
 from parsl.errors import OptionalModuleMissing
 from parsl.executors.base import ParslExecutor
+from parsl.monitoring.radios.base import RadioConfig
 from parsl.utils import RepresentationMixin
 
 try:
@@ -43,6 +44,8 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         label: str = 'GlobusComputeExecutor',
         storage_access: Optional[List[Staging]] = None,
         working_dir: Optional[str] = None,
+        remote_monitoring_radio: Optional[RadioConfig] = None,
+
     ):
         """
         Parameters
@@ -75,6 +78,7 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         self.label = label
         self.storage_access = storage_access
         self.working_dir = working_dir
+        self.remote_monitoring_radio = remote_monitoring_radio
 
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """ Submit func to globus-compute
