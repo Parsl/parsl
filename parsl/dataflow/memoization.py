@@ -194,6 +194,9 @@ class Memoizer:
 
         self.checkpointed_tasks = 0
 
+        # this lock must be held when:
+        # * writing to any checkpoint files
+        # * interacting with self.checkpointable_tasks
         self.checkpoint_lock = threading.Lock()
 
         self.checkpoint_files = checkpoint_files
@@ -317,8 +320,8 @@ class Memoizer:
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint_one(CheckpointCommand(task, result=r))
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            # with self._modify_checkpointable_tasks_lock:  # TODO: sort out use of this lock
-            self.checkpointable_tasks.append(CheckpointCommand(task, result=r))
+            with self._modify_checkpointable_tasks_lock:
+                self.checkpointable_tasks.append(CheckpointCommand(task, result=r))
         elif self.checkpoint_mode is None:
             pass
         else:
@@ -330,8 +333,8 @@ class Memoizer:
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint_one(CheckpointCommand(task, exception=e))
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            # with self._modify_checkpointable_tasks_lock:  # TODO: sort out use of this lock
-            self.checkpointable_tasks.append(CheckpointCommand(task, exception=e))
+            with self._modify_checkpointable_tasks_lock:
+                 self.checkpointable_tasks.append(CheckpointCommand(task, exception=e))
         elif self.checkpoint_mode is None:
             pass
         else:
@@ -463,6 +466,12 @@ class Memoizer:
 
         The checkpoint lock must be held when invoking this method.
         """
+
+        # This checks that the lock is held, at least, but does not check that
+        # it is held by the current thread - threading.Lock does not have a
+        # concept of locking thread for threading.Lock.
+        assert self._checkpoint_lock.locked(), "checkpoint system should be locked"
+
         checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
         checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
