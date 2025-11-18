@@ -999,8 +999,6 @@ class DataFlowKernel:
                        'try_time_returned': None,
                        'resource_specification': resource_specification}
 
-        self._update_task_state(task_record, States.unsched)
-
         for kw in ['stdout', 'stderr']:
             if kw in app_kwargs:
                 if app_kwargs[kw] == parsl.AUTO_LOGNAME:
@@ -1028,10 +1026,6 @@ class DataFlowKernel:
                     'func': func,
                     'kwargs': app_kwargs})
 
-        assert task_id not in self.tasks
-
-        self.tasks[task_id] = task_record
-
         logger.debug("Gathering dependencies")
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
@@ -1053,6 +1047,10 @@ class DataFlowKernel:
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_record))
         self._update_task_state(task_record, States.pending)
+
+        assert task_id not in self.tasks
+        self.tasks[task_id] = task_record
+
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
 
         self._send_task_info(task_record)
