@@ -197,7 +197,7 @@ class Memoizer:
         # this lock must be held when:
         # * writing to any checkpoint files
         # * interacting with self.checkpointable_tasks
-        self.checkpoint_lock = threading.Lock()
+        self._checkpoint_lock = threading.Lock()
 
         self.checkpoint_files = checkpoint_files
         self.checkpoint_mode = checkpoint_mode
@@ -320,7 +320,7 @@ class Memoizer:
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint_one(CheckpointCommand(task, result=r))
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self._modify_checkpointable_tasks_lock:
+            with self._checkpoint_lock:
                 self.checkpointable_tasks.append(CheckpointCommand(task, result=r))
         elif self.checkpoint_mode is None:
             pass
@@ -333,8 +333,8 @@ class Memoizer:
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint_one(CheckpointCommand(task, exception=e))
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self._modify_checkpointable_tasks_lock:
-                 self.checkpointable_tasks.append(CheckpointCommand(task, exception=e))
+            with self._checkpoint_lock:
+                self.checkpointable_tasks.append(CheckpointCommand(task, exception=e))
         elif self.checkpoint_mode is None:
             pass
         else:
@@ -444,7 +444,7 @@ class Memoizer:
             Checkpointing only works if memoization is enabled
 
         """
-        with self.checkpoint_lock:
+        with self._checkpoint_lock:
             self._checkpoint_these_tasks([cc])
 
     def checkpoint_queue(self) -> None:
@@ -457,7 +457,7 @@ class Memoizer:
             Checkpointing only works if memoization is enabled
 
         """
-        with self.checkpoint_lock:
+        with self._checkpoint_lock:
             self._checkpoint_these_tasks(self.checkpointable_tasks)
             self.checkpointable_tasks = []
 
