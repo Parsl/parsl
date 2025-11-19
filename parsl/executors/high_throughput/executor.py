@@ -12,6 +12,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import typeguard
 
+import parsl.log_utils
 from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
@@ -439,6 +440,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if self.encrypted and self.cert_dir is None:
             logger.debug("Creating CurveZMQ certificates")
             self.cert_dir = curvezmq.create_certificates(self.logdir)
+            # TODO: need to untangle cert_dir use vs {certificates, secure log config}
+            # right now this will only work with encryption on...
+            # TODO: create a file in cert_dir called "log_callback.pkl"
+            with open(f"{self.logdir}/certificates/log_callback.pkl", "wb") as f:
+                pickle.dump(parsl.log_utils._parsl_process_loginit, f)
         elif not self.encrypted and self.cert_dir:
             raise AttributeError(
                 "The certificates directory path attribute (cert_dir) is defined, but the "
@@ -581,6 +587,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "manager_selector": self.manager_selector,
                               "run_id": self.run_id,
                               "_check_python_mismatch": self._check_python_mismatch,
+                              "log_callback": parsl.log_utils._parsl_process_loginit
                               }
 
         config_pickle = pickle.dumps(interchange_config)

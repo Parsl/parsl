@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import logging
 import multiprocessing.queues as mpq
-import os
 import queue
 import time
 from multiprocessing.context import SpawnProcess as SpawnProcessType
 from multiprocessing.queues import Queue as QueueType
 from multiprocessing.synchronize import Event as EventType
-from typing import Tuple
+from typing import Callable, Tuple
 
 import typeguard
 import zmq
 
+import parsl.log_utils
 from parsl.addresses import tcp_url
-from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringRouterStartError
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.types import TaggedMonitoringMessage
@@ -60,9 +59,7 @@ class MonitoringRouter:
         exit_event : Event
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
-        os.makedirs(run_dir, exist_ok=True)
-        set_file_logger(f"{run_dir}/monitoring_zmq_router.log",
-                        level=logging_level)
+        parsl.log_utils.initialize_cross_process_logs(run_dir, "monitoring_zmq_router")
         logger.debug("Monitoring router starting")
 
         self.address = address
@@ -124,8 +121,10 @@ def zmq_router_starter(*,
                        port_range: Tuple[int, int],
 
                        run_dir: str,
+                       loginit: Callable,
                        logging_level: int) -> None:
     setproctitle("parsl: monitoring zmq router")
+    parsl.log_utils._parsl_process_loginit = loginit
     try:
         router = MonitoringRouter(address=address,
                                   port_range=port_range,
@@ -170,6 +169,8 @@ def start_zmq_receiver(*,
                                        "port_range": port_range,
                                        "run_dir": logdir,
                                        "logging_level": logging.DEBUG if worker_debug else logging.INFO,
+                                       # ^ TODO: deprecate
+                                       "loginit": parsl.log_utils._parsl_process_loginit,
                                        },
                                name="Monitoring-ZMQ-Router-Process",
                                daemon=True,

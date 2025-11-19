@@ -7,11 +7,12 @@ import platform
 import sys
 import threading
 import time
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, cast
 
 import zmq
 from sortedcontainers import SortedList
 
+import parsl.log_utils
 from parsl import curvezmq
 from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
@@ -50,7 +51,8 @@ class Interchange:
                  hub_zmq_port: Optional[int],
                  heartbeat_threshold: int,
                  logdir: str,
-                 logging_level: int,
+                 logging_level: int,  # TODO: remove
+                 log_callback: Callable | None,  # TODO: document
                  poll_period: int,
                  cert_dir: Optional[str],
                  manager_selector: ManagerSelector,
@@ -93,6 +95,7 @@ class Interchange:
 
         logging_level : int
              Logging level as defined in the logging module.
+             # deprecated/unused in observability model
 
         poll_period : int
              The main thread polling period, in milliseconds.
@@ -107,9 +110,11 @@ class Interchange:
         """
         self.cert_dir = cert_dir
         self.logdir = logdir
-        os.makedirs(self.logdir, exist_ok=True)
 
-        start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
+        parsl.log_utils._parsl_process_loginit = log_callback
+
+        parsl.log_utils.initialize_cross_process_logs(self.logdir, "interchange")
+
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -597,41 +602,6 @@ class Interchange:
             self._ready_managers.pop(manager_id, 'None')
             if manager_id in interesting_managers:
                 interesting_managers.remove(manager_id)
-
-
-def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: Optional[str] = None) -> None:
-    """Add a stream log handler.
-
-    Parameters
-    ---------
-
-    filename: string
-        Name of the file to write logs to. Required.
-    level: logging.LEVEL
-        Set the logging level. Default=logging.DEBUG
-        - format_string (string): Set the format string
-    format_string: string
-        Format string to use.
-
-    Returns
-    -------
-        None.
-    """
-    if format_string is None:
-        format_string = (
-
-            "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d "
-            "%(processName)s(%(process)d) %(threadName)s "
-            "%(funcName)s [%(levelname)s] %(message)s"
-
-        )
-
-    logger.setLevel(level)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
 
 if __name__ == "__main__":

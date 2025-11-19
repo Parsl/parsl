@@ -23,6 +23,7 @@ from typing import Callable, Dict, List, Optional, Sequence
 import psutil
 import zmq
 
+import parsl.log_utils
 from parsl import curvezmq
 from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
@@ -593,6 +594,7 @@ class Manager:
                 args.logdir,
                 args.debug,
                 self.mpi_launcher,
+                parsl.log_utils._parsl_process_loginit
             ),
             name="HTEX-Worker-{}".format(worker_id),
         )
@@ -637,14 +639,13 @@ def worker(
     logdir: str,
     debug: bool,
     mpi_launcher: str,
+    log_callback: Callable
 ):
-    # override the global logger inherited from the __main__ process (which
-    # usually logs to manager.log) with one specific to this worker.
     global logger
-    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
-                               worker_id,
-                               name="worker_log",
-                               level=logging.DEBUG if debug else logging.INFO)
+    logger = logging.getLogger("worker_log")
+    parsl.log_utils._parsl_process_loginit = log_callback
+
+    parsl.log_utils.initialize_cross_process_logs(f'{logdir}/block-{block_id}/{pool_id}', f'worker_{worker_id}')
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -817,33 +818,6 @@ def worker(
         logger.info("All processing finished for executor task {}".format(tid))
 
 
-def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-        - filename (string): Name of the file to write logs to
-        - name (string): Logger name
-        - level (logging.LEVEL): Set the logging level.
-        - format_string (string): Set the format string
-
-    Returns:
-       -  None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
-                        "%(process)d %(threadName)s " \
-                        "[%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
-
-
 def get_arg_parser() -> argparse.ArgumentParser:
 
     def strategyorlist(s: str):
@@ -966,13 +940,26 @@ if __name__ == "__main__":
     parser = get_arg_parser()
     args = parser.parse_args()
 
-    os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
+    # this should be handled as start of the logging callback, if you actually need the directory to exist.
+    # os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
-    logger = start_file_logger(
-        f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
-        0,
-        level=logging.DEBUG if args.debug is True else logging.INFO
-    )
+    logger = logging.getLogger("parsl")
+    # start_file_logger(
+    #    f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
+    #    0,
+    #    level=logging.DEBUG if args.debug is True else logging.INFO
+    # )
+
+    # TODO: shutdown callback, although sometimes this will be terminated
+    # by e.g. batch job ending.
+
+    if args.cert_dir != "None":  # TODO: ugh
+        with open(f"{args.cert_dir}/log_callback.pkl", "rb") as f:
+            log_callback = pickle.load(f)
+            parsl.log_utils._parsl_process_loginit = log_callback
+
+    parsl.log_utils.initialize_cross_process_logs(f'{args.logdir}/block-{args.block_id}/{args.uid}', 'manager')
+
     logger.info(
         f"\n  Python version: {sys.version}"
         f"\n  Debug logging: {args.debug}"

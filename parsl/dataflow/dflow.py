@@ -91,10 +91,25 @@ class DataFlowKernel:
         self.run_dir = make_rundir(config.run_dir)
 
         self._logging_unregister_callback: Optional[Callable[[], None]]
-        if config.initialize_logging:
+        if config.initialize_logging is True:
             self._logging_unregister_callback = parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
-        else:
+        elif config.initialize_logging is False:
             self._logging_unregister_callback = None
+        else:
+            # TODO0: allow the initialize_logging hook to configure itself by eg. getting
+            #        credentials, configuring shared tokens. That means initialize_logging
+            #        cannot be a function.
+
+            # TODO1: initialize logging according to the settings here for this process
+            self._logging_unregister_callback = config.initialize_logging(self.run_dir, "parsl")
+
+            # TODO2: store the initializer globally for use elsewhere
+            parsl.log_utils._parsl_process_loginit = config.initialize_logging
+
+            # TODO3: be cautious about the semantics of overlapping DFKs: for example,
+            #        is it a configuration error to do this overlapping? thats probably
+            #        easiest to begin with, keeping with the notion that a DFK is
+            #        usually a singleton.
 
         logger.info("Starting DataFlowKernel with config\n{}".format(config))
 

@@ -32,6 +32,9 @@ from parsl.providers import LocalProvider
 working_dir = os.getcwd() + "/" + "test_htex_alternate"
 
 
+from parsl.tests.configs.htex_local_alternate_loghelper import my_log_handler
+
+
 def fresh_config():
     return Config(
         executors=[
@@ -63,7 +66,8 @@ def fresh_config():
                         resource_monitoring_interval=1,
         ),
         usage_tracking=3,
-        project_name="parsl htex_local_alternate test configuration"
+        project_name="parsl htex_local_alternate test configuration",
+        initialize_logging=my_log_handler
     )
 
 

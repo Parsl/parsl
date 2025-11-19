@@ -51,6 +51,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
                           "manager_selector": RandomManagerSelector(),
                           "run_id": "test",
                           "_check_python_mismatch": True,
+                          "log_callback": None
                           }
 
     config_pickle = pickle.dumps(interchange_config)

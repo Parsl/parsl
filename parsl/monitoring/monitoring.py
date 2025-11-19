@@ -9,6 +9,7 @@ from typing import Any, Optional, Union
 
 import typeguard
 
+import parsl.log_utils
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
     SpawnEvent,
@@ -135,8 +136,10 @@ class MonitoringHub(RepresentationMixin):
                                      args=(self.resource_msgs,),
                                      kwargs={"run_dir": dfk_run_dir,
                                              "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                             # TODO: logging level should be deprecated in the presence of observability
                                              "db_url": self.logging_endpoint,
                                              "exit_event": self.dbm_exit_event,
+                                             "loginit": parsl.log_utils._parsl_process_loginit
                                              },
                                      name="Monitoring-DBM-Process",
                                      daemon=True,

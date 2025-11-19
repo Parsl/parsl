@@ -2,17 +2,18 @@ import datetime
 import logging
 import multiprocessing.queues as mpq
 import multiprocessing.synchronize as mpe
-import os
 import queue
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
 import typeguard
 
+import parsl.log_utils
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
-from parsl.log_utils import set_file_logger
+
+# from parsl.log_utils import set_file_logger
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
@@ -291,10 +292,13 @@ class DatabaseManager:
         self.workflow_end = False
         self.workflow_start_message: Optional[MonitoringMessage] = None
         self.run_dir = run_dir
-        os.makedirs(self.run_dir, exist_ok=True)
 
-        set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
-                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
+        parsl.log_utils.initialize_cross_process_logs(self.run_dir, "database_manager")
+
+        # os.makedirs(self.run_dir, exist_ok=True)
+        # set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
+        #                format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
+        #
 
         logger.info("Initializing Database Manager process")
 
@@ -686,6 +690,7 @@ def dbm_starter(resource_msgs: mpq.Queue,
                 db_url: str,
                 run_dir: str,
                 logging_level: int,
+                loginit: Callable,
                 exit_event: mpe.Event) -> None:
     """Start the database manager process
 
@@ -693,6 +698,8 @@ def dbm_starter(resource_msgs: mpq.Queue,
 
     """
     setproctitle("parsl: monitoring database")
+
+    parsl.log_utils._parsl_process_loginit = loginit
 
     try:
         dbm = DatabaseManager(db_url=db_url,

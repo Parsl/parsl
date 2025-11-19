@@ -7,9 +7,17 @@ when working in a Jupyter notebook.
 """
 import io
 import logging
+import os
 from typing import Callable, Optional
 
 import typeguard
+
+logger = logging.getLogger(__name__)
+
+# the (singleton) callback that should be invoked at the start of every new process
+# to set up logging consistent with the parent.
+_parsl_process_loginit: Callable | None = None
+
 
 DEFAULT_FORMAT = (
     "%(created)f %(asctime)s %(processName)s-%(process)d "
@@ -97,3 +105,15 @@ def set_file_logger(filename: str,
         futures_logger.removeHandler(handler)
 
     return unregister_callback
+
+
+def initialize_cross_process_logs(rundir, logname):
+    print(f"BENC: in cross process log init, logname {logname}")
+    if _parsl_process_loginit is not None:
+        _parsl_process_loginit(rundir, logname)
+        logger.debug("Initialized cross-process logging for %s in %s", logname, rundir)
+    else:
+        # traditional parsl logging
+        # TODO: feed in legacy configuration options
+        os.makedirs(rundir, exist_ok=True)
+        set_file_logger(f"{rundir}/{logname}.log", level=logging.DEBUG, name='')

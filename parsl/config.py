@@ -122,7 +122,10 @@ class Config(RepresentationMixin, UsageInformation):
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: int = 0,
                  project_name: Optional[str] = None,
-                 initialize_logging: bool = True) -> None:
+                 initialize_logging: bool | Callable = True) -> None:
+        # initialize_logging could become the hook for initializing logging in all processes
+        # everywhere? with True and False being some (now weird) 'everyone does what they
+        # want, which might be nothing)
 
         executors = tuple(executors or [])
         if not executors:

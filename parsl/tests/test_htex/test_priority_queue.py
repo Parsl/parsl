@@ -26,6 +26,10 @@ def test_priority_queue(try_assert):
     )
 
     htex = HighThroughputExecutor(
+        encrypted=True,
+        # TODO: this has to be on to make logging work because of certdir
+        # bodge... which is needed for barrier that interchange has got
+        # all the submitted tasks.
         label="htex_local",
         max_workers_per_node=1,
         manager_selector=RandomManagerSelector(),
