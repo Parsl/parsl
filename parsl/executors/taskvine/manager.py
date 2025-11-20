@@ -467,20 +467,18 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
             # This serializes the result to a file again.
             # Also a double serialization, mark as TODO.
-            is_serverless_output_ok = True
             if exec_mode == "serverless":
-                try:
-                    if t.successful():
-                        _serialize_object_to_file(result_file, t.output)
-                except Exception:
-                    is_serverless_output_ok = False
+                # If the task is not successful, this will be picked up by the
+                # check of 'result_file' below
+                if t.successful():
+                    _serialize_object_to_file(result_file, t.output)
 
-            # A tasks completes 'succesfully' if it has result file.
+            # A tasks completes 'successfully' if it has result file.
             # A check whether the Python object represented using this file can be
             # deserialized happens later in the collector thread of the executor
             # process.
             logger.debug("Looking for result in {}".format(result_file))
-            if os.path.exists(result_file) and is_serverless_output_ok:
+            if os.path.exists(result_file):
                 logger.debug("Found result in {}".format(result_file))
                 finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
                                                                result_received=True,
