@@ -353,18 +353,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug(f'Got resource specification: {resource_specification}')
 
-        # If `_parsl_monitoring_task_id` is in kwargs, Parsl monitoring code is enabled.
-        is_monitoring_enabled = '_parsl_monitoring_task_id' in kwargs
-
         # Default execution mode of apps is regular
         exec_mode = resource_specification.get('exec_mode', self.function_exec_mode)
-
-        # Fall back to regular execution if a function is Parsl-monitored as a monitored function is invocation-specific.
-        # Note that it is possible to get the wrapped function by calling the `__wrapped__` attribute when monitoring is enabled.
-        # It will disable the monitoring wrapper code however.
-        if exec_mode == 'serverless' and is_monitoring_enabled:
-            logger.warning("A serverless task cannot run with Parsl monitoring enabled. Falling back to execute this task as a regular task.")
-            exec_mode = 'regular'
 
         if exec_mode == 'serverless':
             if func.__name__ not in self._map_func_names_to_func_details:
