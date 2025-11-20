@@ -5,17 +5,6 @@ import pytest
 import parsl
 from parsl.app.app import python_app
 
-try:
-    import ndcctools.taskvine  # noqa: F401
-except ImportError:
-    TASKVINE_AVAIL = False
-else:
-    TASKVINE_AVAIL = True
-
-require_taskvine = pytest.mark.skipif(
-        not TASKVINE_AVAIL,
-        reason="Tests use features exclusive to TaskVineExecutor.")
-
 
 def f_context(y, input_file_names):
     bases = []
@@ -37,7 +26,6 @@ def f_local_compute(x):
     return x + 1
 
 
-@require_taskvine
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
 def test_function_context_computation(num_tasks, current_config_name):
