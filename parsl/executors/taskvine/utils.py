@@ -93,5 +93,9 @@ def run_parsl_function(map_file, function_file, argument_file, result_file):
 
 
 def load_variable_in_serverless(var_name):
+    """
+    This helper function loads the value of a variable from the already
+    created context and returns it.
+    """
     from ndcctools.taskvine.utils import load_variable_from_library
     return load_variable_from_library(var_name)
