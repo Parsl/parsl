@@ -344,7 +344,8 @@ class Interchange:
             logger.debug("Putting task %s onto pending_task_queue", task_id)
 
             self.pending_task_queue.add(queue_entry)
-            logger.debug("Put task %s onto pending_task_queue", task_id)
+            logger.debug("Put task %s onto pending_task_queue", task_id, extra={"interchange_task_progress": "in_queue",
+                                                                                "htex_task_id": task_id})
 
     def process_manager_socket_message(
         self,

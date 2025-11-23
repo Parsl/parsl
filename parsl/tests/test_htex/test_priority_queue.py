@@ -1,3 +1,6 @@
+import logging
+import os
+from functools import partial
 from random import randint
 
 import pytest
@@ -17,8 +20,40 @@ def fake_task(parsl_resource_specification=None):
     return time.time()
 
 
+class HelperHandler(logging.Handler):
+
+    def __init__(self, f):
+        super().__init__()
+        self.f = f
+
+    def emit(self, record):
+        logger = logging.getLogger(__name__)
+        logger.info(f"ONE INTERCHANGE LOG: {list(record.__dict__.keys())}")
+        if hasattr(record, "htex_task_id"):
+            self.f.write(str(record.htex_task_id) + "\n")
+            self.f.flush()
+
+
+def log_helper(rundir, name):
+    import logging
+    import os
+
+    import parsl.log_utils as lu
+    os.makedirs(rundir, exist_ok=True)
+    callback = lu.set_file_logger(f"{rundir}/{name}.log", name="", level=logging.DEBUG)
+    logging.info(f"This is the priority test log_handler for name {name}, logging into {rundir}")
+
+    # add a log handler onto the interchange stream (everywhere but only care in the interchange)
+
+    f = open(f"{rundir}/tasks_in_interchange", "w")
+    logging.getLogger("interchange").addHandler(HelperHandler(f))
+
+    return callback
+
+
 @pytest.mark.local
 def test_priority_queue(try_assert):
+
     provider = LocalProvider(
         init_blocks=0,
         max_blocks=0,
@@ -41,6 +76,7 @@ def test_priority_queue(try_assert):
         executors=[htex],
         strategy="htex_auto_scale",
         usage_tracking=LEVEL_1,
+        initialize_logging=log_helper
     )
 
     with parsl.load(config):
@@ -62,10 +98,13 @@ def test_priority_queue(try_assert):
         n = len(priorities)
 
         def interchange_logs_task_count():
-            with open(htex.worker_logdir + "/interchange.log", "r") as f:
+            p = htex.worker_logdir + "/tasks_in_interchange"
+            if not os.path.exists(p):
+                return False
+            with open(p, "r") as f:
                 lines = f.readlines()
                 for line in lines:
-                    if f"Put task {n} onto pending_task_queue" in line:
+                    if f"{n}\n" == line:
                         return True
             return False
 
