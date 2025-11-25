@@ -316,29 +316,13 @@ class Memoizer:
 
     def update_memo_result(self, task: TaskRecord, r: Any) -> None:
         self._update_memo(task)
-
-        if self.checkpoint_mode == 'task_exit':
-            self.checkpoint_one(CheckpointCommand(task, result=r))
-        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self._checkpoint_lock:
-                self.checkpointable_tasks.append(CheckpointCommand(task, result=r))
-        elif self.checkpoint_mode is None:
-            pass
-        else:
-            assert False, "Invalid checkpoint mode {self.checkpoint_mode} - should have been validated at initialization"
+        if self.checkpoint_mode is not None:
+            self._update_checkpoint(CheckpointCommand(task, result=r))
 
     def update_memo_exception(self, task: TaskRecord, e: BaseException) -> None:
         self._update_memo(task)
-
-        if self.checkpoint_mode == 'task_exit':
-            self.checkpoint_one(CheckpointCommand(task, exception=e))
-        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self._checkpoint_lock:
-                self.checkpointable_tasks.append(CheckpointCommand(task, exception=e))
-        elif self.checkpoint_mode is None:
-            pass
-        else:
-            assert False, "Invalid checkpoint mode {self.checkpoint_mode} - should have been validated at initialization"
+        if self.checkpoint_mode is not None:
+            self._update_checkpoint(CheckpointCommand(task, exception=e))
 
     def _update_memo(self, task: TaskRecord) -> None:
         """Updates the memoization lookup table with the result from a task.
@@ -430,6 +414,17 @@ class Memoizer:
             return self._load_checkpoints(checkpointDirs)
         else:
             return {}
+
+    def _update_checkpoint(self, command: CheckpointCommand) -> None:
+        if self.checkpoint_mode == 'task_exit':
+            self.checkpoint_one(command)
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
+            with self._checkpoint_lock:
+                self.checkpointable_tasks.append(command)
+        elif self.checkpoint_mode is None:
+            pass
+        else:
+            assert False, "Invalid checkpoint mode {self.checkpoint_mode} - should have been validated at initialization"
 
     def checkpoint_one(self, cc: CheckpointCommand) -> None:
         """Checkpoint a single task to a checkpoint file.
