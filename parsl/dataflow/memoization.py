@@ -14,10 +14,38 @@ import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.errors import ConfigurationError, InternalConsistencyError
+from parsl.errors import ConfigurationError
 from parsl.utils import Timer, get_all_checkpoints
 
 logger = logging.getLogger(__name__)
+
+
+class CheckpointCommand:
+    def __init__(self, task_record: TaskRecord, *, result: Optional[object] = None, exception: Optional[BaseException] = None):
+        """Create a checkpoint command. This specifies a checkpoint entry of
+        either a result or an exception. If exception is set, then this object
+        specifies an exception checkpoint. Otherwise, it specifies a result.
+        This is almost: one of exception or result must be non-None, but not
+        quite because this data model also needs to accomodate a valid result
+        of None."""
+
+        assert result is None or exception is None, "CheckpointCommand cannot specify both a result and exception"
+
+        self._task_record = task_record
+        self._result = result
+        self._exception = exception
+
+    @property
+    def task_record(self) -> TaskRecord:
+        return self._task_record
+
+    @property
+    def result(self) -> Optional[object]:
+        return self._result
+
+    @property
+    def exception(self) -> Optional[BaseException]:
+        return self._exception
 
 
 @singledispatch
@@ -166,13 +194,16 @@ class Memoizer:
 
         self.checkpointed_tasks = 0
 
-        self.checkpoint_lock = threading.Lock()
+        # this lock must be held when:
+        # * writing to any checkpoint files
+        # * interacting with self.checkpointable_tasks
+        self._checkpoint_lock = threading.Lock()
 
         self.checkpoint_files = checkpoint_files
         self.checkpoint_mode = checkpoint_mode
         self.checkpoint_period = checkpoint_period
 
-        self.checkpointable_tasks: List[TaskRecord] = []
+        self.checkpointable_tasks: List[CheckpointCommand] = []
 
         self._checkpoint_timer: Timer | None = None
 
@@ -285,9 +316,13 @@ class Memoizer:
 
     def update_memo_result(self, task: TaskRecord, r: Any) -> None:
         self._update_memo(task)
+        if self.checkpoint_mode is not None:
+            self._update_checkpoint(CheckpointCommand(task, result=r))
 
     def update_memo_exception(self, task: TaskRecord, e: BaseException) -> None:
         self._update_memo(task)
+        if self.checkpoint_mode is not None:
+            self._update_checkpoint(CheckpointCommand(task, exception=e))
 
     def _update_memo(self, task: TaskRecord) -> None:
         """Updates the memoization lookup table with the result from a task.
@@ -380,18 +415,18 @@ class Memoizer:
         else:
             return {}
 
-    def update_checkpoint(self, task_record: TaskRecord) -> None:
+    def _update_checkpoint(self, command: CheckpointCommand) -> None:
         if self.checkpoint_mode == 'task_exit':
-            self.checkpoint_one(task=task_record)
+            self.checkpoint_one(command)
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self.checkpoint_lock:
-                self.checkpointable_tasks.append(task_record)
+            with self._checkpoint_lock:
+                self.checkpointable_tasks.append(command)
         elif self.checkpoint_mode is None:
             pass
         else:
-            raise InternalConsistencyError(f"Invalid checkpoint mode {self.checkpoint_mode}")
+            assert False, "Invalid checkpoint mode {self.checkpoint_mode} - should have been validated at initialization"
 
-    def checkpoint_one(self, *, task: TaskRecord) -> None:
+    def checkpoint_one(self, cc: CheckpointCommand) -> None:
         """Checkpoint a single task to a checkpoint file.
 
         By default the checkpoints are written to the RUNDIR of the current
@@ -404,8 +439,8 @@ class Memoizer:
             Checkpointing only works if memoization is enabled
 
         """
-        with self.checkpoint_lock:
-            self._checkpoint_these_tasks([task])
+        with self._checkpoint_lock:
+            self._checkpoint_these_tasks([cc])
 
     def checkpoint_queue(self) -> None:
         """Checkpoint all tasks registered in self.checkpointable_tasks.
@@ -417,15 +452,21 @@ class Memoizer:
             Checkpointing only works if memoization is enabled
 
         """
-        with self.checkpoint_lock:
+        with self._checkpoint_lock:
             self._checkpoint_these_tasks(self.checkpointable_tasks)
             self.checkpointable_tasks = []
 
-    def _checkpoint_these_tasks(self, checkpoint_queue: List[TaskRecord]) -> None:
-        """Checkpoint a list of task records.
+    def _checkpoint_these_tasks(self, checkpoint_queue: List[CheckpointCommand]) -> None:
+        """Play a sequence of CheckpointCommands into a checkpoint file.
 
         The checkpoint lock must be held when invoking this method.
         """
+
+        # This checks that the lock is held, at least, but does not check that
+        # it is held by the current thread - threading.Lock does not have a
+        # concept of locking thread for threading.Lock.
+        assert self._checkpoint_lock.locked(), "checkpoint system should be locked"
+
         checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
         checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
@@ -435,22 +476,18 @@ class Memoizer:
         count = 0
 
         with open(checkpoint_tasks, 'ab') as f:
-            for task_record in checkpoint_queue:
-                task_id = task_record['id']
-
-                app_fu = task_record['app_fu']
-
-                if app_fu.done() and app_fu.exception() is None:
-                    hashsum = task_record['hashsum']
+            for cc in checkpoint_queue:
+                if cc.exception is None:
+                    hashsum = cc.task_record['hashsum']
                     if not hashsum:
                         continue
-                    t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+                    t = {'hash': hashsum, 'exception': None, 'result': cc.result}
 
                     # We are using pickle here since pickle dumps to a file in 'ab'
                     # mode behave like a incremental log.
                     pickle.dump(t, f)
                     count += 1
-                    logger.debug("Task {} checkpointed".format(task_id))
+                    logger.debug("Task {cc.task_record['id']} checkpointed")
 
         self.checkpointed_tasks += count
 
