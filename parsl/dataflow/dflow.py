@@ -502,29 +502,6 @@ class DataFlowKernel:
 
             self._log_std_streams(task_record)
 
-    def handle_app_update(self, task_record: TaskRecord, future: AppFuture) -> None:
-        """This function is called as a callback when an AppFuture
-        is in its final state.
-
-        It will trigger post-app processing such as checkpointing.
-
-        Args:
-             task_record : Task record
-             future (Future) : The relevant app future (which should be
-                 consistent with the task structure 'app_fu' entry
-
-        """
-
-        task_id = task_record['id']
-
-        if not task_record['app_fu'].done():
-            logger.error("Internal consistency error: app_fu is not done for task {}".format(task_id))
-        if not task_record['app_fu'] == future:
-            logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
-
-        self.wipe_task(task_id)
-        return
-
     def _complete_task_result(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
         """Set a task into a completed state
         """
@@ -540,6 +517,8 @@ class DataFlowKernel:
         self.memoizer.update_memo_result(task_record, result)
 
         self._send_task_info(task_record)
+
+        self.wipe_task(task_record['id'])
 
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
@@ -559,6 +538,8 @@ class DataFlowKernel:
         self.memoizer.update_memo_exception(task_record, exception)
 
         self._send_task_info(task_record)
+
+        self.wipe_task(task_record['id'])
 
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_exception(exception)
@@ -1045,7 +1026,6 @@ class DataFlowKernel:
                                                               task_record['func_name'],
                                                               waiting_message))
 
-        app_fu.add_done_callback(partial(self.handle_app_update, task_record))
         self._update_task_state(task_record, States.pending)
 
         assert task_id not in self.tasks
