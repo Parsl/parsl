@@ -29,25 +29,21 @@ def random_uuid(x, cache=True):
 
 @pytest.mark.local
 def test_python_memoization(n=10):
-    """Testing python memoization disable
-    """
+    """Testing that the plugged-in memoizer is used and behaves as expected.
 
-    # TODO: this .result() needs to be here, not in the loop
-    # because otherwise we race to complete... and then
-    # we might sometimes get a memoization before the loop
-    # and sometimes not...
+    Memoizations of invocations with parameter 0 should behave like BasicMemoizer,
+    but memoizations of invocations with parameter 7 should never be used, because
+    the plugged-in DontReuseSevenMemoizer has a policy encoded to ignore such
+    invocations.
+    """
     x = random_uuid(0).result()
 
     for i in range(0, n):
         foo = random_uuid(0)
-        print(i)
-        print(foo.result())
         assert foo.result() == x, "Memoized results were incorrectly not used"
 
     y = random_uuid(7).result()
 
     for i in range(0, n):
         foo = random_uuid(7)
-        print(i)
-        print(foo.result())
         assert foo.result() != y, "Memoized results were incorrectly used"
