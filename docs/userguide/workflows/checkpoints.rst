@@ -39,7 +39,7 @@ decorator to ``True`` (by default it is ``False``).
    def hello (msg, stdout=None):
        return 'echo {}'.format(msg)
 			
-App caching can be globally disabled by setting ``app_cache=False``
+App caching can be globally disabled by setting ``memoizer=False``
 in the :class:`~parsl.config.Config`.
 
 App caching can be particularly useful when developing interactive programs such as when
@@ -145,7 +145,7 @@ efficiency.
 
 .. note::
    Checkpointing builds on top of app caching, and so app caching must be
-   enabled. If app caching is disabled in the config ``Config.app_cache``, checkpointing will
+   enabled. If app caching is disabled in the config ``Config.memoizer``, checkpointing will
    not work.
 
 Parsl follows an incremental checkpointing model, where each checkpoint file contains
