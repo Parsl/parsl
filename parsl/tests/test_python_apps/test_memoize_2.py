@@ -14,7 +14,7 @@ def local_config():
         executors=[
             ThreadPoolExecutor(max_threads=4),
         ],
-        memoizer=BasicMemoizer(memoize=False)  # TODO: this should be a better do-nothing impl?
+        memoizer=None
     )
 
 
