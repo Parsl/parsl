@@ -216,7 +216,8 @@ class BasicMemoizer(Memoizer):
             checkpoint_period : str, optional
                 Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
                 ``checkpoint_mode='periodic'``.
-            memoize (Bool): enable memoization or not.
+            memoize : bool
+                enable memoization or not.
         """
         self.checkpointed_tasks = 0
 

@@ -177,6 +177,15 @@ Exceptions
     parsl.serialize.errors.DeserializationError
     parsl.serialize.errors.SerializationError
 
+Memoization and Checkpointing
+=============================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.dataflow.memoization.Memoizer
+    parsl.dataflow.memoization.BasicMemoizer
 
 Monitoring
 ==========
@@ -207,7 +216,6 @@ Internal
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
     parsl.dataflow.memoization.id_for_memo
-    parsl.dataflow.memoization.Memoizer
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
     parsl.dataflow.taskrecord.TaskRecord
