@@ -18,7 +18,7 @@ def local_config():
     )
 
 
-@python_app
+@python_app(cache=True)
 def random_uuid(x):
     import uuid
     return str(uuid.uuid4())
@@ -29,6 +29,9 @@ def test_python_memoization(n=2):
     """Testing python memoization disable via DFK call
     """
     x = random_uuid(0)
+
+    # force x to completion before performing any comparisons
+    x.result()
 
     for i in range(0, n):
         foo = random_uuid(0)
