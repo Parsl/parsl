@@ -207,9 +207,16 @@ class BasicMemoizer(Memoizer):
         """Initialize the memoizer.
 
         KWargs:
-            - memoize (Bool): enable memoization or not.
-            - checkpoint (Dict): A checkpoint loaded as a dict.
-            TODO: update
+            checkpoint_files : sequence of str, optional
+                List of paths to checkpoint files. See :func:`parsl.utils.get_all_checkpoints` and
+                :func:`parsl.utils.get_last_checkpoint` for helpers. Default is None.
+            checkpoint_mode : str, optional
+                Checkpoint mode to use, can be ``'dfk_exit'``, ``'task_exit'``, ``'periodic'`` or ``'manual'``.
+                If set to `None`, checkpointing will be disabled. Default is None.
+            checkpoint_period : str, optional
+                Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
+                ``checkpoint_mode='periodic'``.
+            memoize (Bool): enable memoization or not.
         """
         self.checkpointed_tasks = 0
 
