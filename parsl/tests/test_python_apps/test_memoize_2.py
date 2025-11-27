@@ -30,7 +30,11 @@ def test_python_memoization(n=2):
     """
     x = random_uuid(0)
 
-    # force x to completion before performing any comparisons
+    # Force x to completion before running other tests that will
+    # potentially re-use (or not-re-use) the result of x. Otherwise,
+    # results might not be reused because x is not completed, rather
+    # than because app-caching is disabled.
+
     x.result()
 
     for i in range(0, n):

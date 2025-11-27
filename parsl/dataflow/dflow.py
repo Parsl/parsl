@@ -358,10 +358,10 @@ class DataFlowKernel:
                 self._send_task_info(task_record)
 
                 task_record['try_id'] += 1
-                self._update_task_state(task_record, States.pending)
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
+                self._update_task_state(task_record, States.pending)
                 self._send_task_info(task_record)
 
                 logger.info("Task {} marked for retry".format(task_id))
@@ -388,21 +388,21 @@ class DataFlowKernel:
                 # Fail with a TypeError if the joinapp python body returned
                 # something we can't join on.
                 if isinstance(joinable, Future):
-                    self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
+                    self._update_task_state(task_record, States.joining)
                     self._send_task_info(task_record)
                     joinable.add_done_callback(partial(self.handle_join_update, task_record))
                 elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
-                    self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
+                    self._update_task_state(task_record, States.joining)
                     self._send_task_info(task_record)
                     self.handle_join_update(task_record, None)
                 elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
-                    self._update_task_state(task_record, States.joining)
                     task_record['joins'] = joinable
                     task_record['join_lock'] = threading.Lock()
+                    self._update_task_state(task_record, States.joining)
                     self._send_task_info(task_record)
                     for inner_future in joinable:
                         inner_future.add_done_callback(partial(self.handle_join_update, task_record))
@@ -505,13 +505,12 @@ class DataFlowKernel:
         assert new_state not in FINAL_FAILURE_STATES
         old_state = task_record['status']
 
-        self._update_task_state(task_record, new_state)
-
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
         self.memoizer.update_memo_result(task_record, result)
 
+        self._update_task_state(task_record, new_state)
         self._send_task_info(task_record)
 
         self.wipe_task(task_record['id'])
@@ -526,13 +525,12 @@ class DataFlowKernel:
         assert new_state in FINAL_FAILURE_STATES
         old_state = task_record['status']
 
-        self._update_task_state(task_record, new_state)
-
         logger.info(f"Task {task_record['id']} failed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
         self.memoizer.update_memo_exception(task_record, exception)
 
+        self._update_task_state(task_record, new_state)
         self._send_task_info(task_record)
 
         self.wipe_task(task_record['id'])
@@ -701,8 +699,8 @@ class DataFlowKernel:
 
         with self.submitter_lock:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
-        self._update_task_state(task_record, States.launched)
 
+        self._update_task_state(task_record, States.launched)
         self._send_task_info(task_record)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
@@ -1022,14 +1020,13 @@ class DataFlowKernel:
                                                               task_record['func_name'],
                                                               waiting_message))
 
+        logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
+
         self._update_task_state(task_record, States.pending)
+        self._send_task_info(task_record)
 
         assert task_id not in self.tasks
         self.tasks[task_id] = task_record
-
-        logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
-
-        self._send_task_info(task_record)
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.
