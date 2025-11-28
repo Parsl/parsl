@@ -1,12 +1,13 @@
 import pytest
 
 from parsl.app.app import python_app
+from parsl.config import Config
 from parsl.dataflow.dflow import DataFlowKernel
+from parsl.dataflow.memoization import BasicMemoizer
 
 
 def run_checkpointed(checkpoints):
-    from parsl.tests.configs.local_threads_checkpoint_task_exit import config
-    config.checkpoint_files = checkpoints
+    config = Config(memoizer=BasicMemoizer(checkpoint_files=checkpoints, checkpoint_mode='task_exit'))
     dfk = DataFlowKernel(config=config)
 
     @python_app(data_flow_kernel=dfk, cache=True)

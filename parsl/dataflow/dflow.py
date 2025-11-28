@@ -29,7 +29,7 @@ from parsl.data_provider.files import File
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
-from parsl.dataflow.memoization import Memoizer
+from parsl.dataflow.memoization import BasicMemoizer, Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import FINAL_FAILURE_STATES, FINAL_STATES, States
 from parsl.dataflow.taskrecord import TaskRecord
@@ -165,12 +165,8 @@ class DataFlowKernel:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
 
-        self.memoizer = Memoizer(memoize=config.app_cache,
-                                 checkpoint_mode=config.checkpoint_mode,
-                                 checkpoint_files=config.checkpoint_files,
-                                 checkpoint_period=config.checkpoint_period)
-        self.memoizer.run_dir = self.run_dir
-        self.memoizer.start()
+        self.memoizer: Memoizer = config.memoizer if config.memoizer is not None else BasicMemoizer()
+        self.memoizer.start(run_dir=self.run_dir)
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
@@ -1193,9 +1189,6 @@ class DataFlowKernel:
         # This message won't go to the default parsl.log, but other handlers
         # should still see it.
         logger.info("DFK cleanup complete")
-
-    def checkpoint(self) -> None:
-        self.memoizer.checkpoint_queue()
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
