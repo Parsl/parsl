@@ -16,3 +16,4 @@ with all features from those in Python's :mod:`concurrent.futures` module and mo
    exceptions
    lifted_ops
    checkpoints
+   concurrent
