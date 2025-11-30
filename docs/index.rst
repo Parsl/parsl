@@ -4,7 +4,7 @@ Parsl - Parallel Scripting Library
 Parsl extends parallelism in Python beyond a single computer.
 
 You can use Parsl
-`just like Python's parallel executors <userguide/workflows/workflow.html#parallel-workflows-with-loops>`_
+:ref:`just like Python's parallel executors <label-parslpool>`
 but across *multiple cores and nodes*.
 However, the real power of Parsl is in expressing multi-step workflows of functions.
 Parsl lets you chain functions together and will launch each function as inputs and computing resources are available.
