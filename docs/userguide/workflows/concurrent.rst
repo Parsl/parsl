@@ -12,6 +12,10 @@ available in most versions of Python.
 Creating a ParslPoolExecutor
 ----------------------------
 
+.. note::
+
+    See the :ref:`Configuration section <configuration-section>` for how to define computational resources.
+
 Create a :class:`~parsl.concurrent.ParslPoolExecutor` using one of two methods:
 
 1. Supplying a Parsl :class:`~parsl.Config` that defines how to create new workers.
@@ -29,7 +33,7 @@ Create a :class:`~parsl.concurrent.ParslPoolExecutor` using one of two methods:
 
 
 2. Supplying an already-started Parsl :class:`~parsl.DataFlowKernel` (DFK).
-   The executor assumes you will start and stop the Parsl DFK outside the Executor.
+   The Parsl DFK must be started and stopped separate from the executor.
 
     .. code-block:: python
 
@@ -121,3 +125,6 @@ and the Python :class:`~concurrent.futures.ProcessPoolExecutor` are:
 3. *No Multiprocessing Objects*: Tools such as the :class:`multiprocessing.Queue` and
    `synchronization primitives <https://docs.python.org/3/library/multiprocessing.html#synchronization-primitives>`_
    may not work in Parsl without specific configuration of the :class:`multiprocessing.Manager`.
+
+4. *Worker Initialization*: The worker initialization functions from :class:`~concurrent.futures.ProcessPoolExecutor`
+   are not supported. Configure workers using the ``Config`` object intead.

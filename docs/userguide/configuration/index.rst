@@ -6,7 +6,7 @@ Configuring Parsl
 .. note::
 
     This part of the guide describes the how to configure Parsl from the start.
-    Consider starting with `example configurations <examples.html>`_ to
+    Consider browsing the `example configurations <examples.html>`_ to
     see if there is already an example which matches your needs.
 
 Contemporary computing environments offer a wide range of computational platforms
