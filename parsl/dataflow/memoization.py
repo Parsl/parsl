@@ -6,6 +6,7 @@ import os
 import pickle
 import threading
 import types
+from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from functools import lru_cache, singledispatch
 from typing import Any, Dict, List, Literal, Optional, Sequence
@@ -146,7 +147,7 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
     return pickle.dumps(["types.FunctionType", f.__name__, f.__module__])
 
 
-class Memoizer:
+class Memoizer(metaclass=ABCMeta):
     """Defines the interface for the DFK to talk to the memoization/checkpoint system.
 
     The DFK will invoke these methods on an instance of a Memoizer at suitable points
@@ -154,6 +155,7 @@ class Memoizer:
     directly.
     """
 
+    @abstractmethod
     def update_memo_exception(self, task: TaskRecord, e: BaseException) -> None:
         """Called by the DFK when a task completes with an exception.
 
@@ -165,6 +167,7 @@ class Memoizer:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def update_memo_result(self, task: TaskRecord, r: Any) -> None:
         """Called by the DFK when a task completes with a successful result.
 
@@ -176,6 +179,7 @@ class Memoizer:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def checkpoint_queue(self) -> None:
         """Called by the DFK when the user calls dfk.checkpoint(). This
         indicates that the checkpoint system should explicitly process any
@@ -183,6 +187,7 @@ class Memoizer:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
         """Asks the checkpoint system for a result recorded for the described
         task. ``check_memo`` should return a `Future` that will be used as
@@ -191,6 +196,7 @@ class Memoizer:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def close(self) -> None:
         """Called at DFK shutdown. This gives the checkpoint system an
         opportunity for graceful shutdown.
