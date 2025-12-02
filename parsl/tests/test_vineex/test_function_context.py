@@ -5,6 +5,7 @@ import pytest
 import parsl
 from parsl.app.app import python_app
 
+from parsl.tests.configs.taskvine_ex import fresh_config as local_config
 
 def f_context(y, input_file_names):
     bases = []
@@ -26,12 +27,10 @@ def f_local_compute(x):
     return x + 1
 
 
+@pytest.mark.local
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
 def test_function_context_computation(num_tasks, current_config_name):
-    if current_config_name != 'taskvine_ex':
-        pytest.skip("Skip tests as these are exclusively for TaskVineExecutor.")
-
     input_file_names = ['input1.test_taskvine_context.data', 'input2.test_taskvine_context.data']
     try:
         input_data = [7, 8]
