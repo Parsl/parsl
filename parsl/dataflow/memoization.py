@@ -6,6 +6,7 @@ import os
 import pickle
 import threading
 import types
+from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from functools import lru_cache, singledispatch
 from typing import Any, Dict, List, Literal, Optional, Sequence
@@ -146,7 +147,64 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
     return pickle.dumps(["types.FunctionType", f.__name__, f.__module__])
 
 
-class Memoizer:
+class Memoizer(metaclass=ABCMeta):
+    """Defines the interface for the DFK to talk to the memoization/checkpoint system.
+
+    The DFK will invoke these methods on an instance of a Memoizer at suitable points
+    in the lifecycle of a task. These methods are not intended for users to invoke
+    directly.
+    """
+
+    @abstractmethod
+    def update_memo_exception(self, task: TaskRecord, e: BaseException) -> None:
+        """Called by the DFK when a task completes with an exception.
+
+        On every task completion, either this method or `update_memo_result`
+        will be called, but not both.
+
+        This is an opportunity for the memoization/checkpoint system to record
+        the outcome of a task for later discovery by a call to check_memo.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_memo_result(self, task: TaskRecord, r: Any) -> None:
+        """Called by the DFK when a task completes with a successful result.
+
+        On every task completion, either this method or `update_memo_exception`
+        will be called, but not both.
+
+        This is an opportunity for the memoization/checkpoint system to record
+        the outcome of a task for later discovery by a call to check_memo.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def checkpoint_queue(self) -> None:
+        """Called by the DFK when the user calls dfk.checkpoint(). This
+        indicates that the checkpoint system should explicitly process any
+        outstanding checkpoint writes.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
+        """Asks the checkpoint system for a result recorded for the described
+        task. ``check_memo`` should return a `Future` that will be used as
+        an executor future, in place of sending the task to an executor for
+        execution. That future should be populated with a result or exception.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self) -> None:
+        """Called at DFK shutdown. This gives the checkpoint system an
+        opportunity for graceful shutdown.
+        """
+        raise NotImplementedError
+
+
+class BasicMemoizer(Memoizer):
     """Memoizer is responsible for ensuring that identical work is not repeated.
 
     When a task is repeated, i.e., the same function is called with the same exact arguments, the
