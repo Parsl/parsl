@@ -4,8 +4,8 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-
 from parsl.tests.configs.taskvine_ex import fresh_config as local_config
+
 
 def f_context(y, input_file_names):
     bases = []
