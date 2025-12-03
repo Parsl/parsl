@@ -165,13 +165,8 @@ class DataFlowKernel:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
 
-        self.memoizer: Memoizer = BasicMemoizer(memoize=config.app_cache,
-                                                checkpoint_mode=config.checkpoint_mode,
-                                                checkpoint_files=config.checkpoint_files,
-                                                checkpoint_period=config.checkpoint_period)
-        self.memoizer.run_dir = self.run_dir
-
-        self.memoizer.start()
+        self.memoizer: Memoizer = config.memoizer if config.memoizer is not None else BasicMemoizer()
+        self.memoizer.start(run_dir=self.run_dir)
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.

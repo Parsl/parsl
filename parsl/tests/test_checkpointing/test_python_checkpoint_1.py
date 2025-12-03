@@ -5,13 +5,12 @@ import pytest
 
 import parsl
 from parsl import python_app
-from parsl.tests.configs.local_threads import fresh_config
+from parsl.config import Config
+from parsl.dataflow.memoization import BasicMemoizer
 
 
 def local_config():
-    config = fresh_config()
-    config.checkpoint_mode = "manual"
-    return config
+    return Config(memoizer=BasicMemoizer(checkpoint_mode="manual"))
 
 
 @python_app(cache=True)
@@ -26,9 +25,10 @@ def test_initial_checkpoint_write() -> None:
     """
     uuid_app().result()
 
-    parsl.dfk().checkpoint()
-
     cpt_dir = Path(parsl.dfk().run_dir) / 'checkpoint'
 
     cptpath = cpt_dir / 'tasks.pkl'
-    assert os.path.exists(cptpath), f"Tasks checkpoint missing: {cptpath}"
+
+    assert not os.path.exists(cptpath), f"Tasks checkpoint should not exist yet: {cptpath}"
+    parsl.dfk().checkpoint()
+    assert os.path.exists(cptpath), f"Tasks checkpoint should exist now: {cptpath}"

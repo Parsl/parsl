@@ -22,6 +22,7 @@ from parsl.data_provider.file_noop import NoOpFileStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
 from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.zip import ZipFileStaging
+from parsl.dataflow.memoization import BasicMemoizer
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
 
@@ -56,7 +57,7 @@ def fresh_config():
             )
         ],
         strategy='simple',
-        app_cache=True, checkpoint_mode='task_exit',
+        memoizer=BasicMemoizer(memoize=True, checkpoint_mode='task_exit'),
         retries=2,
         monitoring=MonitoringHub(
                         monitoring_debug=False,

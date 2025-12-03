@@ -143,6 +143,16 @@ Batch jobs
     parsl.jobs.error_handlers.simple_error_handler
     parsl.jobs.error_handlers.windowed_error_handler
 
+Checkpointing and Memoization
+=============================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.dataflow.memoization.Memoizer
+    parsl.dataflow.memoization.BasicMemoizer
+
 Exceptions
 ==========
 
@@ -207,8 +217,6 @@ Internal
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
     parsl.dataflow.memoization.id_for_memo
-    parsl.dataflow.memoization.Memoizer
-    parsl.dataflow.memoization.BasicMemoizer
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
     parsl.dataflow.taskrecord.TaskRecord
