@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 import pickle
-import time
 from multiprocessing.queues import Queue
 from multiprocessing.synchronize import Event
 from typing import cast
@@ -17,6 +16,9 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 logger = logging.getLogger(__name__)
+
+# how often the router will scan the new message directory
+POLL_PERIOD_S = 10
 
 
 @wrap_with_logs
@@ -36,8 +38,18 @@ def filesystem_router_starter(*, q: Queue[TaggedMonitoringMessage], run_dir: str
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
 
-    while not exit_event.is_set():
+    loop = True
+
+    while loop:
         logger.debug("Start filesystem radio receiver loop")
+
+        # this happens before the final poll of the directory so that
+        # one complete pass over the new_dir will happen strictly after
+        # the exit_event is set. Without forcing that final pass, there
+        # can be a race between exiting on exit_event after the files
+        # are added.
+        if exit_event.wait(POLL_PERIOD_S):
+            loop = False
 
         # iterate over files in new_dir
         for filename in os.listdir(new_dir):
@@ -53,7 +65,6 @@ def filesystem_router_starter(*, q: Queue[TaggedMonitoringMessage], run_dir: str
             except Exception:
                 logger.exception("Exception processing %s - probably will be retried next iteration", filename)
 
-        time.sleep(1)  # whats a good time for this poll?
     logger.info("Ending filesystem radio receiver")
 
 
