@@ -28,7 +28,8 @@ def random_uuid(x, cache=True):
 
 
 @pytest.mark.local
-def test_python_memoization(n=10):
+@pytest.mark.parametrize("n", (10,))
+def test_python_memoization(n: int):
     """Testing using an alternate memoization plugin.
 
     The plugin under test memoizes except for functions with the parameter 7,
@@ -39,14 +40,10 @@ def test_python_memoization(n=10):
 
     for i in range(0, n):
         foo = random_uuid(0)
-        print(i)
-        print(foo.result())
         assert foo.result() == x, "Memoized results were incorrectly not used"
 
     y = random_uuid(7).result()
 
     for i in range(0, n):
         foo = random_uuid(7)
-        print(i)
-        print(foo.result())
         assert foo.result() != y, "Memoized results were incorrectly used"
