@@ -193,12 +193,16 @@ parameter to ``memoizer=BasicMemoizer(...)``
       BasicMemoizer(checkpoint_mode = 'dfk_exit')
 
 4. ``manual``: in addition to these automated checkpointing modes, it is also possible
-   to manually initiate a checkpoint by calling ``DataFlowKernel.checkpoint()`` in the
-   Parsl program code.
+   to manually initiate a checkpoint by calling ``checkpoint()`` on the
+   `BasicMemoizer` in the Parsl program code.
 
    .. code-block:: python
 
-      dfk.checkpoint()
+      m = BasicMemoizer(checkpoint_mode = 'manual')
+      ...
+      with parsl.load(Config(memoizer=m, ...)):
+         ...
+         m.checkpoint()
 
 In all cases the checkpoint file is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 
@@ -238,7 +242,7 @@ each invocation of the ``slow_double`` app will be stored in the checkpoint file
 
 Alternatively, manual checkpointing can be used to explictly specify when the checkpoint
 file should be saved. The following example shows how manual checkpointing can be used.
-Here, the ``dfk.checkpoint()`` function will save the results of the prior invocations 
+Here, the ``checkpoint()`` method will save the results of the prior invocations 
 of the ``slow_double`` app.
 
 .. code-block:: python
@@ -263,7 +267,7 @@ of the ``slow_double`` app.
     # Wait for the results
     [i.result() for i in d]
 
-    dfk.checkpoint()
+    dfk.memoizer.checkpoint()
 
 
 Resuming from a checkpoint

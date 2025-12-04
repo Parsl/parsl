@@ -1190,9 +1190,6 @@ class DataFlowKernel:
         # should still see it.
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self) -> None:
-        self.memoizer.checkpoint_queue()
-
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
         tid = task_record['id']
