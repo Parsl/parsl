@@ -180,6 +180,17 @@ class Memoizer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
+    def start(self, *, run_dir: str) -> None:
+        """Called by the DFK when it starts up.
+
+        This is an opportunity for the memoization/checkpoint system to
+        initialize itself.
+
+        The path to the base run directory is passed as a parameter.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def checkpoint_queue(self) -> None:
         """Called by the DFK when the user calls dfk.checkpoint(). This
         indicates that the checkpoint system should explicitly process any
@@ -238,18 +249,26 @@ class BasicMemoizer(Memoizer):
     run_dir: str
 
     def __init__(self, *,
-                 memoize: bool = True,
-                 checkpoint_files: Sequence[str] | None,
-                 checkpoint_period: Optional[str],
-                 checkpoint_mode: Literal['task_exit', 'periodic', 'dfk_exit', 'manual'] | None):
+                 checkpoint_files: Sequence[str] | None = None,
+                 checkpoint_period: Optional[str] = None,
+                 checkpoint_mode: Literal['task_exit', 'periodic', 'dfk_exit', 'manual'] | None = None,
+                 memoize: bool = True):
         """Initialize the memoizer.
 
         KWargs:
-            - memoize (Bool): enable memoization or not.
-            - checkpoint (Dict): A checkpoint loaded as a dict.
-        """
-        self.memoize = memoize
 
+            - checkpoint_files : sequence of str, optional
+                  List of paths to checkpoint files. See :func:`parsl.utils.get_all_checkpoints` and
+                  :func:`parsl.utils.get_last_checkpoint` for helpers. Default is None.
+            - checkpoint_period : str, optional
+                  Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
+                  ``checkpoint_mode='periodic'``.
+            - checkpoint_mode : str, optional
+                  Checkpoint mode to use, can be ``'dfk_exit'``, ``'task_exit'``, ``'periodic'`` or ``'manual'``.
+                  If set to `None`, checkpointing will be disabled. Default is None.
+            - memoize : str, enable memoization or not.
+
+        """
         self.checkpointed_tasks = 0
 
         # this lock must be held when:
@@ -264,8 +283,12 @@ class BasicMemoizer(Memoizer):
         self.checkpointable_tasks: List[CheckpointCommand] = []
 
         self._checkpoint_timer: Timer | None = None
+        self.memoize = memoize
 
-    def start(self) -> None:
+    def start(self, *, run_dir: str) -> None:
+
+        self.run_dir = run_dir
+
         if self.checkpoint_files is not None:
             checkpoint_files = self.checkpoint_files
         elif self.checkpoint_files is None and self.checkpoint_mode is not None:
