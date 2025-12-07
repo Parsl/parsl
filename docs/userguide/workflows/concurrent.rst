@@ -124,7 +124,7 @@ and the Python :class:`~concurrent.futures.ProcessPoolExecutor` are:
 
 3. *No Multiprocessing Objects*: Tools such as the :class:`multiprocessing.Queue` and
    `synchronization primitives <https://docs.python.org/3/library/multiprocessing.html#synchronization-primitives>`_
-   may not work in Parsl without specific configuration of the :class:`multiprocessing.Manager`.
+   are not compatible with ``ParslPoolExecutor``.
 
 4. *Worker Initialization*: The worker initialization functions from :class:`~concurrent.futures.ProcessPoolExecutor`
    are not supported. Configure workers using the ``Config`` object intead.
