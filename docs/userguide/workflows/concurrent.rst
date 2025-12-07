@@ -4,10 +4,9 @@ ParslPoolExecutor Interface
 ===========================
 
 The :class:`parsl.concurrent.ParslPoolExecutor` implements the "Executor" interface
-from :mod:`concurrent.futures` module in standard Python.
+from the :mod:`concurrent.futures` module in standard Python.
 This reduced interface permits employing Parsl into applications already capable
-of single-node parallelism using the :class:`~concurrent.futures.ProcessPoolExecutor`
-available in most versions of Python.
+of single-node parallelism using :class:`~concurrent.futures.ProcessPoolExecutor`.
 
 Creating a ParslPoolExecutor
 ----------------------------
@@ -51,9 +50,9 @@ Create a :class:`~parsl.concurrent.ParslPoolExecutor` using one of two methods:
 Use multiple types of resources within the same program
 by creating multiple :class:`~parsl.concurrent.ParslPoolExecutors`,
 each mapped to different types of Parsl workers (also called "executors").
-Start by starting DFK with a Parsl Config that includes :ref:`multiple executors <config-multiple>`.
-Then create separate executors with the same DFK but
-different lists of executors their tasks will use.
+Start by loading a Parsl Config that includes :ref:`multiple executors <config-multiple>`.
+Then create ``ParslPoolExecutor`` with different lists of "executors" that
+their tasks will use.
 
 .. code-block:: python
 
@@ -120,11 +119,11 @@ and the Python :class:`~concurrent.futures.ProcessPoolExecutor` are:
    `spawn start method <https://docs.python.org/3/library/multiprocessing.html#the-spawn-and-forkserver-start-methods>`_
    in the ``ProcessPoolExecutor``), which means modules must be imported
    inside the function.
-   Follow the guidelines :ref:`in the App guide <function-rules>`.
+   Follow the rules :ref:`in the App guide <function-rules>`.
 
 3. *No Multiprocessing Objects*: Tools such as the :class:`multiprocessing.Queue` and
    `synchronization primitives <https://docs.python.org/3/library/multiprocessing.html#synchronization-primitives>`_
    are not compatible with ``ParslPoolExecutor``.
 
 4. *Worker Initialization*: The worker initialization functions from :class:`~concurrent.futures.ProcessPoolExecutor`
-   are not supported. Configure workers using the ``Config`` object intead.
+   are not supported. Configure workers using the ``Config`` object instead.
