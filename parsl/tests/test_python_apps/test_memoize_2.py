@@ -5,6 +5,7 @@ import pytest
 import parsl
 from parsl.app.app import python_app
 from parsl.config import Config
+from parsl.dataflow.memoization import BasicMemoizer
 from parsl.executors.threads import ThreadPoolExecutor
 
 
@@ -13,7 +14,7 @@ def local_config():
         executors=[
             ThreadPoolExecutor(max_threads=4),
         ],
-        app_cache=False
+        memoizer=BasicMemoizer(memoize=False)
     )
 
 

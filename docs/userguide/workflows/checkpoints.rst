@@ -8,10 +8,14 @@ reuse the result from the first invocation without executing the app again.
 
 This can save time and computational resources.
 
-This is done in two ways:
+The memoization and checkpointing system is pluggable, with basic behaviour
+provided by the `BasicMemoizer`. The rest of this chapter refers to the
+behaviour of the `BasicMemoizer`.
+
+Memoization and checkpointing is done in two ways:
 
 * Firstly, *app caching* will allow reuse of results and exceptions within
-  the same run.
+  the same run. This is also referred to as *memoization*.
 
 * Building on top of that, *checkpointing* will store results (but not
   exceptions) on the filesystem and reuse those results in later runs.
@@ -39,8 +43,8 @@ decorator to ``True`` (by default it is ``False``).
    def hello (msg, stdout=None):
        return 'echo {}'.format(msg)
 			
-App caching can be globally disabled by setting ``app_cache=False``
-in the :class:`~parsl.config.Config`.
+App caching can be globally disabled by supplying a new memoizer in
+:class:`~parsl.config.Config` defined as ``BasicMemoizer(memoize=False)``.
 
 App caching can be particularly useful when developing interactive programs such as when
 using a Jupyter notebook. In this case, cells containing apps are often re-executed
@@ -158,7 +162,8 @@ use the hash of the app and the invocation input parameters to identify previous
 results. If multiple checkpoints exist for an app (with the same hash)
 the most recent entry will be used.
 
-Parsl provides four checkpointing modes:
+Parsl provides four checkpointing modes, which can be specified using the ``checkpoint_mode``
+parameter to ``memoizer=BasicMemoizer(...)``
 
 1. ``task_exit``: a checkpoint is created each time an app completes or fails
    (after retries if enabled). This mode minimizes the risk of losing information
@@ -166,8 +171,7 @@ Parsl provides four checkpointing modes:
 
    .. code-block:: python
 
-      from parsl.configs.local_threads import config
-      config.checkpoint_mode = 'task_exit'
+      BasicMemoizer(checkpoint_mode = 'task_exit')
 
 2. ``periodic``: a checkpoint is created periodically using a user-specified
    checkpointing interval. Results will be saved to the checkpoint file for
@@ -175,9 +179,8 @@ Parsl provides four checkpointing modes:
 
    .. code-block:: python
 
-      from parsl.configs.local_threads import config
-      config.checkpoint_mode = 'periodic'
-      config.checkpoint_period = "01:00:00"
+      BasicMemoizer(checkpoint_mode = 'periodic',
+                    checkpoint_period = '01:00:00')
 
 3. ``dfk_exit``: checkpoints are created when Parsl is
    about to exit. This reduces the risk of losing results due to
@@ -187,20 +190,19 @@ Parsl provides four checkpointing modes:
 
    .. code-block:: python
 
-      from parsl.configs.local_threads import config
-      config.checkpoint_mode = 'dfk_exit'
+      BasicMemoizer(checkpoint_mode = 'dfk_exit')
 
 4. ``manual``: in addition to these automated checkpointing modes, it is also possible
-   to manually initiate a checkpoint by calling ``DataFlowKernel.checkpoint()`` in the
-   Parsl program code.
+   to manually initiate a checkpoint by calling ``checkpoint()`` on the
+   `BasicMemoizer` in the Parsl program code.
 
    .. code-block:: python
 
-      import parsl
-      from parsl.configs.local_threads import config
-      dfk = parsl.load(config)
-      ....
-      dfk.checkpoint()
+      m = BasicMemoizer(checkpoint_mode = 'manual')
+      ...
+      with parsl.load(Config(memoizer=m, ...)):
+         ...
+         m.checkpoint()
 
 In all cases the checkpoint file is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 
@@ -240,7 +242,7 @@ each invocation of the ``slow_double`` app will be stored in the checkpoint file
 
 Alternatively, manual checkpointing can be used to explictly specify when the checkpoint
 file should be saved. The following example shows how manual checkpointing can be used.
-Here, the ``dfk.checkpoint()`` function will save the results of the prior invocations 
+Here, the ``checkpoint()`` method will save the results of the prior invocations 
 of the ``slow_double`` app.
 
 .. code-block:: python
@@ -265,7 +267,7 @@ of the ``slow_double`` app.
     # Wait for the results
     [i.result() for i in d]
 
-    dfk.checkpoint()
+    dfk.memoizer.checkpoint()
 
 
 Resuming from a checkpoint
@@ -286,11 +288,11 @@ from the checkpoint file are are immediately returned.
     from parsl.tests.configs.local_threads import config
     from parsl.utils import get_all_checkpoints
 
-    config.checkpoint_files = get_all_checkpoints()
+    config.memoizer = BasicMemoizer(checkpoint_files = get_all_checkpoints())
 
     parsl.load(config)
 		
-		# Rerun the same workflow
+    # Rerun the same workflow
     d = []
     for i in range(5):
         d.append(slow_double(i))
