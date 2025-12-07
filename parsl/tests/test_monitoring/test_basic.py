@@ -15,12 +15,6 @@ from parsl.monitoring.radios.udp import UDPRadio
 
 @parsl.python_app
 def this_app():
-    # this delay needs to be several times the resource monitoring
-    # period configured in the test configuration, so that some
-    # messages are actually sent - there is no guarantee that any
-    # (non-first) resource message will be sent at all for a short app.
-    time.sleep(3)
-
     return 5
 
 
