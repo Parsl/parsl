@@ -30,7 +30,7 @@ def f_local_compute(x):
 @pytest.mark.local
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
-def test_function_context_computation(num_tasks, current_config_name):
+def test_function_context_computation(num_tasks):
     input_file_names = ['input1.test_taskvine_context.data', 'input2.test_taskvine_context.data']
     try:
         input_data = [7, 8]
