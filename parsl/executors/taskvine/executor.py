@@ -360,11 +360,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             if func.__name__ not in self._map_func_names_to_func_details:
                 self._map_func_names_to_func_details[func.__name__] = {'func_obj': func}
             else:
-                if id(func) != id(self._map_func_names_to_func_details[func.__name__]['func_obj']):
-                    logger.warning('Inconsistency in a serverless function call detected.\
-                                   A function name cannot point to two different function objects.\
-                                   Falling back to executing it as a regular task.')
-                    exec_mode = 'regular'
+                if func is self._map_func_names_to_func_details[func.__name__]['func_obj']:
+                    logger.error('Inconsistency in a serverless function call detected.\
+                                   A function name cannot point to two different function objects.')
+                    raise ExecutorError(self, 'In the serverless mode, a function name cannot\
+                                                point to two different function objects.')
 
         # Detect resources and features of a submitted Parsl app
         cores = None
