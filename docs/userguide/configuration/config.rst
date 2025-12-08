@@ -103,6 +103,8 @@ Common options include:
 Consult the :py:class:`API documentation for Config <parsl.config.Config>`
 or the `advanced documentation <../advanced/index.html>`_ to learn about options.
 
+.. _config-multiple:
+
 Multiple Executors
 ------------------
 
