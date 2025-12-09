@@ -27,6 +27,7 @@ def f_local_compute(x):
 
 
 # TODO: add negative test cases
+@pytest.mark.local
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
 def test_function_context_computation(num_tasks):
