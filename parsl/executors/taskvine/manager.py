@@ -279,9 +279,9 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     function_context_list = None
 
                     if task.function_context_file:
-                        with open(task.function_context_file, 'rb') as f:
-                            # function_context_list = cloudpickle.load(f)
-                            function_context_list = _deserialize_object_from_file(f)
+                        function_context_list = _deserialize_object_from_file(task.function_context_file)
+                        # with open(task.function_context_file, 'rb') as f:
+                        # function_context_list = cloudpickle.load(f)
 
                     # Don't automatically add environment so manager can declare and cache the vine file associated with the environment file
                     add_env = False
