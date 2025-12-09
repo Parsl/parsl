@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 
 class ParslTaskToVine:
@@ -15,7 +15,7 @@ class ParslTaskToVine:
                  function_file: Optional[str],     # pickled file containing the function information
                  argument_file: Optional[str],     # pickled file containing the arguments to the function call
                  result_file: Optional[str],       # path to the pickled result object of the function execution
-                 function_context_file: Optional[List[Any]],  # path to the pickled list of function context details for serverless functions
+                 function_context_file: Optional[str],  # path to the pickled list of function context details for serverless functions
                  function_context_input_files: Dict[str, str],     # a dictionary of input files to the function context,
                                                                    # mapping from local path names to remote path names
                  cores: Optional[float],           # number of cores to allocate

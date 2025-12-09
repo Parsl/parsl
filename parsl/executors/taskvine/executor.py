@@ -248,6 +248,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix).name
         else:
             self._function_data_dir = os.path.join(log_dir, 'function')
+            os.makedirs(self._function_data_dir, exist_ok=True)
 
         # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
         # Parsl does not.
@@ -361,10 +362,15 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 self._map_func_names_to_func_details[func.__name__] = {'func_obj': func}
             else:
                 if func is not self._map_func_names_to_func_details[func.__name__]['func_obj']:
-                    logger.error('Inconsistency in a serverless function call detected.\
-                                   A function name cannot point to two different function objects.')
-                    raise ExecutorError(self, 'In the serverless mode, a function name cannot\
-                                                point to two different function objects.')
+                    logger.error(
+                        ('Inconsistency in a serverless function call detected. '
+                         'A function name cannot point to two different function objects.')
+                    )
+                    raise ExecutorError(
+                        self,
+                        ('In the serverless mode, a function name cannot '
+                         'point to two different function objects.')
+                    )
 
         # Detect resources and features of a submitted Parsl app
         cores = None
@@ -490,11 +496,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if exec_mode == 'serverless':
             if function_context:
                 kwargs['parsl_resource_specification']['function_context'] = function_context
-            if function_context_args:
                 kwargs['parsl_resource_specification']['function_context_args'] = function_context_args
-            if function_context_kwargs:
                 kwargs['parsl_resource_specification']['function_context_kwargs'] = function_context_kwargs
-            if function_context_input_files:
                 kwargs['parsl_resource_specification']['function_context_input_files'] = function_context_input_files
 
         # Construct the map file of local filenames at worker

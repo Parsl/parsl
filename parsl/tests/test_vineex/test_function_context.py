@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.taskvine_ex import fresh_config as local_config
 
@@ -27,6 +26,7 @@ def f_local_compute(x):
     return x + 1
 
 
+# TODO: add negative test cases
 @pytest.mark.local
 @pytest.mark.taskvine
 @pytest.mark.parametrize('num_tasks', (1, 50))
