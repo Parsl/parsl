@@ -461,10 +461,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     function_context_kwargs = resource_specification.get('function_context_kwargs', {})
                     function_context_file = os.path.join(self._function_data_dir, func.__name__, 'function_context')
 
-                    self._cloudpickle_serialize_object_to_file(function_context_file,
-                                                               [function_context,
-                                                                function_context_args,
-                                                                function_context_kwargs])
+                    # self._cloudpickle_serialize_object_to_file(function_context_file,
+                    self._serialize_object_to_file(function_context_file,
+                                                   [function_context, function_context_args, function_context_kwargs])
                     self._map_func_names_to_func_details[func.__name__].update({'function_context_file': function_context_file})
                 else:
                     function_context_file = self._map_func_names_to_func_details[func.__name__]['function_context_file']

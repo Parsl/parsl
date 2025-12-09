@@ -169,7 +169,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
     means that any communication should be done using the multiprocessing
     module capabilities, rather than shared memory.
     """
-    import cloudpickle  # type: ignore[import-not-found]
+    # import cloudpickle  # type: ignore[import-not-found]
     logger.debug("Starting TaskVine Submit/Wait Process")
     setproctitle("parsl: TaskVine submit/wait")
 
@@ -280,7 +280,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
                     if task.function_context_file:
                         with open(task.function_context_file, 'rb') as f:
-                            function_context_list = cloudpickle.load(f)
+                            # function_context_list = cloudpickle.load(f)
+                            function_context_list = _deserialize_object_from_file(f)
 
                     # Don't automatically add environment so manager can declare and cache the vine file associated with the environment file
                     add_env = False
