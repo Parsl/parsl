@@ -26,7 +26,6 @@ def register_method_for_data(s: SerializerBase) -> None:
     methods_for_data[s.identifier] = s
 
 
-register_method_for_data(concretes.PickleSerializer())
 register_method_for_data(concretes.DillSerializer())
 
 
