@@ -1,6 +1,7 @@
 import argparse
 import concurrent.futures
 import importlib
+import math
 import time
 from typing import Any, Dict, Literal
 
@@ -38,7 +39,7 @@ def load_dfk_from_config(filename: str) -> DataFlowKernel:
         raise RuntimeError("Config module does not define config or fresh_config")
 
 
-@parsl.python_app
+@parsl.python_app(cache=True)
 def app(extra_payload: Any, parsl_resource_specification: Dict = {}) -> int:
     return 7
 
@@ -49,7 +50,7 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
 
     iteration = 1
 
-    args_extra_payload = "x" * args_extra_size
+    # args_extra_payload = "x" * args_extra_size
 
     if isinstance(iterate_mode, list):
         n = iterate_mode[0]
@@ -65,7 +66,15 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
 
         fs = []
         print("Submitting tasks / invoking apps")
-        for _ in range(n):
+        pmax = int(math.sqrt(n))
+        print(f"pmax  = {pmax}")
+        for index in range(n):
+            # this means there is a different argument for each iteration,
+            # which will make checkpointing/memo behave differently
+            # so this could be switchable in parsl-perf dev branch
+            # args_extra_payload = index   # always a new one (except for run repeats)
+
+            args_extra_payload = index % pmax
             fs.append(app(args_extra_payload, parsl_resource_specification=resources))
 
         submitted_t = time.time()
