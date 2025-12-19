@@ -15,32 +15,8 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
     Works just like a :class:`~concurrent.futures.ProcessPoolExecutor` except that tasks
     are distributed across workers that can be on different machines.
 
-    Create a new executor using one of two methods:
-
-    1. Supplying a Parsl :class:`~parsl.Config` that defines how to create new workers.
-       The executor will start a new Parsl Data Flow Kernel (DFK) when it is entered as a context manager.
-
-    2. Supplying an already-started Parsl :class:`~parsl.DataFlowKernel` (DFK).
-       The executor assumes you will start and stop the Parsl DFK outside the Executor.
-
     The futures returned by :meth:`submit` and :meth:`map` are Parsl futures and will work
-    with the same function chaining mechanisms as when using Parsl with decorators.
-
-    .. code-block:: python
-
-        def f(x):
-            return x + 1
-
-        @python_app
-        def parity(x):
-            return 'odd' if x % 2 == 1 else 'even'
-
-        with ParslPoolExecutor(config=my_parsl_config) as executor:
-            future_1 = executor.submit(f, 1)
-            assert parity(future_1) == 'even'  # Function chaining, as expected
-
-            future_2 = executor.submit(f, future_1)
-            assert future_2.result() == 3  # Chaining works with `submit` too
+    with the same function chaining mechanisms as when using App-based Parsl.
 
     Parsl does not support canceling tasks. The :meth:`map` method does not cancel work
     when one member of the run fails or a timeout is reached

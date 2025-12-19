@@ -7,26 +7,31 @@ import plotly.figure_factory as ff
 import plotly.graph_objs as go
 from plotly.offline import plot
 
+from parsl.dataflow.states import States
 from parsl.monitoring.visualization.utils import (
     DB_DATE_FORMAT,
     num_to_timestamp,
     timestamp_to_int,
 )
 
-# gantt_colors must assign a color value for every state name defined
-# in parsl/dataflow/states.py
-gantt_colors = {'unsched': 'rgb(240, 240, 240)',
-                'pending': 'rgb(168, 168, 168)',
-                'launched': 'rgb(100, 255, 255)',
-                'running': 'rgb(0, 0, 255)',
-                'running_ended': 'rgb(64, 64, 255)',
-                'joining': 'rgb(128, 128, 255)',
-                'dep_fail': 'rgb(255, 128, 255)',
-                'failed': 'rgb(200, 0, 0)',
-                'exec_done': 'rgb(0, 200, 0)',
-                'memo_done': 'rgb(64, 200, 64)',
-                'fail_retryable': 'rgb(200, 128,128)'
-                }
+gantt_colors = {
+    "pending": 'rgb(168, 168, 168)',
+    "launched": 'rgb(100, 255, 255)',
+    "running": 'rgb(0, 0, 255)',
+    "dep_fail": 'rgb(255, 128, 255)',
+    "failed": 'rgb(200, 0, 0)',
+    "exec_done": 'rgb(0, 200, 0)',
+    "memo_done": 'rgb(64, 200, 64)',
+    "fail_retryable": 'rgb(200, 128, 128)',
+    "joining": 'rgb(128, 128, 255)',
+    "running_ended": 'rgb(64, 64, 255)',
+}
+dag_state_colors = {}
+for enum_i, (state, color) in enumerate(gantt_colors.items()):
+    dag_state_colors[state] = (enum_i, color)
+
+assert len(States) == len(gantt_colors), "must assign color for every state"
+assert all(s.name in gantt_colors for s in States), "must assign color for every state"
 
 
 def task_gantt_plot(df_task, df_status, time_completed=None):
@@ -199,20 +204,6 @@ def total_tasks_plot(df_task, df_status, columns=20):
         title="Total tasks"))
 
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
-
-
-dag_state_colors = {"unsched": (0, 'rgb(240, 240, 240)'),
-                    "pending": (1, 'rgb(168, 168, 168)'),
-                    "launched": (2, 'rgb(100, 255, 255)'),
-                    "running": (3, 'rgb(0, 0, 255)'),
-                    "dep_fail": (4, 'rgb(255, 128, 255)'),
-                    "failed": (5, 'rgb(200, 0, 0)'),
-                    "exec_done": (6, 'rgb(0, 200, 0)'),
-                    "memo_done": (7, 'rgb(64, 200, 64)'),
-                    "fail_retryable": (8, 'rgb(200, 128,128)'),
-                    "joining": (9, 'rgb(128, 128, 255)'),
-                    "running_ended": (10, 'rgb(64, 64, 255)')
-                    }
 
 
 def workflow_dag_plot(df_tasks, group_by_apps=True):

@@ -27,5 +27,4 @@ def test_garbage_collect():
 
     evt.set()
     assert x.result() == 10 * 4
-    time.sleep(0.01)  # Give enough time for task wipes to work - see issue #1279
     assert x.tid not in parsl.dfk().tasks, "Task record should be wiped after task completion"
