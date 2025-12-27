@@ -183,17 +183,19 @@ class Strategy:
     def _general_strategy(self, executors: List[BlockProviderExecutor], *, strategy_type: str) -> None:
         logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(executors)} executors")
 
+        # TODO (wardlt): Restructure this function so we don't have 7 levels of indentation, all strategies in single function
         for executor in executors:
             label = executor.label
+            prefix = f"[Scaling {label}]"
 
             if executor.bad_state_is_set:
-                logger.info(f"Not strategizing for executor {label} because bad state is set")
+                logger.info("{} Not strategizing for executor because bad state is set", prefix)
                 continue
 
-            logger.debug(f"Strategizing for executor {label}")
+            logger.debug("{} Strategizing for executor", prefix)
 
             if self.executors[label]['first']:
-                logger.debug(f"Scaling out {executor.provider.init_blocks} initial blocks for {label}")
+                logger.debug("{} Scaling out {} initial blocks", prefix, executor.provider.init_blocks)
                 executor.scale_out_facade(executor.provider.init_blocks)
                 self.executors[label]['first'] = False
 
@@ -216,13 +218,10 @@ class Strategy:
             active_blocks = running + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}")
-
-            logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
-                label, active_tasks, running, pending))
+            logger.debug('{} Executor {} active tasks, {} active slots, and {}/{} running/pending blocks'.format(
+                prefix, active_tasks, active_slots, running, pending))
 
             # reset idle timer if executor has active tasks
-
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
                 self.executors[executor.label]['idle_since'] = None
 
@@ -230,21 +229,20 @@ class Strategy:
             # No tasks.
             if active_tasks == 0:
                 # Case 1a
-                logger.debug("Strategy case 1: Executor has no active tasks")
-
                 # Fewer blocks that min_blocks
                 if active_blocks <= min_blocks:
-                    logger.debug("Strategy case 1a: Executor has no active tasks and minimum blocks. Taking no action.")
+                    logger.debug("{} Strategy case 1a: Executor has no active tasks and minimum blocks. Taking no action.", prefix)
                 # Case 1b
                 # More blocks than min_blocks. Scale in
                 else:
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
-                    logger.debug(f"Strategy case 1b: Executor has no active tasks, and more ({active_blocks})"
-                                 f" than minimum blocks ({min_blocks})")
+                    logger.debug("{} Strategy case 1b: Executor has no active tasks, and more ({})"
+                                 " than minimum blocks ({})", prefix, active_blocks, min_blocks)
 
                     if not self.executors[executor.label]['idle_since']:
-                        logger.debug(f"Starting idle timer for executor. If idle time exceeds {self.max_idletime}s, blocks will be scaled in")
+                        logger.debug(f"Starting idle timer for executor {label}."
+                                     f" If idle time exceeds {self.max_idletime}s, blocks will be scaled in")
                         self.executors[executor.label]['idle_since'] = time.time()
                     idle_since = self.executors[executor.label]['idle_since']
                     assert idle_since is not None, "The `if` statement above this assert should have forced idle time to be not-None"
@@ -253,24 +251,24 @@ class Strategy:
                     if idle_duration > self.max_idletime:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
-                        logger.debug(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in")
+                        logger.debug("{} Idle time has reached {}s for executor; scaling in", prefix, self.max_idletime)
                         executor.scale_in_facade(active_blocks - min_blocks)
 
                     else:
                         logger.debug(
-                                f"Idle time {idle_duration}s is less than max_idletime {self.max_idletime}s"
-                                f" for executor {label}; not scaling in")
+                            "{} Idle time {}s is less than max_idletime {}s; not scaling in", prefix, idle_duration, self.max_idletime,
+                        )
 
             # Case 2
             # More tasks than the available slots.
             elif (float(active_slots) / active_tasks) < parallelism:
-                logger.debug("Strategy case 2: slots are overloaded - (slot_ratio = active_slots/active_tasks) < parallelism")
+                logger.debug("{} Strategy case 2: slots are overloaded - (slot_ratio = active_slots/active_tasks) < parallelism", prefix)
 
                 # Case 2a
                 # We have the max blocks possible
                 if active_blocks >= max_blocks:
                     # Ignore since we already have the max nodes
-                    logger.debug(f"Strategy case 2a: active_blocks {active_blocks} >= max_blocks {max_blocks} so not scaling out")
+                    logger.debug("{} Strategy case 2a: active_blocks {} >= max_blocks {} so not scaling out", prefix, active_blocks, max_blocks)
                 # Case 2b
                 else:
                     logger.debug(f"Strategy case 2b: active_blocks {active_blocks} < max_blocks {max_blocks} so scaling out")
@@ -280,21 +278,22 @@ class Strategy:
                     logger.debug(f"Requesting {excess_blocks} more blocks")
                     executor.scale_out_facade(excess_blocks)
 
+            # Case 4a
+            # Tasks but no slots
             elif active_slots == 0 and active_tasks > 0:
-                logger.debug("Strategy case 4a: No active slots but some active tasks - could scale out by a single block")
+                logger.debug("{} Strategy case 4a: No active slots but some active tasks - could scale out by a single block", prefix)
 
-                # Case 4a
                 if active_blocks < max_blocks:
-                    logger.debug("Requesting single block")
+                    logger.debug("{} Requesting single block", prefix)
 
                     executor.scale_out_facade(1)
                 else:
-                    logger.debug("Not requesting single block, because at maxblocks already")
+                    logger.debug("{} Not requesting any blocks, because at maxblocks already", prefix)
 
             # Case 4b
             # More slots than tasks
             elif active_slots > 0 and active_slots > active_tasks:
-                logger.debug("Strategy case 4b: more slots than tasks")
+                logger.debug("{} Strategy case 4b: more slots than tasks", prefix)
                 if strategy_type == 'htex':
                     # Scale in for htex
                     if isinstance(executor, HighThroughputExecutor):
@@ -302,14 +301,14 @@ class Strategy:
                             excess_slots = math.floor(active_slots - (active_tasks * parallelism))
                             excess_blocks = math.floor(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
-                            logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
+                            logger.debug("{} Requesting scaling in by {} blocks with idle time {}s", prefix, excess_blocks, self.max_idletime)
                             executor.scale_in_facade(excess_blocks, max_idletime=self.max_idletime)
                     else:
-                        logger.error("This strategy does not support scaling in except for HighThroughputExecutor - taking no action")
+                        logger.error("{} This strategy only supports scaling in for HighThroughputExecutor - taking no action", prefix)
                 else:
-                    logger.debug("This strategy does not support scaling in")
+                    logger.debug("{} This strategy does not support scaling in", prefix)
 
             # Case 3
             # tasks ~ slots
             else:
-                logger.debug("Strategy case 3: no changes necessary to current block load")
+                logger.debug("{} Strategy case 3: no changes necessary to current block load", prefix)
