@@ -186,7 +186,7 @@ class Strategy:
         # TODO (wardlt): Restructure this function so we don't have 7 levels of indentation, all strategies in single function
         for executor in executors:
             label = executor.label
-            prefix = f"[Scaling {label}]"
+            prefix = f"[Scaling executor {label}]"
 
             if executor.bad_state_is_set:
                 logger.info("{} Not strategizing for executor because bad state is set", prefix)
@@ -241,8 +241,7 @@ class Strategy:
                                  " than minimum blocks ({})", prefix, active_blocks, min_blocks)
 
                     if not self.executors[executor.label]['idle_since']:
-                        logger.debug(f"Starting idle timer for executor {label}."
-                                     f" If idle time exceeds {self.max_idletime}s, blocks will be scaled in")
+                        logger.debug("{} Starting idle timer. If idle time exceeds {}s, blocks will be scaled in", prefix, self.max_idletime)
                         self.executors[executor.label]['idle_since'] = time.time()
                     idle_since = self.executors[executor.label]['idle_since']
                     assert idle_since is not None, "The `if` statement above this assert should have forced idle time to be not-None"
