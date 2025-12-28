@@ -101,8 +101,8 @@ The directory contains two types of files:
 
 .. _section-logging-tasks:
 
-Common Logging Tasks
---------------------
+Common Debugging Tasks
+----------------------
 
 .. note::
 
@@ -110,20 +110,61 @@ Common Logging Tasks
     and includes visualization tools.
     Consider using Monitoring as a basis for routine logging efforts.
 
-Many common logging tasks require processing information from multiple files
-as a single operation may coordinated across multiple processes.
 This section describes how to use the logs to check correctness
 and locate errors in common operations.
+
+Launching Blocks
+~~~~~~~~~~~~~~~~
+
+Parsl groups compute resources into :ref:`blocks <label-elasticity>` that are acquired
+and released as compute requirements change.
+The process for launching a block is recorded in a sequence:
+
+1. A request for "scaling out" in ``parsl.log``.
+
+   Log messages starting with ``[Scaling executor <name>]`` record the process for
+   deciding whether to request another block and status messages while acquiring
+   a new block of workers.
+   Typical log lines for requesting a block start with a request
+   and end with a job ID from the :ref:`provider <label-execution>`:
+
+   .. code-block:: text
+
+      TBD
+
+   The last message, "Launched block <N> with job ID <>," indicates
+   a request was successfully made to the execution provider.
+
+2. The results from requesting resources are found in the "scripts directory."
+
+   The ``submit_scripts`` directory in the run folder contains the script submitted
+   to an execution provider (e.g., a Slurm batch script) and the outputs from that script.
+   The file names always contain the name of the executor and ID associated with the block of workers.
+
+   Use the output files and the job ID from the previous step to determine whether
+   the block was launched properly.
+
+   Common errors that can be found in the output files include:
+
+   - Parsl worker services not found because the :ref:`Python environment was not activated <label-worker-init>`
+   - The launcher (e.g., ``srun``) fails to work because of incorrect options.
+   - Workers fail to connect to the host process :ref:`due to network configuration problems <label-networking>`
 
 Tracking Manager Status
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The log should also contain messages about blocks of workers being requested,
-starting, and being reported closed.
+The next step in a Parsl workflow is the workers on the compute nodes starting,
+detecting and (optionally) pinning to the available resources,
+and then connecting back to the host process.
 
-.. code-block:: text
+TODO:
 
-    TO BE FOUND
+1. Explain where to find the log files (in the block directory, one per node)
+2. Show that the manager log indicates which resources are found
+3. Show that that the worker logs describe which cores/accelerators they pin to
+4. Show that connections are reported both in manager and ``parsl.log``
+5. Caveat that different Executors will log differently
+
 
 Tracking Task Status
 ~~~~~~~~~~~~~~~~~~~~
