@@ -8,7 +8,7 @@ and how results are passed between different Apps.
 The core concept of workflows is that Parsl Apps produce **Futures**
 with all features from those in Python's :mod:`concurrent.futures` module and more.
 
-The Parsl programs must contain a ``parsl.load`` statement to start
+The Parsl programs typically contain a ``parsl.load`` statement to start
 the services which manage scheduling computations.
 
 .. code-block:: python
@@ -35,3 +35,4 @@ the services which manage scheduling computations.
    lifted_ops
    logging
    checkpoints
+   concurrent
