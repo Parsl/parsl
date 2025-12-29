@@ -1,3 +1,6 @@
+..
+   The logging examples are from the "examples" in the advanced user guide.
+
 Logging
 =======
 
@@ -130,7 +133,13 @@ The process for launching a block is recorded in a sequence:
 
    .. code-block:: text
 
-      TBD
+      [...] parsl.jobs.strategy:195 _general_strategy DEBUG: [Scaling executor htex_local] Strategizing for executor
+      [...] parsl.jobs.strategy:198 _general_strategy DEBUG: [Scaling executor htex_local] Scaling out 1 initial blocks
+      [...] parsl.executors.status_handling:204 scale_out_facade INFO: [Scaling executor htex_local] Scaling out by 1 blocks
+      [...] parsl.executors.status_handling:207 scale_out_facade INFO: [Scaling executor htex_local] Allocated block ID 0
+      [...]
+      [...] parsl.executors.status_handling:268 _launch_block DEBUG: [Scaling executor htex_local] Launched block 0 with job ID 20076
+
 
    The last message, "Launched block <N> with job ID <>," indicates
    a request was successfully made to the execution provider.
