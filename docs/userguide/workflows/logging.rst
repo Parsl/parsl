@@ -159,20 +159,51 @@ The process for launching a block is recorded in a sequence:
    - The launcher (e.g., ``srun``) fails to work because of incorrect options.
    - Workers fail to connect to the host process :ref:`due to network configuration problems <label-networking>`
 
-Tracking Manager Status
-~~~~~~~~~~~~~~~~~~~~~~~
+Tracing Compute Nodes
+~~~~~~~~~~~~~~~~~~~~~
 
-The next step in a Parsl workflow is the workers on the compute nodes starting,
-detecting and (optionally) pinning to the available resources,
-and then connecting back to the host process.
+.. note::
 
-TODO:
+    This sections describes the procedure for Parsl using
+    :ref:`the high-throughput executor <label-htex>`
+    and may not be applicable to other executors.
 
-1. Explain where to find the log files (in the block directory, one per node)
-2. Show that the manager log indicates which resources are found
-3. Show that that the worker logs describe which cores/accelerators they pin to
-4. Show that connections are reported both in manager and ``parsl.log``
-5. Caveat that different Executors will log differently
+Use logs specific to an Executor to trace whether the workers on the compute nodes
+are starting, detecting resources, and connecting to the host process.
+
+Each node in a compute block writes to a unique subdirectory within
+the directory of its associated executor and block.
+For example, a compute node in the first block of the "htex_local" executor
+is found in ``htex_local/block-0``.
+
+A compute log directory contains two types of log files:
+a "manager" log for the process which launches the workers,
+and "worker" logs for each worker the manager launches.
+
+Use the logs to ensure...
+
+- *Connectivity* to the host process. The manager log should declare that it connected
+  and identify which network it is using by printing a log line similar to
+
+  .. code-block:: text
+
+     2025-12-29 09:22:12.683 parsl:322 20081 Interchange-Communicator [INFO]  Successfully connected to interchange via URL: tcp://192.168.1.71:54495
+
+  The ``interchange.log`` in the root directory for the executor will include a matching line
+  after acknowledging the connection and registering the workers as ready for tasks.
+
+  .. code-block:: text
+
+     2025-12-29 09:22:12.779 interchange:438 MainProcess(20069) MainThread process_manager_socket_message [INFO] Registered manager b'c4b55da1a90f' (py3.11, 1.3.0-dev) and added to ready queue
+
+- *Resource Pinning* for the workers.
+  Each worker log begins with a message that it has started then
+  a list of resources (CPU and/or GPU) that it will use for tasks.
+
+  .. code-block:: text
+
+     2025-12-29 09:22:13.110 worker_log:658 20100 MainThread [INFO]  Worker 7 started
+     2025-12-29 09:22:13.112 worker_log:715 20100 MainThread [INFO]  Set worker CPU affinity to [7]
 
 
 Tracking Task Status
@@ -180,9 +211,12 @@ Tracking Task Status
 
 The tasks being submitted, passing, or failing will also be visible in the logs.
 
-.. code-block:: text
+TBD:
 
-    TO BE FOUND
+1. Show that a task is getting launched (``parsl.log``)
+2. Show that a task is getting executed (worker logs)
+3. Show that a result is being received (``parsl.log``)
+4. Show that the task is successful or why it errored (``parsl.log``, ``result.future()/.execption()``)
 
 Monitoring Workflow Status
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
