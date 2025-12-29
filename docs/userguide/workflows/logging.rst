@@ -209,14 +209,59 @@ Use the logs to ensure...
 Tracking Task Status
 ~~~~~~~~~~~~~~~~~~~~
 
-The tasks being submitted, passing, or failing will also be visible in the logs.
+The ``parsl.log`` provides information about a task across its lifespan.
 
-TBD:
+1. The task is submitted. Parsl logs which executor it is assigned to
+   and the name of the App it is running, and any dependencies.
 
-1. Show that a task is getting launched (``parsl.log``)
-2. Show that a task is getting executed (worker logs)
-3. Show that a result is being received (``parsl.log``)
-4. Show that the task is successful or why it errored (``parsl.log``, ``result.future()/.execption()``)
+  .. code-block:: text
+
+     1763128191.056197 2025-11-14 05:49:51 MainProcess- ThreadPoolExecutor-2_0- parsl.dataflow.dflow:973 submit DEBUG: Task 316 will be sent to executor _parsl_internal
+     1763128191.058182 2025-11-14 05:49:51 MainProcess- ThreadPoolExecutor-2_0- parsl.dataflow.dflow:1052 submit INFO: Task 316 submitted for App launch_relaxations, waiting on task 315
+     1763128191.058387 2025-11-14 05:49:51 MainProcess- ThreadPoolExecutor-2_0- parsl.dataflow.dflow:1058 submit DEBUG: Task 316 set to pending state with AppFuture: <AppFuture at 0x7fb6ce3da510 state=pending>
+     1763128191.058833 2025-11-14 05:49:51 MainProcess- Task-Launch_0- parsl.dataflow.dflow:629 _launch_if_ready_async DEBUG: Task 316 has outstanding dependencies, so launch_if_ready skipping
+
+  The above task is a :ref:`join app <label-joinapp>` named ``launch_relaxations``,
+  and will run on the internal executor for Parsl (``_parsl_internal``).
+  It is dependent on task 315, so will not start immediately.
+
+2. The task is launched. The launch process starts tasks once all dependencies are done.
+
+  .. code-block:: text
+
+     1763130591.542695 2025-11-14 06:29:51 MainProcess- Task-Launch_0- parsl.dataflow.memoization:269 check_memo DEBUG: Task 316 will not be memoized
+     1763130591.543230 2025-11-14 06:29:51 MainProcess- Task-Launch_0- parsl.dataflow.dflow:739 launch_task INFO: Parsl task 316 try 0 launched on executor _parsl_internal
+
+  A single task may be :ref:`tried multiple times <label-retry>` and the attempt number is recorded in the logs as well.
+
+3. The result is received. If successful, Parsl will print a single completion message.
+
+  .. code-block:: text
+
+    1763147214.980597 2025-11-14 11:06:54 MainProcess- HTEX-Result-Queue-Thread- parsl.dataflow.dflow:539 _complete_task_result INFO: Task 316 completed (joining -> exec_done)
+
+  If unsuccessful, the task could be restarted and relaunched
+
+  .. code-block:: text
+
+     1763129113.044855 2025-11-14 06:05:13 MainProcess- HTEX-Result-Queue-Thread- parsl.dataflow.dflow:331 handle_exec_update INFO: Task 204 try 0 failed with exception of type ValueError
+     1763129113.045055 2025-11-14 06:05:13 MainProcess- HTEX-Result-Queue-Thread- parsl.dataflow.dflow:371 handle_exec_update INFO: Task 204 marked for retry
+     [...]
+     1763129113.050172 2025-11-14 06:05:13 MainProcess- Task-Launch_0-140414082344704 parsl.dataflow.dflow:734 launch_task INFO: Parsl task 204 try 1 launched on executor xtb with executor id 445
+
+  or failed and the exception both recorded in the logs and :ref:`referred to the user <label-exceptions>`.
+
+  .. code-block:: text
+
+     1763137697.445044 2025-11-14 08:28:17 MainProcess- HTEX-Result-Queue-Thread- parsl.app.errors:110 reraise DEBUG: Reraising exception of type <class 'ValueError'>
+     1763137697.445302 2025-11-14 08:28:17 MainProcess- HTEX-Result-Queue-Thread- parsl.dataflow.dflow:331 handle_exec_update INFO: Task 204 try 1 failed with exception of type ValueError
+     1763137697.445468 2025-11-14 08:28:17 MainProcess- HTEX-Result-Queue-Thread- parsl.dataflow.dflow:374 handle_exec_update ERROR: Task 204 failed after 1 retry attempts
+     Traceback (most recent call last):
+       File "/global/cfs/env/lib/python3.12/site-packages/parsl/dataflow/dflow.py", line 328, in handle_exec_update
+     [...]
+         return umr_minimum(a, axis, None, out, keepdims, initial, where)
+         ^^^^^^^^^^^^^^^^^
+     ValueError: zero-size array to reduction operation minimum which has no identity
 
 Monitoring Workflow Status
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
