@@ -52,7 +52,7 @@ that occur on the Python process running the Parsl application.
 
 The log should begin with a message indicating Parsl DataFlowKernel (DFK) is starting
 and a readout of the configuration settings.
-The logs will end with a status message that the DFK has cleaned up resources successfully
+The logs will end with a status message that the DFK has cleaned up resources successfully.
 
 .. code-block:: text
 
@@ -69,8 +69,9 @@ Submission Scripts
 
 The ``submit_script`` directory contains the input and outputs from the :ref:`resource providers <label-execution>`
 used by a Parsl application.
-The actual contents of the file vary, but most providers will produce a shell script
-used when requesting resources and the outputs of the shell scripts
+The actual contents of the file vary between Parsl configurations,
+but most providers will produce a shell script
+used when requesting resources and the outputs of the shell scripts.
 
 Executor Logs
 ~~~~~~~~~~~~~
@@ -78,7 +79,7 @@ Executor Logs
 The remaining directories are used by the different Executors in the Parsl application.
 The types of logs vary depending on the choice of Executor.
 This section describes the output structure of a common configuration:
-:ref:`HighThroughputExecutor <label-htex>` deployed onto nodes provided by a batch scheduler.
+:ref:`HighThroughputExecutor <label-htex>` using a batch scheduler.
 
 The log file at the root of the directory, ``interchange.log``, is from a process
 which distributes task across the workers used by Parsl.
@@ -128,6 +129,7 @@ The process for launching a block is recorded in a sequence:
    Log messages starting with ``[Scaling executor <name>]`` record the process for
    deciding whether to request another block and status messages while acquiring
    a new block of workers.
+
    Typical log lines for requesting a block start with a request
    and end with a job ID from the :ref:`provider <label-execution>`:
 
@@ -144,14 +146,14 @@ The process for launching a block is recorded in a sequence:
    The last message, "Launched block <N> with job ID <>," indicates
    a request was successfully made to the execution provider.
 
-2. The results from requesting resources are found in the "scripts directory."
+   The job ID is often the same used by the scheduling system underlying the Provider.
+   Use standard tools (e.g., ``squeue`` for Slurm) to monitor whether the requested nodes are available.
 
-   The ``submit_scripts`` directory in the run folder contains the script submitted
-   to an execution provider (e.g., a Slurm batch script) and the outputs from that script.
-   The file names always contain the name of the executor and ID associated with the block of workers.
+2. The results from requesting resources are found in the ``submit_scripts`` directory.
 
    Use the output files and the job ID from the previous step to determine whether
    the block was launched properly.
+   The file names contain the name of the executor and ID associated with the block of workers.
 
    Common errors that can be found in the output files include:
 
@@ -169,18 +171,14 @@ Tracing Compute Nodes
     and may not be applicable to other executors.
 
 Use logs specific to an Executor to trace whether the workers on the compute nodes
-are starting, detecting resources, and connecting to the host process.
+are starting, detecting resources properly, and connecting to the host process.
 
 Each node in a compute block writes to a unique subdirectory within
 the directory of its associated executor and block.
 For example, a compute node in the first block of the "htex_local" executor
 is found in ``htex_local/block-0``.
 
-A compute log directory contains two types of log files:
-a "manager" log for the process which launches the workers,
-and "worker" logs for each worker the manager launches.
-
-Use the logs to ensure...
+Use the logs written by processes on the compute node to ensure...
 
 - *Connectivity* to the host process. The manager log should declare that it connected
   and identify which network it is using by printing a log line similar to
@@ -225,7 +223,7 @@ The ``parsl.log`` provides information about a task across its lifespan.
   and will run on the internal executor for Parsl (``_parsl_internal``).
   It is dependent on task 315, so will not start immediately.
 
-2. The task is launched. The launch process starts tasks once all dependencies are done.
+2. The task is launched after all dependencies are done.
 
   .. code-block:: text
 
@@ -262,8 +260,3 @@ The ``parsl.log`` provides information about a task across its lifespan.
          return umr_minimum(a, axis, None, out, keepdims, initial, where)
          ^^^^^^^^^^^^^^^^^
      ValueError: zero-size array to reduction operation minimum which has no identity
-
-Monitoring Workflow Status
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-[ TBD: Describe how to access the number of active tasks/blocks/workers ]
