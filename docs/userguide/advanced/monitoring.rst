@@ -1,3 +1,5 @@
+.. _label-monitoring:
+
 Monitoring
 ==========
 
