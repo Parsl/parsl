@@ -1,4 +1,5 @@
 import pandas as pd
+import sqlalchemy
 from flask import current_app as app
 from flask import render_template
 
@@ -143,9 +144,9 @@ def workflow_dag_details(workflow_id, path):
                                        FROM status
                                        WHERE status.task_id = task.task_id and status.run_id = task.run_id
                                       )
-               WHERE task.run_id='%s'""" % (workflow_id)
+               WHERE task.run_id=:run_id"""
 
-    df_tasks = pd.read_sql_query(query, db.engine)
+    df_tasks = pd.read_sql_query(sqlalchemy.text(query), db.engine, params={"run_id": workflow_id})
 
     group_by_apps = (path == "group_by_apps")
     return render_template('dag.html',
@@ -166,10 +167,11 @@ def workflow_resources(workflow_id):
                                message="Workflow %s does not have any resource usage records." % workflow_id)
 
     df_task = queries.tasks_for_workflow(workflow_id, db.engine)
-    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
-                                      task_try_time_launched, task_try_time_running, task_try_time_returned from task, try
-                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
-                                      % (workflow_id, workflow_id), db.engine)
+
+    query = """SELECT task.task_id, task_func_name,
+               task_try_time_launched, task_try_time_running, task_try_time_returned from task, try
+               WHERE task.task_id = try.task_id AND task.run_id=:run_id and try.run_id=task.run_id"""
+    df_task_tries = pd.read_sql_query(query, db.engine, params={"run_id": workflow_id})
     df_node = queries.nodes_for_workflow(workflow_id, db.engine)
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
