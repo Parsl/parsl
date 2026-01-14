@@ -90,7 +90,8 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
         return app(*args, **kwargs)
 
     # TODO (wardlt): This override can go away when Parsl supports cancel
-    def map(self, fn: Callable[..., T], *iterables: Iterable, timeout: Optional[float] = None, chunksize: int = 1) -> Iterator[T]:
+    def map(self, fn: Callable[..., T], *iterables: Iterable, timeout: Optional[float] = None,
+            chunksize: int = 1, buffersize: Optional[int] = None) -> Iterator[T]:
         """Returns an iterator equivalent to map(fn, iter).
 
         Args:
