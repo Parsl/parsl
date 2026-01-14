@@ -151,7 +151,7 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         In case of a remote file system, specify the path to where logs will be kept.
 
     encrypted : bool
-        Flag to enable/disable encryption (CurveZMQ). Default is False.
+        Flag to enable/disable encryption (CurveZMQ). Default is True.
 
     manager_selector: ManagerSelector
         Determines what strategy the interchange uses to select managers during task distribution.
@@ -268,7 +268,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False,
+                 encrypted: bool = True,
                  remote_monitoring_radio: Optional[RadioConfig] = None):
 
         logger.debug("Initializing HighThroughputExecutor")
