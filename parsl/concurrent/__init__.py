@@ -100,9 +100,9 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
             timeout: The maximum number of seconds to wait. If None, then there
                 is no limit on the wait time.
             chunksize: This parameter is ignored. Caution should be exercised
-                if expecting behaviour as documented in the base `Executor` class.
+                if expecting behaviour as documented in the base `concurrent.futures.Executor` class.
             buffersize: This parameter is ignored. Caution should be exercised
-                if expecting behaviour as documented in the base `Executor` class.
+                if expecting behaviour as documented in the base `concurrent.futures.Executor` class.
 
         Returns:
             An iterator equivalent to: map(func, ``*iterables``) but the calls may
