@@ -2,11 +2,13 @@
 import time
 from concurrent.futures import Executor
 from contextlib import AbstractContextManager
-from typing import Callable, Dict, Iterable, Iterator, Literal, Optional
+from typing import Callable, Dict, Iterable, Iterator, Literal, Optional, TypeVar
 from warnings import warn
 
 from parsl import Config, DataFlowKernel, load
 from parsl.app.python import PythonApp
+
+T = TypeVar('T')
 
 
 class ParslPoolExecutor(Executor, AbstractContextManager):
@@ -88,7 +90,7 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
         return app(*args, **kwargs)
 
     # TODO (wardlt): This override can go away when Parsl supports cancel
-    def map(self, fn: Callable, *iterables: Iterable, timeout: Optional[float] = None, chunksize: int = 1) -> Iterator:
+    def map(self, fn: Callable[..., T], *iterables: Iterable, timeout: Optional[float] = None, chunksize: int = 1) -> Iterator[T]:
         """Returns an iterator equivalent to map(fn, iter).
 
         Args:
