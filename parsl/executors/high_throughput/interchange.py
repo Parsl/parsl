@@ -138,9 +138,6 @@ class Interchange:
 
         self.pending_task_queue: SortedList[Any] = SortedList(key=lambda tup: (tup[0], tup[1]))
 
-        # count of tasks that have been received from the submit side
-        self.task_counter = 0
-
         # count of tasks that have been sent out to worker pools
         self.count = 0
 
@@ -163,6 +160,7 @@ class Interchange:
         logger.info(f"Bound to port {worker_port} for incoming worker connections")
 
         self._ready_managers: Dict[bytes, ManagerRecord] = {}
+        self._logged_manager_count_token: object = None
         self.connected_block_history: List[str] = []
 
         self.heartbeat_threshold = heartbeat_threshold
@@ -316,6 +314,7 @@ class Interchange:
             self.process_manager_socket_message(interesting_managers, monitoring_radio, kill_event)
             self.expire_bad_managers(interesting_managers, monitoring_radio)
             self.expire_drained_managers(interesting_managers, monitoring_radio)
+            self.log_manager_counts(interesting_managers)
             self.process_tasks_to_send(interesting_managers, monitoring_radio)
 
         self.zmq_context.destroy()
@@ -332,15 +331,15 @@ class Interchange:
             msg = self.task_incoming.recv_pyobj()
 
             # Process priority, higher number = lower priority
+            task_id = msg['task_id']
             resource_spec = msg['context'].get('resource_spec', {})
             priority = resource_spec.get('priority', float('inf'))
-            queue_entry = (-priority, -self.task_counter, msg)
+            queue_entry = (-priority, -task_id, msg)
 
-            logger.debug("putting message onto pending_task_queue")
+            logger.debug("Putting task %s onto pending_task_queue", task_id)
 
             self.pending_task_queue.add(queue_entry)
-            self.task_counter += 1
-            logger.debug(f"Fetched {self.task_counter} tasks so far")
+            logger.debug("Put task %s onto pending_task_queue", task_id)
 
     def process_manager_socket_message(
         self,
@@ -526,14 +525,23 @@ class Interchange:
                 m['active'] = False
                 self._send_monitoring_info(monitoring_radio, m)
 
+    def log_manager_counts(self, interesting_managers: Set[bytes]) -> None:
+        count_interesting = len(interesting_managers)
+        count_ready = len(self._ready_managers)
+
+        new_logged_manager_count_token = (count_interesting, count_ready)
+
+        if self._logged_manager_count_token != new_logged_manager_count_token:
+
+            logger.debug(
+                "Managers count (interesting/total): %d/%d",
+                count_interesting,
+                count_ready
+            )
+            self._logged_manager_count_token = new_logged_manager_count_token
+
     def process_tasks_to_send(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         # Check if there are tasks that could be sent to managers
-
-        logger.debug(
-            "Managers count (interesting/total): %d/%d",
-            len(interesting_managers),
-            len(self._ready_managers)
-        )
 
         if interesting_managers and self.pending_task_queue:
             shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)

@@ -13,6 +13,7 @@ Core
     parsl.app.app.join_app
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
+    parsl.concurrent.ParslPoolExecutor
     parsl.dataflow.dependency_resolvers.DependencyResolver
     parsl.dataflow.dependency_resolvers.DEEP_DEPENDENCY_RESOLVER
     parsl.dataflow.dependency_resolvers.SHALLOW_DEPENDENCY_RESOLVER
@@ -142,6 +143,16 @@ Batch jobs
     parsl.jobs.error_handlers.simple_error_handler
     parsl.jobs.error_handlers.windowed_error_handler
 
+Checkpointing and Memoization
+=============================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.dataflow.memoization.Memoizer
+    parsl.dataflow.memoization.BasicMemoizer
+
 Exceptions
 ==========
 
@@ -206,7 +217,6 @@ Internal
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
     parsl.dataflow.memoization.id_for_memo
-    parsl.dataflow.memoization.Memoizer
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
     parsl.dataflow.taskrecord.TaskRecord

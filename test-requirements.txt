@@ -5,12 +5,11 @@ pytest-cov
 pytest-random-order
 nbsphinx
 sphinx_rtd_theme
-mypy==1.5.1
+mypy==1.18.2
 types-mock
 types-python-dateutil
 types-requests
 mpi4py
-globus-compute-sdk>=2.34.0
 
 # sqlalchemy is needed for typechecking, so it's here
 # as well as at runtime for optional monitoring execution

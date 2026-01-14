@@ -20,7 +20,6 @@ class States(IntEnum):
     All tasks should end up in one of the states listed in `FINAL_STATES`.
     """
 
-    unsched = -1
     pending = 0
     """Task is known to parsl but cannot run yet. Usually, a task cannot
     run because it is waiting for dependency tasks to complete.
@@ -67,10 +66,10 @@ class States(IntEnum):
         return self.__class__.__name__ + "." + self.name
 
 
-FINAL_STATES = [States.exec_done, States.memo_done, States.failed, States.dep_fail]
-"""States from which we will never move to another state, because the job has
-either definitively completed or failed."""
-
-FINAL_FAILURE_STATES = [States.failed, States.dep_fail]
+FINAL_FAILURE_STATES = {States.failed, States.dep_fail}
 """States which are final and which indicate a failure. This must
 be a subset of FINAL_STATES"""
+
+FINAL_STATES = {States.exec_done, States.memo_done, *FINAL_FAILURE_STATES}
+"""States from which we will never move to another state, because the job has
+either definitively completed or failed."""

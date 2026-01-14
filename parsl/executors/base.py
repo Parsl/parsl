@@ -80,11 +80,11 @@ class ParslExecutor(metaclass=ABCMeta):
         self.shutdown()
         return False
 
-    @abstractmethod
     def start(self) -> None:
         """Start the executor.
 
-        Any spin-up operations (for example: starting thread pools) should be performed here.
+        By default, this does nothing, but this method should be overridden to
+        perform any spin-up operations (for example: starting thread pools).
         """
         pass
 

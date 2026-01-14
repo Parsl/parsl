@@ -18,7 +18,7 @@ def fake_task(parsl_resource_specification=None):
 
 
 @pytest.mark.local
-def test_priority_queue():
+def test_priority_queue(try_assert):
     provider = LocalProvider(
         init_blocks=0,
         max_blocks=0,
@@ -30,6 +30,7 @@ def test_priority_queue():
         max_workers_per_node=1,
         manager_selector=RandomManagerSelector(),
         provider=provider,
+        worker_debug=True,  # needed to instrospect interchange logs
     )
 
     config = Config(
@@ -49,6 +50,22 @@ def test_priority_queue():
         for i, priority in enumerate(priorities):
             spec = {'priority': priority}
             futures[(priority, i)] = fake_task(parsl_resource_specification=spec)
+
+        # wait for the interchange to have received all tasks
+        # (which happens asynchronously to the main thread, and is otherwise
+        # a race condition which can cause this test to fail)
+
+        n = len(priorities)
+
+        def interchange_logs_task_count():
+            with open(htex.worker_logdir + "/interchange.log", "r") as f:
+                lines = f.readlines()
+                for line in lines:
+                    if f"Put task {n} onto pending_task_queue" in line:
+                        return True
+            return False
+
+        try_assert(interchange_logs_task_count)
 
         provider.max_blocks = 1
         htex.scale_out_facade(1)  # don't wait for the JSP to catch up

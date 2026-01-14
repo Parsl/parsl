@@ -10,7 +10,7 @@ class JobState(IntEnum):
     """Defines a set of states that a job can be in"""
 
     UNKNOWN = 0
-    """The batch provider is unable to determinate a state for this job"""
+    """The batch provider is unable to determine a state for this job"""
 
     PENDING = 1
     """"This job is in the batch queue but has not started running"""
@@ -40,7 +40,7 @@ class JobState(IntEnum):
     """This job is held/suspended in the batch system"""
 
     MISSING = 8
-    """This job has reached a terminal state without the resources(managers/workers)
+    """This job has reached a terminal state without the resources (managers/workers)
     launched in the job connecting back to the Executor. This state is set by HTEX
     when it is able to infer that the block failed to start workers for eg due to
     bad worker environment or network connectivity issues.

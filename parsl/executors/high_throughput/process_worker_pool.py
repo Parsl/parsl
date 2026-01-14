@@ -349,7 +349,7 @@ class Manager:
 
             logger.debug(
                 'ready workers: %d, pending tasks: %d',
-                self.ready_worker_count.value,  # type: ignore[attr-defined]
+                self.ready_worker_count.value,
                 pending_task_count,
             )
 
@@ -379,7 +379,7 @@ class Manager:
                 last_interchange_contact = time.time()
 
                 if tasks == HEARTBEAT_CODE:
-                    logger.debug("Got heartbeat from interchange")
+                    logger.debug("Got heartbeat response from interchange")
                 elif tasks == DRAINED_CODE:
                     logger.info("Got fully drained message from interchange - setting kill flag")
                     self._stop_event.set()

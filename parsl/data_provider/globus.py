@@ -4,7 +4,6 @@ import os
 from functools import partial
 from typing import Optional
 
-import globus_sdk
 import typeguard
 
 import parsl
@@ -79,6 +78,7 @@ class Globus:
 
     @classmethod
     def transfer_file(cls, src_ep, dst_ep, src_path, dst_path):
+        import globus_sdk
         tc = globus_sdk.TransferClient(authorizer=cls.authorizer)
         td = globus_sdk.TransferData(tc, src_ep, dst_ep)
         td.add_item(src_path, dst_path)
@@ -140,6 +140,7 @@ class Globus:
     def _do_native_app_authentication(cls, client_id, redirect_uri,
                                       requested_scopes=None):
 
+        import globus_sdk
         client = globus_sdk.NativeAppAuthClient(client_id=client_id)
         client.oauth2_start_flow(
             requested_scopes=requested_scopes,
@@ -154,6 +155,7 @@ class Globus:
 
     @classmethod
     def _get_native_app_authorizer(cls, client_id):
+        import globus_sdk
         tokens = None
         try:
             tokens = cls._load_tokens_from_file(cls.TOKEN_FILE)

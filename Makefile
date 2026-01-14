@@ -51,6 +51,7 @@ mypy: ## run mypy checks
 .PHONY: gce_test
 gce_test: ## Run tests with GlobusComputeExecutor (--config .../globus_compute.py)
 	pytest -v -k "not shared_fs and not issue_3620 and not staging_required" --config parsl/tests/configs/globus_compute.py parsl/tests/ --random-order --durations 10
+	pytest -v -k "not shared_fs and not issue_3620 and not staging_required and globus_compute" --config local --random-order --durations 10
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config (--config .../local_threads.py)
@@ -86,7 +87,7 @@ radical_local_test:  ## Run the Radical local tests (-m radical --config local)
 .PHONY: config_local_test
 config_local_test:  ## run the config-local tests (--config local)
 	pip3 install ".[monitoring,visualization,proxystore,kubernetes]"
-	pytest parsl/tests/ -k "not cleannet and not workqueue and not taskvine" --config local --random-order --durations 10 --log-cli-level=DEBUG -s
+	pytest parsl/tests/ -k "not cleannet and not workqueue and not taskvine and not globus_compute" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:  ## Run the site tests
@@ -96,6 +97,7 @@ site_test:  ## Run the site tests
 .PHONY: perf_test
 perf_test:  ## Run `parsl-perf` (--config .../local_threads.py)
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
+	parsl-perf --iterate 1,2,3 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
 test: clean_coverage isort lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test config_local_test perf_test ## run all tests

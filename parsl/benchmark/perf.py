@@ -2,10 +2,13 @@ import argparse
 import concurrent.futures
 import importlib
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernel
+from parsl.errors import InternalConsistencyError
+
+VALID_NAMED_ITERATION_MODES = ("estimate", "exponential")
 
 min_iterations = 2
 
@@ -40,21 +43,24 @@ def app(extra_payload: Any, parsl_resource_specification: Dict = {}) -> int:
     return 7
 
 
-def performance(*, resources: dict, target_t: float, args_extra_size: int) -> None:
-    n = 10
+def performance(*, resources: dict, target_t: float, args_extra_size: int, iterate_mode: str | list[int]) -> None:
 
     delta_t: float
-    delta_t = 0
-
-    threshold_t = int(0.75 * target_t)
 
     iteration = 1
 
     args_extra_payload = "x" * args_extra_size
 
-    while delta_t < threshold_t or iteration <= min_iterations:
+    if isinstance(iterate_mode, list):
+        n = iterate_mode[0]
+    else:
+        n = 10
+
+    iterate = True
+
+    while iterate:
         print(f"==== Iteration {iteration} ====")
-        print(f"Will run {n} tasks to target {target_t} seconds runtime")
+        print(f"Will run {n} tasks")
         start_t = time.time()
 
         fs = []
@@ -78,9 +84,41 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int) -> No
         print(f"Runtime: actual {delta_t:.3f}s vs target {target_t}s")
         print(f"Tasks per second: {rate:.3f}")
 
-        n = max(1, int(target_t * rate))
-
         iteration += 1
+
+        # decide upon next iteration
+
+        match iterate_mode:
+            case "estimate":
+                n = max(1, int(target_t * rate))
+                iterate = delta_t < (0.75 * target_t) or iteration <= min_iterations
+            case "exponential":
+                n = int(n * 2)
+                iterate = delta_t < target_t or iteration <= min_iterations
+            case seq if isinstance(seq, list) and iteration <= len(seq):
+                n = seq[iteration - 1]
+                iterate = True
+            case seq if isinstance(seq, list):
+                iterate = False
+            case _:
+                raise InternalConsistencyError(f"Bad iterate mode {iterate_mode} - should have been validated at arg parse time")
+
+
+def validate_int_list(v: str) -> list[int] | Literal[False]:
+    try:
+        return list(map(int, v.split(",")))
+    except ValueError:
+        return False
+
+
+def iteration_mode(v: str) -> str | list[int]:
+    match v:
+        case s if s in VALID_NAMED_ITERATION_MODES:
+            return s
+        case _ if seq := validate_int_list(v):
+            return seq
+        case _:
+            raise argparse.ArgumentTypeError(f"Invalid iteration mode: {v}")
 
 
 def cli_run() -> None:
@@ -96,6 +134,11 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     parser.add_argument("--time", metavar="SECONDS", help="target number of seconds for an iteration", default=120, type=float)
     parser.add_argument("--argsize", metavar="BYTES", help="extra bytes to add into app invocation arguments", default=0, type=int)
     parser.add_argument("--version", action="version", version=f"parsl-perf from Parsl {parsl.__version__}")
+    parser.add_argument("--iterate",
+                        metavar="MODE",
+                        help="Iteration mode: " + ", ".join(VALID_NAMED_ITERATION_MODES) + ", or sequence of explicit sizes",
+                        type=iteration_mode,
+                        default="estimate")
 
     args = parser.parse_args()
 
@@ -105,7 +148,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
         resources = {}
 
     with load_dfk_from_config(args.config):
-        performance(resources=resources, target_t=args.time, args_extra_size=args.argsize)
+        performance(resources=resources, target_t=args.time, args_extra_size=args.argsize, iterate_mode=args.iterate)
         print("Tests complete - leaving DFK block")
     print("The end")
 

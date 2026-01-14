@@ -16,10 +16,11 @@ be executed either locally or on a remote system.
 Most functions can run without modification.
 Limitations on the content of the functions and their inputs/outputs are described below.
 
-Rules for Function Contents
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. _function-rules:
+
+Rules for Function Contents
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Parsl apps have access to less information from the script that defined them
 than functions run via Python's native multiprocessing libraries.
