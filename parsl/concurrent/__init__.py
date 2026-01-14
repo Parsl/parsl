@@ -99,9 +99,10 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
                 passed iterables.
             timeout: The maximum number of seconds to wait. If None, then there
                 is no limit on the wait time.
-            chunksize: If greater than one, the iterables will be chopped into
-                chunks of size chunksize and submitted to the process pool.
-                If set to one, the items in the list will be sent one at a time.
+            chunksize: This parameter is ignored. Caution should be exercised
+                if expecting behaviour as documented in the base `concurrent.futures.Executor` class.
+            buffersize: This parameter is ignored. Caution should be exercised
+                if expecting behaviour as documented in the base `concurrent.futures.Executor` class.
 
         Returns:
             An iterator equivalent to: map(func, ``*iterables``) but the calls may
