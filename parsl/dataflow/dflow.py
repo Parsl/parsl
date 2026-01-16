@@ -166,7 +166,7 @@ class DataFlowKernel:
                                        workflow_info))
 
         self.memoizer: Memoizer = config.memoizer if config.memoizer is not None else BasicMemoizer()
-        self.memoizer.start(run_dir=self.run_dir)
+        self.memoizer.start(run_dir=self.run_dir, config_run_dir=self.config.run_dir)
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.

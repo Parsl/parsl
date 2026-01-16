@@ -88,7 +88,7 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
     db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
 
     config = fresh_config()
-    config.run_dir = tmpd_cwd
+    config.run_dir = str(tmpd_cwd)
     config.monitoring.logging_endpoint = db_url
 
     with parsl.load(config):
