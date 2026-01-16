@@ -54,7 +54,7 @@ def test_app_name(get_app, expected_name, expected_result, tmpd_cwd):
     import sqlalchemy
 
     c = fresh_config()
-    c.run_dir = tmpd_cwd
+    c.run_dir = str(tmpd_cwd)
     c.monitoring.logging_endpoint = f"sqlite:///{tmpd_cwd}/monitoring.db"
     parsl.load(c)
 

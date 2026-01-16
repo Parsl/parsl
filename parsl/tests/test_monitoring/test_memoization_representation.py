@@ -5,6 +5,10 @@ import os
 import pytest
 
 import parsl
+from parsl.config import Config
+from parsl.executors import ThreadPoolExecutor
+from parsl.monitoring import MonitoringHub
+from parsl.monitoring.radios.udp import UDPRadio
 
 logger = logging.getLogger(__name__)
 
@@ -14,19 +18,24 @@ def this_app(x):
     return x + 1
 
 
+def fresh_config(*, config_run_dir: str):
+    c = Config(run_dir=config_run_dir,
+               executors=[ThreadPoolExecutor(remote_monitoring_radio=UDPRadio(address="localhost", atexit_timeout=0))],
+               monitoring=MonitoringHub(resource_monitoring_interval=0))
+    return c
+
+
 @pytest.mark.local
-def test_hashsum():
+def test_hashsum(tmpd_cwd):
     import sqlalchemy
     from sqlalchemy import text
-
-    from parsl.tests.configs.htex_local_alternate import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):
         logger.info("Monitoring database already exists - deleting")
         os.remove("runinfo/monitoring.db")
 
     logger.info("loading parsl")
-    parsl.load(fresh_config())
+    parsl.load(fresh_config(config_run_dir=str(tmpd_cwd)))
 
     logger.info("invoking and waiting for result (1/4)")
     f1 = this_app(4)
@@ -54,7 +63,11 @@ def test_hashsum():
     # at this point, we should find one row in the monitoring database.
 
     logger.info("checking database content")
-    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
+
+    monitoring_db = str(tmpd_cwd / "monitoring.db")
+    monitoring_url = "sqlite:///" + monitoring_db
+
+    engine = sqlalchemy.create_engine(monitoring_url)
     with engine.begin() as connection:
 
         # we should have three tasks, but with only two tries, because the

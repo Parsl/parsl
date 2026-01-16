@@ -216,13 +216,14 @@ class Memoizer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def start(self, *, run_dir: str) -> None:
+    def start(self, *, run_dir: str, config_run_dir: str) -> None:
         """Called by the DFK when it starts up.
 
         This is an opportunity for the memoization/checkpoint system to
         initialize itself.
 
-        The path to the base run directory is passed as a parameter.
+        The path to the per-run run directory and the base run directory
+        are passed as parameters.
         """
         raise NotImplementedError
 
@@ -313,14 +314,15 @@ class BasicMemoizer(Memoizer):
         self._checkpoint_timer: Timer | None = None
         self.memoize = memoize
 
-    def start(self, *, run_dir: str) -> None:
+    def start(self, *, run_dir: str, config_run_dir: str) -> None:
 
         self.run_dir = run_dir
+        self.config_run_dir = config_run_dir
 
         if self.checkpoint_files is not None:
             checkpoint_files = self.checkpoint_files
         elif self.checkpoint_files is None and self.checkpoint_mode is not None:
-            checkpoint_files = get_all_checkpoints(self.run_dir)
+            checkpoint_files = get_all_checkpoints(self.config_run_dir)
         else:
             checkpoint_files = []
 
