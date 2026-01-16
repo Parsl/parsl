@@ -28,6 +28,12 @@ def uuid_app():
     return uuid.uuid4()
 
 
+@python_app(cache=True)
+def uuid_in_exception_app():
+    import uuid
+    raise RuntimeError(uuid.uuid4())
+
+
 @pytest.mark.local
 def test_loading_checkpoint(tmpd_cwd):
     """Load memoization table from previous checkpoint
@@ -40,3 +46,20 @@ def test_loading_checkpoint(tmpd_cwd):
         relaunched = uuid_app().result()
 
     assert result == relaunched, "Expected following call to uuid_app to return cached uuid"
+
+
+@pytest.mark.local
+def test_regression_239(tmpd_cwd):
+    """Check that a failing app is run again in a subsequent run.
+
+    This doesn't check that the app is not recorded in the checkpoint database,
+    only that its exception is not re-used at the task execution level.
+    """
+    with parsl_configured(tmpd_cwd, BasicMemoizer(checkpoint_mode="task_exit")):
+        checkpoint_files = [os.path.join(parsl.dfk().run_dir, "checkpoint")]
+        result = uuid_in_exception_app().exception()
+
+    with parsl_configured(tmpd_cwd, BasicMemoizer(checkpoint_files=checkpoint_files)):
+        relaunched = uuid_in_exception_app().exception()
+
+    assert result.args[0] != relaunched.args[0], "RuntimeError UUIDs should be different"
