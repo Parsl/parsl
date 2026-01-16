@@ -25,7 +25,7 @@ def test_future_representation(tmpd_cwd):
 
     c = fresh_config()
     c.monitoring.logging_endpoint = monitoring_url
-    c.run_dir = tmpd_cwd
+    c.run_dir = str(tmpd_cwd)
 
     parsl.load(c)
 
