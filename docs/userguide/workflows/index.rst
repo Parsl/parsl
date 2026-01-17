@@ -33,5 +33,6 @@ the services which manage scheduling computations.
    workflow
    exceptions
    lifted_ops
+   logging
    checkpoints
    concurrent
