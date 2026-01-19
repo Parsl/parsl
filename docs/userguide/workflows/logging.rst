@@ -52,7 +52,7 @@ that occur on the Python process running the Parsl application.
 
 The log should begin with a message indicating Parsl DataFlowKernel (DFK) is starting
 and a readout of the configuration settings.
-The logs will end with a status message that the DFK has cleaned up resources successfully.
+The logs will end with a status message that the DFK has cleaned up successfully.
 
 .. code-block:: text
 
@@ -67,16 +67,16 @@ status changes of blocks of workers and each task.
 Submission Scripts
 ~~~~~~~~~~~~~~~~~~
 
-The ``submit_script`` directory contains the input and outputs from the :ref:`resource providers <label-execution>`
+The ``submit_script`` directory contains the input and outputs from the :ref:`execution providers <label-execution>`
 used by a Parsl application.
 The actual contents of the file vary between Parsl configurations,
 but most providers will produce a shell script
-used when requesting resources and the outputs of the shell scripts.
+used when requesting compute nodes and the outputs of the shell scripts.
 
 Executor Logs
 ~~~~~~~~~~~~~
 
-The remaining directories are used by the different Executors in the Parsl application.
+Different Executors in the Parsl application write log files to their own directories.
 The types of logs vary depending on the choice of Executor.
 This section describes the output structure of a common configuration:
 :ref:`HighThroughputExecutor <label-htex>` using a batch scheduler.
@@ -101,7 +101,7 @@ The structure shown above includes one manager directory: ``htex_local/block‑0
 The directory contains two types of files:
 
 1. A single manager log reporting connections to the other Parsl components,
-2. Many worker logs reporting the resources they use, and which tasks they have processed.
+2. Many worker logs reporting which CPUs or accelerators they use, and which tasks they have processed.
 
 .. _section-logging-tasks:
 
@@ -110,9 +110,8 @@ Common Debugging Tasks
 
 .. note::
 
-    The :ref:`monitoring module<label-monitoring>` collects logging information into a single database
-    and includes visualization tools.
-    Consider using Monitoring as a basis for routine logging efforts.
+    Consider the :ref:`monitoring module <label-monitoring>` for developing
+    components that display the current status of a workflow.
 
 This section describes how to use the logs to check correctness
 and locate errors in common operations.
@@ -120,7 +119,7 @@ and locate errors in common operations.
 Launching Blocks
 ~~~~~~~~~~~~~~~~
 
-Parsl groups compute resources into :ref:`blocks <label-elasticity>` that are acquired
+Parsl groups compute nodes into :ref:`blocks <label-elasticity>` that are acquired
 and released as compute requirements change.
 The process for launching a block is recorded in a sequence:
 
@@ -149,7 +148,7 @@ The process for launching a block is recorded in a sequence:
    The job ID is often the same used by the scheduling system underlying the Provider.
    Use standard tools (e.g., ``squeue`` for Slurm) to monitor whether the requested nodes are available.
 
-2. The results from requesting resources are found in the ``submit_scripts`` directory.
+2. The results from requesting nodes are found in the ``submit_scripts`` directory.
 
    Use the output files and the job ID from the previous step to determine whether
    the block was launched properly.
@@ -171,7 +170,7 @@ Tracing Compute Nodes
     and may not be applicable to other executors.
 
 Use logs specific to an Executor to trace whether the workers on the compute nodes
-are starting, detecting resources properly, and connecting to the host process.
+are starting, detecting hardware properly, and connecting to the host process.
 
 Each node in a compute block writes to a unique subdirectory within
 the directory of its associated executor and block.
@@ -195,8 +194,9 @@ Use the logs written by processes on the compute node to ensure...
      2025-12-29 09:22:12.779 interchange:438 MainProcess(20069) MainThread process_manager_socket_message [INFO] Registered manager b'c4b55da1a90f' (py3.11, 1.3.0-dev) and added to ready queue
 
 - *Resource Pinning* for the workers.
-  Each worker log begins with a message that it has started then
-  a list of resources (CPU and/or GPU) that it will use for tasks.
+  Each worker log begins with a message that it has started then,
+  if affinity is enabled,
+  a list of hardware (CPU and/or GPU) that it will use for tasks.
 
   .. code-block:: text
 
@@ -247,7 +247,8 @@ The ``parsl.log`` provides information about a task across its lifespan.
      [...]
      1763129113.050172 2025-11-14 06:05:13 MainProcess- Task-Launch_0-140414082344704 parsl.dataflow.dflow:734 launch_task INFO: Parsl task 204 try 1 launched on executor xtb with executor id 445
 
-  or failed and the exception both recorded in the logs and :ref:`referred to the user <label-exceptions>`.
+  or failed and the exception both recorded in the logs and
+  :ref:`exposed to the user as an exception in the app Future <label-exceptions>`.
 
   .. code-block:: text
 
