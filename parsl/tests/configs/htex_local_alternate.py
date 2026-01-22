@@ -25,8 +25,6 @@ from parsl.data_provider.zip import ZipFileStaging
 from parsl.dataflow.memoization import BasicMemoizer
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
-
-# imports for monitoring:
 from parsl.monitoring import MonitoringHub
 from parsl.providers import LocalProvider
 
