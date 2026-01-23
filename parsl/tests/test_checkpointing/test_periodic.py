@@ -7,9 +7,10 @@ from parsl.dataflow.memoization import BasicMemoizer
 from parsl.executors.threads import ThreadPoolExecutor
 
 
-def fresh_config():
+def fresh_config(*, config_run_dir):
     tpe = ThreadPoolExecutor(label='local_threads_checkpoint_periodic', max_threads=1)
     return Config(
+        run_dir=config_run_dir,
         executors=[tpe],
         memoizer=BasicMemoizer(
             checkpoint_mode='periodic',
@@ -31,10 +32,10 @@ def tstamp_to_seconds(line):
 
 
 @pytest.mark.local
-def test_periodic():
+def test_periodic(tmpd_cwd):
     """Test checkpointing with task_periodic behavior
     """
-    with parsl.load(fresh_config()):
+    with parsl.load(fresh_config(config_run_dir=str(tmpd_cwd))):
         memoizer = parsl.dfk().memoizer
         h, m, s = map(int, memoizer.checkpoint_period.split(":"))
         assert h == 0, "Verify test setup"
