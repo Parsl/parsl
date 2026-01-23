@@ -45,6 +45,11 @@ from parsl.version import VERSION as PARSL_VERSION
 HEARTBEAT_CODE = (2 ** 32) - 1
 DRAINED_CODE = (2 ** 32) - 2
 
+# this is specified explicitly because when this file is run as a script (the
+# expected use), __name__ which is the normal idiom here is set to __main__,
+# rather than a parsl submodule name.
+logger = logging.getLogger("parsl.executors.high_throughput.process_worker_pool")
+
 
 class Manager:
     """ Manager manages task execution by the workers
@@ -619,7 +624,7 @@ def _init_mpi_env(mpi_launcher: str, resource_spec: Dict):
     update_resource_spec_env_vars(mpi_launcher=mpi_launcher, resource_spec=resource_spec, node_info=nodes_for_task)
 
 
-@wrap_with_logs(target="worker_log")
+@wrap_with_logs
 def worker(
     worker_id: int,
     pool_id: str,
@@ -638,12 +643,8 @@ def worker(
     debug: bool,
     mpi_launcher: str,
 ):
-    # override the global logger inherited from the __main__ process (which
-    # usually logs to manager.log) with one specific to this worker.
-    global logger
-    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
-                               name="worker_log",
-                               level=logging.DEBUG if debug else logging.INFO)
+    start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
+                      level=logging.DEBUG if debug else logging.INFO)
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -840,7 +841,6 @@ def start_file_logger(filename, name='parsl', level=logging.DEBUG, format_string
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    return logger
 
 
 def get_arg_parser() -> argparse.ArgumentParser:
@@ -967,7 +967,7 @@ if __name__ == "__main__":
 
     os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
-    logger = start_file_logger(
+    start_file_logger(
         f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
         level=logging.DEBUG if args.debug is True else logging.INFO
     )
