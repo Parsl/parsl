@@ -642,7 +642,6 @@ def worker(
     # usually logs to manager.log) with one specific to this worker.
     global logger
     logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
-                               worker_id,
                                name="worker_log",
                                level=logging.DEBUG if debug else logging.INFO)
 
@@ -817,7 +816,7 @@ def worker(
         logger.info("All processing finished for executor task {}".format(tid))
 
 
-def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
+def start_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
 
     Args:
@@ -970,7 +969,6 @@ if __name__ == "__main__":
 
     logger = start_file_logger(
         f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
-        0,
         level=logging.DEBUG if args.debug is True else logging.INFO
     )
     logger.info(
