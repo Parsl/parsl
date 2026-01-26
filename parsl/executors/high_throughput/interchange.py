@@ -28,8 +28,7 @@ from parsl.version import VERSION as PARSL_VERSION
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
 
-LOGGER_NAME = "interchange"
-logger = logging.getLogger(LOGGER_NAME)
+logger = logging.getLogger("parsl.executors.high_throughput.interchange")
 
 
 class Interchange:
