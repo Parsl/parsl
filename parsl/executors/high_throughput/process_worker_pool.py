@@ -37,6 +37,7 @@ from parsl.executors.high_throughput.mpi_resource_management import (
     TaskScheduler,
 )
 from parsl.executors.high_throughput.probe import probe_addresses
+from parsl.log_utils import DEFAULT_FORMAT
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
@@ -830,9 +831,7 @@ def start_file_logger(filename, name='parsl', level=logging.DEBUG, format_string
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
-                        "%(process)d %(threadName)s " \
-                        "[%(levelname)s]  %(message)s"
+        format_string = DEFAULT_FORMAT
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
