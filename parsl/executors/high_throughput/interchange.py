@@ -598,7 +598,7 @@ class Interchange:
                 interesting_managers.remove(manager_id)
 
 
-def start_file_logger(filename: str, name: str='parsl', level: int = logging.DEBUG, format_string: Optional[str] = None) -> None:
+def start_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None) -> None:
     """Add a stream log handler.
 
     Parameters
