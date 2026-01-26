@@ -18,6 +18,7 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
+from parsl.log_utils import DEFAULT_FORMAT
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.base import MonitoringRadioSender
 from parsl.monitoring.radios.zmq import ZMQRadioSender
@@ -617,13 +618,7 @@ def start_file_logger(filename: str, name: str = 'parsl', level: int = logging.D
         None.
     """
     if format_string is None:
-        format_string = (
-
-            "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d "
-            "%(processName)s(%(process)d) %(threadName)s "
-            "%(funcName)s [%(levelname)s] %(message)s"
-
-        )
+        format_string = DEFAULT_FORMAT
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
