@@ -17,7 +17,7 @@ def uuid_app():
 
 @pytest.mark.local
 def test_manual_checkpoint() -> None:
-    """1. Launch a few apps and write the checkpoint once a few have completed
+    """Launch a single app, write manually, check file exists.
     """
     memoizer = BasicMemoizer(checkpoint_mode="manual")
 

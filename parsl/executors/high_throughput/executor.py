@@ -79,7 +79,7 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
     launch_cmd : str
         Command line string to launch the process_worker_pool from the provider. The command line string
         will be formatted with appropriate values for the following values (debug, task_url, result_url,
-        cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For example:
+        cores_per_worker, nodes_per_block, heartbeat_period, heartbeat_threshold, logdir). For example:
         launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
 
     interchange_launch_cmd : Sequence[str]
@@ -151,7 +151,7 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         In case of a remote file system, specify the path to where logs will be kept.
 
     encrypted : bool
-        Flag to enable/disable encryption (CurveZMQ). Default is False.
+        Flag to enable/disable encryption (CurveZMQ). Default is True.
 
     manager_selector: ManagerSelector
         Determines what strategy the interchange uses to select managers during task distribution.
@@ -268,7 +268,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False,
+                 encrypted: bool = True,
                  remote_monitoring_radio: Optional[RadioConfig] = None):
 
         logger.debug("Initializing HighThroughputExecutor")

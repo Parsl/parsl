@@ -18,9 +18,12 @@ def get_manager_pgid():
 def lose_manager():
     import os
     import signal
+    import time
 
     manager_pid = os.getppid()
     os.kill(manager_pid, signal.SIGSTOP)
+
+    time.sleep(5)  # approximate "forever"; if not enough, something's awry
 
 
 @pytest.mark.local

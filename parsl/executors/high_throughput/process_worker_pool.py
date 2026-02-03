@@ -37,6 +37,7 @@ from parsl.executors.high_throughput.mpi_resource_management import (
     TaskScheduler,
 )
 from parsl.executors.high_throughput.probe import probe_addresses
+from parsl.log_utils import set_file_logger
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
@@ -44,6 +45,11 @@ from parsl.version import VERSION as PARSL_VERSION
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 DRAINED_CODE = (2 ** 32) - 2
+
+# this is specified explicitly because when this file is run as a script (the
+# expected use), __name__ which is the normal idiom here is set to __main__,
+# rather than a parsl submodule name.
+logger = logging.getLogger("parsl.executors.high_throughput.process_worker_pool")
 
 
 class Manager:
@@ -619,7 +625,7 @@ def _init_mpi_env(mpi_launcher: str, resource_spec: Dict):
     update_resource_spec_env_vars(mpi_launcher=mpi_launcher, resource_spec=resource_spec, node_info=nodes_for_task)
 
 
-@wrap_with_logs(target="worker_log")
+@wrap_with_logs
 def worker(
     worker_id: int,
     pool_id: str,
@@ -638,13 +644,8 @@ def worker(
     debug: bool,
     mpi_launcher: str,
 ):
-    # override the global logger inherited from the __main__ process (which
-    # usually logs to manager.log) with one specific to this worker.
-    global logger
-    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
-                               worker_id,
-                               name="worker_log",
-                               level=logging.DEBUG if debug else logging.INFO)
+    set_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
+                    level=logging.DEBUG if debug else logging.INFO)
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -817,33 +818,6 @@ def worker(
         logger.info("All processing finished for executor task {}".format(tid))
 
 
-def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-        - filename (string): Name of the file to write logs to
-        - name (string): Logger name
-        - level (logging.LEVEL): Set the logging level.
-        - format_string (string): Set the format string
-
-    Returns:
-       -  None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
-                        "%(process)d %(threadName)s " \
-                        "[%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
-
-
 def get_arg_parser() -> argparse.ArgumentParser:
 
     def strategyorlist(s: str):
@@ -968,9 +942,8 @@ if __name__ == "__main__":
 
     os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
-    logger = start_file_logger(
+    set_file_logger(
         f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
-        0,
         level=logging.DEBUG if args.debug is True else logging.INFO
     )
     logger.info(
