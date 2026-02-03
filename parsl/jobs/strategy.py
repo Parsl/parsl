@@ -183,7 +183,6 @@ class Strategy:
     def _general_strategy(self, executors: List[BlockProviderExecutor], *, strategy_type: str) -> None:
         logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(executors)} executors")
 
-        # TODO (wardlt): Restructure this function so we don't have 7 levels of indentation, all strategies in single function
         for executor in executors:
             label = executor.label
             prefix = f"[Scaling executor {label}]"
