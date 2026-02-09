@@ -106,18 +106,30 @@ def get_last_checkpoint(rundir: str = "runinfo") -> Sequence[str]:
     if not os.path.isdir(rundir):
         return []
 
-    dirs = sorted(os.listdir(rundir))
+    dirs = os.listdir(rundir)
 
-    if len(dirs) == 0:
-        return []
+    logger.debug("Rundir candidates: %s", dirs)
 
-    last_runid = dirs[-1]
-    last_checkpoint = os.path.abspath(f'{rundir}/{last_runid}/checkpoint')
+    # dirs_parseable is a list of number-like directory names,
+    # which is the rundir subdirectories, excluding non-numerical
+    # files such as the monitoring database.
+    dirs_parseable = [d for d in dirs if d.isdigit()]
+    logger.debug("Parseable candidates: %s", dirs_parseable)
 
-    if not os.path.isdir(last_checkpoint):
-        return []
+    # dirs_sorted will be a list containing the largest numbered directories
+    # first (parsed as an int, not lexically sorted, to accomodate different
+    # length run directory names that can happen after 1000 runs)
+    dirs_sorted = sorted(dirs_parseable, key=int, reverse=True)
 
-    return [last_checkpoint]
+    # use a generator so that the resulting co-routine will only do filesystem
+    # operations on paths until it finds the first one with a checkpoint - which
+    # is likely to be the first one.
+    last_path = next(([path] for d in dirs_sorted
+                      if os.path.isdir(path := os.path.abspath(f'{rundir}/{d}/checkpoint'))),
+                     [])
+
+    logger.debug("Selected path: %s", last_path)
+    return last_path
 
 
 @typeguard.typechecked
