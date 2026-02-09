@@ -571,7 +571,7 @@ class BasicMemoizer(Memoizer):
                     # mode behave like a incremental log.
                     pickle.dump(t, f)
                     count += 1
-                    logger.debug("Task {cc.task_record['id']} checkpointed")
+                    logger.debug("Task %s checkpointed", cc.task_record['id'])
 
         self.checkpointed_tasks += count
 
