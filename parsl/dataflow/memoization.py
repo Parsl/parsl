@@ -287,8 +287,11 @@ class BasicMemoizer(Memoizer):
         KWargs:
 
             - checkpoint_files : sequence of str, optional
-                  List of paths to checkpoint files. See :func:`parsl.utils.get_all_checkpoints` and
-                  :func:`parsl.utils.get_last_checkpoint` for helpers. Default is None.
+                  List of paths to checkpoint files to load. By default, all checkpoints from the
+                  run directory will be restored. This is usually the right behaviour, but this
+                  parameter allows that behaviour to be overridden.
+                  See :func:`parsl.utils.get_all_checkpoints` and :func:`parsl.utils.get_last_checkpoint`
+                  for helpers.
             - checkpoint_period : str, optional
                   Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
                   ``checkpoint_mode='periodic'``.
