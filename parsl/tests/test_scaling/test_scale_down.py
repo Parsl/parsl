@@ -33,11 +33,11 @@ def local_config():
                     min_blocks=_min_blocks,
                     launcher=SingleNodeLauncher(),
                 ),
+                max_idletime=0.5,
+                strategy='simple',
+                strategy_period=0.5,
             )
         ],
-        max_idletime=0.5,
-        strategy='simple',
-        strategy_period=0.5,
     )
 
 

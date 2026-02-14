@@ -19,8 +19,8 @@ config = Config(
                 max_blocks=1,
                 launcher=SimpleLauncher(),
             ),
+            strategy='none',
             storage_access=[HTTPInTaskStaging(), FTPInTaskStaging(), RSyncStaging("fitzroy.cqx.ltd.uk")]
         )
     ],
-    strategy='none',
 )

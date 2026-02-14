@@ -1,9 +1,9 @@
 from argparse import ArgumentParser
 
-import parsl
-
-from library.config import make_local_config
 from library.app import convert_many_to_binary
+from library.config import make_local_config
+
+import parsl
 from parsl.app.python import PythonApp
 
 # Protect the script from running twice.
