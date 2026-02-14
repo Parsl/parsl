@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Iterable, Optional, Sequence, Union
+from typing import Callable, Iterable, Optional, Sequence
 
 import typeguard
 from typing_extensions import Literal
@@ -58,15 +58,6 @@ class Config(RepresentationMixin, UsageInformation):
     std_autopath : function, optional
         Sets the function used to generate stdout/stderr specifications when parsl.AUTO_LOGPATH is used. If no function
         is specified, generates paths that look like: ``rundir/NNN/task_logs/X/task_{id}_{name}{label}.{out/err}``
-    strategy : str, optional
-        Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
-        or `None`.
-        If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
-        deprecated.
-    strategy_period : float or int, optional
-        How often the scaling strategy should be executed. Default is 5 seconds.
-    max_idletime : float, optional
-        The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
     usage_tracking : int, optional
         Set this field to 1, 2, or 3 to opt-in to Parsl's usage tracking system.
         The value represents the level of usage tracking detail to be collected.
@@ -99,9 +90,6 @@ class Config(RepresentationMixin, UsageInformation):
                  retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
                  run_dir: str = 'runinfo',
                  std_autopath: Optional[Callable] = None,
-                 strategy: Optional[str] = 'simple',
-                 strategy_period: Union[float, int] = 5,
-                 max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: int = 0,
                  project_name: Optional[str] = None,
@@ -122,9 +110,6 @@ class Config(RepresentationMixin, UsageInformation):
         self.retries = retries
         self.retry_handler = retry_handler
         self.run_dir = run_dir
-        self.strategy = strategy
-        self.strategy_period = strategy_period
-        self.max_idletime = max_idletime
         self.validate_usage_tracking(usage_tracking)
         self.usage_tracking = usage_tracking
         self.project_name = project_name
