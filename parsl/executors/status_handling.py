@@ -27,9 +27,10 @@ class BlockProviderExecutor(ParslExecutor):
     """A base class for executors which scale using blocks.
 
     This base class is intended to help with executors which:
-
+    
     - use blocks of workers to execute tasks
-    - blocks of workers are launched on a batch system through an `ExecutionProvider`
+    - blocks of workers are launched on a batch system through
+      an `ExecutionProvider`.
 
     An implementing class should implement the abstract methods required by
     `ParslExecutor` to submit tasks, as well as BlockProviderExecutor
@@ -51,19 +52,16 @@ class BlockProviderExecutor(ParslExecutor):
     ----------
 
         provider : ExecutionProvider
-
-
-
         strategy : str, optional
         Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
         or `None`.
         If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
         deprecated.
-    strategy_period : float or int, optional
-        How often the scaling strategy should be executed. Default is 5 seconds.
-    max_idletime : float, optional
-        The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
-    usage_tracking : int, optional
+        strategy_period : float or int, optional
+            How often the scaling strategy should be executed. Default is 5 seconds.
+        max_idletime : float, optional
+            The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
+        usage_tracking : int, optional
     """
 
     def __init__(
