@@ -57,9 +57,6 @@ class HtexAutoScaleStrategy(SimpleStrategy):
         # active_blocks must be above min_blocks to scale in
         if state.active_blocks <= state.min_blocks:
             return False
-        
-        logger.debug("%s More slots than tasks: %d active slots, %d active tasks, %d active blocks, min blocks is %d, parallelism is %.1f",
-            self.build_prefix(), state.active_slots, state.active_tasks, state.active_blocks, state.min_blocks, state.parallelism)
 
         excess_slots = math.floor(state.active_slots - (state.active_tasks * state.parallelism))
         excess_blocks = math.floor(float(excess_slots) / (state.tasks_per_node * state.nodes_per_block))
