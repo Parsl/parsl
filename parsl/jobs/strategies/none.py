@@ -37,8 +37,6 @@ class InitOnlyStrategy(ScalingStrategy):
             logger.debug("%s Scaling out %d initial blocks", self.build_prefix(), provider.init_blocks)
             executor.scale_out_facade(provider.init_blocks)
             self._first = False
-        else:
-            logger.debug("strategy_init_only: doing nothing")
 
     def bad_state(self) -> bool:
         executor = self.executor

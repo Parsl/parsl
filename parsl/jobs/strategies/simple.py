@@ -140,7 +140,7 @@ class SimpleStrategy(InitOnlyStrategy):
 
         idle_duration = time.time() - self._executor_idle_since
 
-        if idle_duration > self.executor.max_idletime:
+        if idle_duration >= self.executor.max_idletime:
             # We have resources idle for the max duration,
             # we have to scale_in now.
             logger.debug(
