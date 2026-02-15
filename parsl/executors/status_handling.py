@@ -29,8 +29,7 @@ class BlockProviderExecutor(ParslExecutor):
     This base class is intended to help with executors which:
 
     - use blocks of workers to execute tasks
-    - blocks of workers are launched on a batch system through
-      an `ExecutionProvider`
+    - blocks of workers are launched on a batch system through an `ExecutionProvider`
 
     An implementing class should implement the abstract methods required by
     `ParslExecutor` to submit tasks, as well as BlockProviderExecutor
