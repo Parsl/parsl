@@ -221,7 +221,6 @@ Internal
     parsl.dataflow.states.States
     parsl.dataflow.taskrecord.TaskRecord
     parsl.jobs.job_status_poller.JobStatusPoller
-    parsl.jobs.strategy.Strategy
     parsl.utils.Timer
 
 Task Vine configuration

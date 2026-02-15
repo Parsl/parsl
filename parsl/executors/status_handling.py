@@ -13,6 +13,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.error_handlers import noop_error_handler, simple_error_handler
+from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
@@ -46,13 +47,44 @@ class BlockProviderExecutor(ParslExecutor):
     invoking scale_out, but it will not initialize the blocks requested by
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
+
+    Parameters
+    ----------
+
+        provider : ExecutionProvider
+        strategy : str, optional
+        Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
+        or `None`.
+        If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
+        deprecated.
+        strategy_period : float or int, optional
+            How often the scaling strategy should be executed. Default is 5 seconds.
+        max_idletime : float, optional
+            The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
+        usage_tracking : int, optional
     """
 
-    def __init__(self, *,
-                 provider: Optional[ExecutionProvider],
-                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]]):
+    def __init__(
+        self,
+        *,
+        provider: Optional[ExecutionProvider],
+        block_error_handler: Union[
+            bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]
+        ],
+        strategy: str = "simple",
+        strategy_period: Union[float, int] = 5,
+        max_idletime: float = 120.0,
+    ):
         super().__init__()
         self._provider = provider
+
+        # Executor-scoped strategy configuration
+        self.strategy = strategy
+        self.strategy_period = strategy_period
+        self.max_idletime = max_idletime
+
+        self.job_status_poller: Optional[JobStatusPoller] = None
+
         self.block_error_handler: Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]
         if isinstance(block_error_handler, bool):
             if block_error_handler:
@@ -97,6 +129,16 @@ class BlockProviderExecutor(ParslExecutor):
         super().start()
         if self.monitoring_messages:
             self.submit_monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring_messages)
+
+    def start_job_status_poller(self):
+        try:
+            self.job_status_poller = JobStatusPoller(
+                executor=self,
+                strategy=self.strategy,
+                strategy_period=self.strategy_period,
+            )
+        except RuntimeError:
+            self.job_status_poller = None
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
@@ -347,17 +389,10 @@ class BlockProviderExecutor(ParslExecutor):
         """
         return self._status
 
-    def scale_in_facade(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
+    def scale_in_facade(self, n: int) -> List[str]:
+        block_ids = self.scale_in(n)
+        logger.info("%s Scaled in facade call with {n} blocks", self._scale_prefix)
 
-        if max_idletime is None:
-            block_ids = self.scale_in(n)
-        else:
-            # This is a HighThroughputExecutor-specific interface violation.
-            # This code hopes, through pan-codebase reasoning, that this
-            # scale_in method really does come from HighThroughputExecutor,
-            # and so does have an extra max_idletime parameter not present
-            # in the executor interface.
-            block_ids = self.scale_in(n, max_idletime=max_idletime)  # type: ignore[call-arg]
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
@@ -368,3 +403,12 @@ class BlockProviderExecutor(ParslExecutor):
                 self._simulated_status[block_id] = s
             self.send_monitoring_info(new_status)
         return block_ids
+
+    def shutdown(self):
+        # force scale in of all blocks on shutdown
+        self.max_idletime = 0.0
+        if self.job_status_poller is not None:
+            logger.info("Closing job status poller")
+            self.job_status_poller.close()
+            logger.info("Terminated job status poller")
+        return super().shutdown()

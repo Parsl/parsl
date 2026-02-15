@@ -5,7 +5,7 @@ import pytest
 
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
 from parsl.jobs.states import JobState, JobStatus
-from parsl.jobs.strategy import Strategy
+from parsl.jobs.strategies.scaling_strategy_factory import make_strategy
 
 
 # the parameterize tuple consists of:
@@ -40,10 +40,10 @@ def test_htex_strategy_does_not_oscillate(ns):
 
     n_tasks, n_workers, n_blocks = ns
 
-    s = Strategy(strategy='htex_auto_scale', max_idletime=0)
-
     provider = MagicMock()
     executor = MagicMock(spec=HighThroughputExecutor)
+
+    s = make_strategy(strategy="htex_auto_scale", executor=executor)
 
     statuses = {}
 
@@ -52,6 +52,7 @@ def test_htex_strategy_does_not_oscillate(ns):
     executor.status_facade = statuses
     executor.workers_per_node = n_workers
     executor.bad_state_is_set = False
+    executor.max_idletime = 0.0
 
     provider.parallelism = 1
     provider.init_blocks = 0
@@ -65,7 +66,7 @@ def test_htex_strategy_does_not_oscillate(ns):
 
     executor.scale_out_facade.side_effect = scale_out
 
-    def scale_in(n, max_idletime=None):
+    def scale_in(n):
         # find n PENDING jobs and set them to CANCELLED
         for k in statuses:
             if n == 0:
@@ -76,11 +77,9 @@ def test_htex_strategy_does_not_oscillate(ns):
 
     executor.scale_in_facade.side_effect = scale_in
 
-    s.add_executors([executor])
-
     # In issue #3696, this first strategise does initial and load based
     # scale outs, because n_tasks > n_workers*0
-    s.strategize([executor])
+    s.strategize()
 
     executor.scale_out_facade.assert_called()
     assert len(statuses) == n_blocks, "Should have launched n_blocks"
@@ -91,7 +90,7 @@ def test_htex_strategy_does_not_oscillate(ns):
     executor.scale_in_facade.assert_not_called()
 
     # In issue #3696, this second strategize does a scale in, because n_tasks < n_workers*1
-    s.strategize([executor])
+    s.strategize()
 
     # assert that there should still be n_blocks pending blocks
     assert len([k for k in statuses if statuses[k].state == JobState.PENDING]) == n_blocks
@@ -99,6 +98,6 @@ def test_htex_strategy_does_not_oscillate(ns):
 
     # Now check scale in happens with 0 load
     executor.outstanding = lambda: 0
-    s.strategize([executor])
+    s.strategize()
     executor.scale_in_facade.assert_called()
     assert len([k for k in statuses if statuses[k].state == JobState.PENDING]) == 0

@@ -115,6 +115,18 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             which can be viewed here:  http://ccl.cse.nd.edu/software/workqueue/status
             Default is None.  Overrides address.
 
+        strategy : str, optional
+            Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
+            or `None`.
+            If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
+            deprecated.
+
+        strategy_period : float or int, optional
+            How often the scaling strategy should be executed. Default is 5 seconds.
+
+        max_idletime : float, optional
+            The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
+
         project_password_file: str
             Optional password file for the work queue project. Default is None.
 
@@ -233,6 +245,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def __init__(self,
                  label: str = "WorkQueueExecutor",
                  provider: ExecutionProvider = LocalProvider(),
+                 strategy: str = "simple",
+                 strategy_period: Union[float, int] = 5,
+                 max_idletime: float = 120.0,
                  working_dir: str = ".",
                  project_name: Optional[str] = None,
                  project_password_file: Optional[str] = None,
@@ -258,7 +273,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  scaling_cores_per_worker: int = 1,
                  remote_monitoring_radio: Optional[RadioConfig] = None):
         BlockProviderExecutor.__init__(self, provider=provider,
-                                       block_error_handler=True)
+                                       block_error_handler=True,
+                                       strategy=strategy,
+                                       strategy_period=strategy_period,
+                                       max_idletime=max_idletime)
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], f"WorkQueueExecutor requires the work_queue module. More info: {IMPORT_EXCEPTION}")
 
@@ -382,6 +400,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Initialize scaling for the provider
         self.initialize_scaling()
+
+        self.start_job_status_poller()
 
     def _path_in_task(self, executor_task_id, *path_components):
         """Returns a filename specific to a task.
@@ -703,6 +723,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
+        super().shutdown()
         logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 
@@ -718,8 +739,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.task_queue.join_thread()
         self.collector_queue.close()
         self.collector_queue.join_thread()
-
-        super().shutdown()
 
         logger.debug("Work Queue shutdown completed")
 

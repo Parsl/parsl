@@ -24,9 +24,9 @@ def local_config():
                     init_blocks=1,
                     max_blocks=1,
                 ),
+                strategy='none',
             )
         ],
-        strategy='none',
     )
 
 

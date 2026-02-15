@@ -1,53 +1,109 @@
 import logging
-from typing import List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Union
 
-from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.jobs.strategy import Strategy
+from parsl.jobs.strategies.base import ScalingStrategy
+from parsl.jobs.strategies.scaling_strategy_factory import make_strategy
 from parsl.utils import Timer
+
+if TYPE_CHECKING:
+    from parsl.executors.status_handling import BlockProviderExecutor
 
 logger = logging.getLogger(__name__)
 
 
 class JobStatusPoller(Timer):
-    def __init__(self, *, strategy: Optional[str], max_idletime: float,
-                 strategy_period: Union[float, int]) -> None:
-        self._executors = []  # type: List[BlockProviderExecutor]
-        self._strategy = Strategy(strategy=strategy,
-                                  max_idletime=max_idletime)
-        super().__init__(self.poll, interval=strategy_period, name="JobStatusPoller")
+    """
+    This class initializes a background thread that periodically
+    executes the polling loop for each BlockProviderExecutor.
+
+    At each cycle, the poll method:
+
+    1. Updates provider/job state.
+    2. Runs executor error handlers.
+    3. Applies the scaling strategy.
+    """
+
+    def __init__(
+        self,
+        *,
+        executor: "BlockProviderExecutor",
+        strategy: str,
+        strategy_period: Union[float, int],
+    ) -> None:
+        """
+        Parameters
+        ----------
+        executor : BlockProviderExecutor
+            The executor managed by this poller.
+
+        strategy : str
+            Scaling strategy name.
+
+        max_idletime : float
+            Idle timeout used by the strategy.
+
+        strategy_period : float | int
+            Interval (in seconds) between polling cycles.
+        """
+
+        # status_polling_interval is <= 0 when the executor does not have a provider
+        if executor.status_polling_interval <= 0:
+            logger.warning(
+                f"Could not initialize JobStatusPoller for executor {executor.label}: "
+                "status_polling_interval <= 0 (no provider available)."
+            )
+            raise RuntimeError(
+                f"Executor {executor.label} has status_polling_interval <= 0. "
+                "JobStatusPoller cannot be created."
+            )
+
+        self._executor = executor
+
+        self._strategy: ScalingStrategy = make_strategy(
+            executor=executor,
+            strategy=strategy
+        )
+
+        # Initialize the Timer thread with the polling method and interval
+        super().__init__(
+            self.poll,
+            interval=strategy_period,
+            name=f"JobStatusPoller-{executor.label}",
+        )
+
+        logger.info(
+            f"Job status polling thread initialized for executor {executor.label}"
+        )
 
     def poll(self) -> None:
-        self._update_state()
-        self._run_error_handlers(self._executors)
-        self._strategy.strategize(self._executors)
+        """
+        Main polling loop executed by the Timer thread.
+        """
 
-    def _run_error_handlers(self, executors: List[BlockProviderExecutor]) -> None:
-        for e in executors:
-            e.handle_errors(e.status_facade)
+        # Update provider state and collect executor errors
+        self._executor.poll_facade()
+        self._executor.handle_errors(self._executor.status_facade)
 
-    def _update_state(self) -> None:
-        for item in self._executors:
-            item.poll_facade()
-
-    def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
-        for executor in executors:
-            if executor.status_polling_interval > 0:
-                logger.debug("Adding executor {}".format(executor.label))
-                self._executors.append(executor)
-        self._strategy.add_executors(executors)
+        # Run scaling strategy
+        self._strategy.strategize()
 
     def close(self, timeout: Optional[float] = None) -> None:
+        """
+        Stop polling thread and scale in remaining blocks.
+        """
         super().close(timeout)
-        for executor in self._executors:
-            if not executor.bad_state_is_set:
-                logger.info(f"Scaling in executor {executor.label}")
 
-                # this code needs to be at least as many blocks as need
-                # cancelling, but it is safe to be more, as the scaling
-                # code will cope with being asked to cancel more blocks
-                # than exist.
-                block_count = len(executor.status_facade)
-                executor.scale_in_facade(block_count)
+        if not self._executor.bad_state_is_set:
+            logger.info(f"Scaling in executor {self._executor.label}")
 
-            else:  # and bad_state_is_set
-                logger.warning(f"Not scaling in executor {executor.label} because it is in bad state")
+            # this code needs to be at least as many blocks as need
+            # cancelling, but it is safe to be more, as the scaling
+            # code will cope with being asked to cancel more blocks
+            # than exist.
+            block_count = len(self._executor.status_facade)
+            self._executor.scale_in_facade(block_count)
+
+        else:
+            logger.warning(
+                f"Not scaling in executor {self._executor.label} because it is in bad state"
+            )

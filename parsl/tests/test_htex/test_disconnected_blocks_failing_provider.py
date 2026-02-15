@@ -30,14 +30,14 @@ def local_config():
                     max_blocks=2,
                     min_blocks=0,
                 ),
+                max_idletime=0.5,
+                strategy='htex_auto_scale',
+                strategy_period=0.1
+                # this strategy period needs to be a few times smaller than the
+                # status_polling_interval of FailingProvider, which is 5s at
+                # time of writing
             )
         ],
-        max_idletime=0.5,
-        strategy='htex_auto_scale',
-        strategy_period=0.1
-        # this strategy period needs to be a few times smaller than the
-        # status_polling_interval of FailingProvider, which is 5s at
-        # time of writing
     )
 
 
