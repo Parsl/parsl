@@ -12,23 +12,23 @@ T_s = 1
 
 def fresh_config():
     htex = HighThroughputExecutor(
-               heartbeat_period=1 * T_s,
-               heartbeat_threshold=3 * T_s,
-               label="htex_local",
-               worker_debug=True,
-               cores_per_worker=1,
-               encrypted=False,
-               provider=LocalProvider(
-                   init_blocks=0,
-                   min_blocks=0,
-                   max_blocks=0,
-                   launcher=SimpleLauncher(),
-               ),
-           )
+                heartbeat_period=1 * T_s,
+                heartbeat_threshold=3 * T_s,
+                label="htex_local",
+                worker_debug=True,
+                cores_per_worker=1,
+                encrypted=False,
+                provider=LocalProvider(
+                    init_blocks=0,
+                    min_blocks=0,
+                    max_blocks=0,
+                    launcher=SimpleLauncher(),
+                ),
+                strategy='none',
+                strategy_period=0.5,
+            )
     c = Config(
         executors=[htex],
-        strategy='none',
-        strategy_period=0.5,
     )
     return c, htex
 

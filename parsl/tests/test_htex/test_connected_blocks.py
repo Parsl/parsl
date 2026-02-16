@@ -21,10 +21,10 @@ def local_config():
                     max_blocks=2,
                     min_blocks=0,
                 ),
+                max_idletime=0.0,
+                strategy='htex_auto_scale',
             )
         ],
-        max_idletime=0.5,
-        strategy='htex_auto_scale',
     )
 
 

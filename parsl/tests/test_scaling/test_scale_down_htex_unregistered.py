@@ -35,11 +35,11 @@ def local_config():
                     min_blocks=_min_blocks,
                     launcher=SingleNodeLauncher(),
                 ),
+                max_idletime=0.5,
+                strategy='htex_auto_scale',
+                strategy_period=0.1
             )
         ],
-        max_idletime=0.5,
-        strategy='htex_auto_scale',
-        strategy_period=0.1
     )
 
 

@@ -22,9 +22,9 @@ def local_config() -> Config:
                     parallelism=0,
                     launcher=SimpleLauncher(),
                 ),
+                strategy='simple',
             )
         ],
-        strategy='simple',
     )
 
 

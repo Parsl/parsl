@@ -28,7 +28,7 @@ def lose_manager():
 
 @pytest.mark.local
 def test_manager_lost_system_failure(tmpd_cwd):
-    hte = HighThroughputExecutor(
+    htex = HighThroughputExecutor(
         label="htex_local",
         address="127.0.0.1",
         max_workers_per_node=2,
@@ -36,8 +36,10 @@ def test_manager_lost_system_failure(tmpd_cwd):
         worker_logdir_root=str(tmpd_cwd),
         heartbeat_period=1,
         heartbeat_threshold=3,
+        strategy='simple',
+        strategy_period=0.1
     )
-    c = Config(executors=[hte], strategy='simple', strategy_period=0.1)
+    c = Config(executors=[htex])
 
     with parsl.load(c):
         manager_pgid = get_manager_pgid().result()
