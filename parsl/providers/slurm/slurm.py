@@ -102,6 +102,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     mem_per_node : int
         Specify the real memory to provision per node in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
+    gpus_per_node: int
+        Specify the number of GPUs to provision per node. If set to None, executors
+        request no gpus. Default: None
+    gres: str
+        Slurm GRES options to request arbitrary resources.
+        `Refer to slurm docs <https://slurm.schedmd.com/gres.html>`_
     init_blocks : int
         Number of blocks to provision at the start of the run. Default is 1.
     min_blocks : int
@@ -147,6 +153,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
                  mem_per_node: Optional[int] = None,
+                 gpus_per_node: Optional[int] = None,
+                 gres: Optional[str] = None,
                  init_blocks: int = 1,
                  min_blocks: int = 0,
                  max_blocks: int = 1,
@@ -173,6 +181,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.partition = partition
         self.cores_per_node = cores_per_node
         self.mem_per_node = mem_per_node
+        self.gpus_per_node = gpus_per_node
+        self.gres = gres
         self.exclusive = exclusive
         self.account = account
         self.qos = qos
@@ -193,6 +203,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
         if clusters:
             self.scheduler_options += "#SBATCH --clusters={}\n".format(clusters)
+        if gpus_per_node:
+            self.scheduler_options += "#SBATCH --gpus-per-node={}\n".format(gpus_per_node)
+        if gres:
+            self.scheduler_options += "#SBATCH --gres={}\n".format(gres)
 
         self.regex_job_id = regex_job_id
         self.worker_init = worker_init + '\n'
