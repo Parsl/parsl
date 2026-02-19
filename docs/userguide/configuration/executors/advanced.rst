@@ -9,6 +9,7 @@ but there are several cases where the executors needed to be tuned for specific 
    :local:
    :depth: 1
 
+.. _label-networking:
 
 Connecting Parsl to Workers
 ---------------------------
