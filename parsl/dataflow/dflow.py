@@ -39,9 +39,7 @@ from parsl.errors import (
     NoDataFlowKernelError,
 )
 from parsl.executors.base import ParslExecutor
-from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
@@ -167,12 +165,6 @@ class DataFlowKernel:
 
         self.memoizer: Memoizer = config.memoizer if config.memoizer is not None else BasicMemoizer()
         self.memoizer.start(run_dir=self.run_dir, config_run_dir=self.config.run_dir)
-
-        # this must be set before executors are added since add_executors calls
-        # job_status_poller.add_executors.
-        self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
-                                                 strategy_period=self.config.strategy_period,
-                                                 max_idletime=self.config.max_idletime)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
@@ -1083,8 +1075,6 @@ class DataFlowKernel:
 
             self.executors[executor.label] = executor
             executor.start()
-        block_executors = [e for e in executors if isinstance(e, BlockProviderExecutor)]
-        self.job_status_poller.add_executors(block_executors)
 
     def atexit_cleanup(self) -> None:
         logger.warning("Python is exiting with a DFK still running. "
@@ -1137,10 +1127,6 @@ class DataFlowKernel:
         # Send final stats
         self.usage_tracker.send_end_message()
         self.usage_tracker.close()
-
-        logger.info("Closing job status poller")
-        self.job_status_poller.close()
-        logger.info("Terminated job status poller")
 
         logger.info("Shutting down executors")
 

@@ -56,15 +56,15 @@ def test_shutdown_scalein_blocks(tmpd_cwd, try_assert):
     )
 
     htex = HighThroughputExecutor(
-               label="htex_local",
-               cores_per_worker=1,
-               provider=accumulating_provider
-           )
+                label="htex_local",
+                cores_per_worker=1,
+                provider=accumulating_provider,
+                strategy='none',
+                strategy_period=0.1,
+            )
 
     config = Config(
         executors=[htex],
-        strategy='none',
-        strategy_period=0.1,
         run_dir=str(tmpd_cwd)
     )
 
