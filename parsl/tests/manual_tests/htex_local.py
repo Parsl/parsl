@@ -19,7 +19,7 @@ config = Config(
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option should in most cases be 1
                 launcher=SingleNodeLauncher(),
             ),
+            strategy='none',
         )
     ],
-    strategy='none',
 )

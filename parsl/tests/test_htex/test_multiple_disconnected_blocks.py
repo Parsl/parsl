@@ -24,11 +24,11 @@ def local_config():
                     worker_init="exit 0",
                     init_blocks=2
                 ),
+                max_idletime=0.5,
+                strategy='none',
             )
         ],
         run_dir="/tmp/test_htex",
-        max_idletime=0.5,
-        strategy='none',
     )
 
 

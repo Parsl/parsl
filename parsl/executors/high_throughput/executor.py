@@ -76,6 +76,18 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
     label : str
         Label for this executor instance.
 
+    strategy : str, optional
+        Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
+        or `None`.
+        If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
+        deprecated.
+
+    strategy_period : float or int, optional
+        How often the scaling strategy should be executed. Default is 5 seconds.
+
+    max_idletime : float, optional
+        The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
+
     launch_cmd : str
         Command line string to launch the process_worker_pool from the provider. The command line string
         will be formatted with appropriate values for the following values (debug, task_url, result_url,
@@ -243,6 +255,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     @typeguard.typechecked
     def __init__(self,
                  label: str = 'HighThroughputExecutor',
+                 strategy: str = "simple",
+                 strategy_period: Union[float, int] = 5,
+                 max_idletime: float = 120.0,
                  provider: Optional[ExecutionProvider] = None,
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[Sequence[str]] = None,
@@ -275,7 +290,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         BlockProviderExecutor.__init__(self,
                                        provider=provider if provider else LocalProvider(),
-                                       block_error_handler=block_error_handler)
+                                       block_error_handler=block_error_handler,
+                                       strategy=strategy,
+                                       strategy_period=strategy_period,
+                                       max_idletime=max_idletime)
         self.label = label
         self.worker_debug = worker_debug
         self.storage_access = storage_access
@@ -470,6 +488,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._start_local_interchange_process()
 
         self.initialize_scaling()
+        self.start_job_status_poller()
 
     @wrap_with_logs
     def _result_queue_worker(self):
@@ -907,6 +926,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             Amount of time to wait for the Interchange process to terminate before
             we forcefully kill it.
         """
+        super().shutdown()
         if self.interchange_proc is None:
             logger.info("HighThroughputExecutor has not started; skipping shutdown")
             return
@@ -945,8 +965,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         if self.zmq_monitoring:
             self.zmq_monitoring.close()
-
-        super().shutdown()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

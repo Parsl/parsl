@@ -31,13 +31,13 @@ config = Config(
                     # medium queue has a max walltime of 24 hrs
                     walltime='24:00:00'
                 ),
+                strategy='simple',
             ),
         ],
         monitoring=MonitoringHub(
             hub_address=address_by_interface('ib0'),
             resource_monitoring_interval=10,
         ),
-        strategy='simple',
         retries=3,
         memoizer=BasicMemoizer(checkpoint_mode='task_exit'),
         usage_tracking=LEVEL_1,
