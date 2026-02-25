@@ -177,7 +177,7 @@ class Interchange:
 
         logger.info("Platform info: {}".format(self.current_platform))
 
-        self.affinities = {}
+        self.affinities: Dict[Any, Any] = {}
 
     def get_tasks(self, count: int, manager_id: Any) -> Sequence[dict]:
         """ Obtains a batch of tasks from the internal pending_task_queue
@@ -192,7 +192,7 @@ class Interchange:
         List of upto count tasks. May return fewer than count down to an empty list
             eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
         """
-        tasks = []
+        tasks: list[Any] = []
         discards = []
         try:
             while len(tasks) < count:
@@ -207,7 +207,7 @@ class Interchange:
                     tasks.append(task)
                 else:
                     discards.append(e)
-                     
+
         except IndexError:
             # we've run out of tasks in the queue
             pass
