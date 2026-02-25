@@ -387,7 +387,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if resource_specification:
             """HTEX supports the following *Optional* resource specifications:
             priority: lower value is higher priority"""
-            acceptable_fields = {'priority'}  # add new resource spec field names here to make htex accept them
+            acceptable_fields = {'priority', 'manager_affinity'}  # add new resource spec field names here to make htex accept them
             keys = set(resource_specification.keys())
             invalid_keys = keys - acceptable_fields
             if invalid_keys:
