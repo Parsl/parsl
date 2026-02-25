@@ -177,7 +177,9 @@ class Interchange:
 
         logger.info("Platform info: {}".format(self.current_platform))
 
-    def get_tasks(self, count: int) -> Sequence[dict]:
+        self.affinities = {}
+
+    def get_tasks(self, count: int, manager_id: Any) -> Sequence[dict]:
         """ Obtains a batch of tasks from the internal pending_task_queue
 
         Parameters
@@ -191,12 +193,26 @@ class Interchange:
             eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
         """
         tasks = []
+        discards = []
         try:
-            for _ in range(count):
-                *_, task = self.pending_task_queue.pop()
-                tasks.append(task)
+            while len(tasks) < count:
+                e = self.pending_task_queue.pop()
+                *_, manager_affinity, task = e
+                if manager_affinity is None:
+                    tasks.append(task)
+                elif manager_affinity not in self.affinities:
+                    tasks.append(task)
+                    self.affinities[manager_affinity] = manager_id
+                elif self.affinities[manager_affinity] == manager_id:
+                    tasks.append(task)
+                else:
+                    discards.append(e)
+                     
         except IndexError:
+            # we've run out of tasks in the queue
             pass
+        for d in discards:
+            self.pending_task_queue.add(d)
 
         return tasks
 
@@ -334,7 +350,8 @@ class Interchange:
             task_id = msg['task_id']
             resource_spec = msg['context'].get('resource_spec', {})
             priority = resource_spec.get('priority', float('inf'))
-            queue_entry = (-priority, -task_id, msg)
+            manager_affinity = resource_spec.get('manager_affinity', None)
+            queue_entry = (-priority, -task_id, manager_affinity, msg)
 
             logger.debug("Putting task %s onto pending_task_queue", task_id)
 
@@ -553,7 +570,7 @@ class Interchange:
                 real_capacity = m['max_capacity'] - tasks_inflight
 
                 if real_capacity and m["active"] and not m["draining"]:
-                    tasks = self.get_tasks(real_capacity)
+                    tasks = self.get_tasks(real_capacity, manager_id)
                     if tasks:
                         self.manager_sock.send_multipart([manager_id, pickle.dumps(tasks)])
                         task_count = len(tasks)
