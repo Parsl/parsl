@@ -60,7 +60,7 @@ class SingleNodeLauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - fail_on_any: If True, return a nonzero exit code if any worker failed, otherwise zero;
                        if False, return a nonzero exit code if all workers failed, otherwise zero.
         - script_dir (str): Path to the submit script directory
@@ -130,7 +130,7 @@ class GnuParallelLauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - script_dir (str): Path to the submit script directory
 
         """
@@ -209,7 +209,7 @@ class MpiExecLauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - script_dir (str): Path to the submit script directory
 
         """
@@ -266,7 +266,7 @@ class MpiRunLauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - script_dir (str): Path to the submit script directory
 
         """
@@ -316,7 +316,7 @@ class SrunLauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - script_dir (str): Path to the submit script directory
 
         """
@@ -370,7 +370,7 @@ class SrunMPILauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - script_dir (str): Path to the submit script directory
 
         """
@@ -444,7 +444,7 @@ class AprunLauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - tasks_per_node (int) : Workers to launch per node
         - nodes_per_block (int) : Number of nodes in a block
         - script_dir (str): Path to the submit script directory
@@ -495,7 +495,7 @@ class JsrunLauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - tasks_per_node (int) : Workers to launch per node
         - nodes_per_block (int) : Number of nodes in a block
         - script_dir (str): Path to the submit script directory
