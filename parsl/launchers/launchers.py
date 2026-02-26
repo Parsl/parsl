@@ -63,6 +63,7 @@ class SingleNodeLauncher(Launcher):
         - command (string): The command string to be launched
         - fail_on_any: If True, return a nonzero exit code if any worker failed, otherwise zero;
                        if False, return a nonzero exit code if all workers failed, otherwise zero.
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -130,6 +131,7 @@ class GnuParallelLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -208,6 +210,7 @@ class MpiExecLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -264,6 +267,7 @@ class MpiRunLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -313,6 +317,7 @@ class SrunLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -366,6 +371,7 @@ class SrunMPILauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -441,6 +447,7 @@ class AprunLauncher(Launcher):
         - command (string): The command string to be launched
         - tasks_per_node (int) : Workers to launch per node
         - nodes_per_block (int) : Number of nodes in a block
+        - script_dir (str): Path to the submit script directory
 
         """
 
@@ -491,6 +498,7 @@ class JsrunLauncher(Launcher):
         - command (string): The command string to be launched
         - tasks_per_node (int) : Workers to launch per node
         - nodes_per_block (int) : Number of nodes in a block
+        - script_dir (str): Path to the submit script directory
 
         """
 
