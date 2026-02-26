@@ -104,7 +104,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         job_config["user_script"] = self.launcher(command,
                                                   tasks_per_node,
-                                                  self.nodes_per_block)
+                                                  self.nodes_per_block,
+                                                  self.script_dir)
         return job_config
 
     def submit(self, command, tasks_per_node, job_name="parsl.sge"):
