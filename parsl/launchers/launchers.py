@@ -11,7 +11,7 @@ class SimpleLauncher(Launcher):
     def __init__(self, debug: bool = True) -> None:
         super().__init__(debug=debug)
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
 
         if nodes_per_block > 1:
             logger.warning('Simple Launcher only supports single node per block. '
@@ -35,7 +35,7 @@ class WrappedLauncher(Launcher):
         super().__init__(debug=debug)
         self.prepend = prepend
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, debug: bool = True) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, debug: bool = True, script_dir: str = "") -> str:
         if tasks_per_node > 1:
             logger.warning('WrappedLauncher ignores the number of tasks per node. '
                            'You may be getting fewer workers than expected')
@@ -57,12 +57,13 @@ class SingleNodeLauncher(Launcher):
         super().__init__(debug=debug)
         self.fail_on_any = fail_on_any
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - fail_on_any: If True, return a nonzero exit code if any worker failed, otherwise zero;
                        if False, return a nonzero exit code if all workers failed, otherwise zero.
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -126,10 +127,11 @@ class GnuParallelLauncher(Launcher):
     def __init__(self, debug: bool = True):
         super().__init__(debug=debug)
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -139,6 +141,8 @@ class GnuParallelLauncher(Launcher):
 export CORES=$(getconf _NPROCESSORS_ONLN)
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
+SCRIPT_DIR="{script_dir}"
+[[ -d $SCRIPT_DIR ]] || SCRIPT_DIR=""
 
 # Deduplicate the nodefile
 SSHLOGINFILE="$JOBNAME.nodes"
@@ -148,20 +152,20 @@ else
     sort -u $PBS_NODEFILE > $SSHLOGINFILE
 fi
 
-cat << PARALLEL_CMD_EOF > cmd_$JOBNAME.sh
+cat << PARALLEL_CMD_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 {command}
 PARALLEL_CMD_EOF
-chmod u+x cmd_$JOBNAME.sh
+chmod u+x ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 
 #file to contain the commands to parallel
-PFILE=cmd_${{JOBNAME}}.sh.parallel
+PFILE=${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_${{JOBNAME}}.sh.parallel
 
 # Truncate the file
 cp /dev/null $PFILE
 
 for COUNT in $(seq 1 1 $WORKERCOUNT)
 do
-    echo "sh cmd_$JOBNAME.sh" >> $PFILE
+    echo "sh ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh" >> $PFILE
 done
 
 parallel --env _ --joblog "$JOBNAME.sh.parallel.log" \
@@ -171,7 +175,8 @@ parallel --env _ --joblog "$JOBNAME.sh.parallel.log" \
 '''.format(command=command,
            tasks_per_node=tasks_per_node,
            task_blocks=task_blocks,
-           debug=debug_num)
+           debug=debug_num,
+           script_dir=script_dir)
         return x
 
 
@@ -202,10 +207,11 @@ class MpiExecLauncher(Launcher):
         self.bind_cmd = bind_cmd
         self.overrides = overrides
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -215,6 +221,8 @@ class MpiExecLauncher(Launcher):
 export CORES=$(getconf _NPROCESSORS_ONLN)
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
+SCRIPT_DIR="{script_dir}"
+[[ -d $SCRIPT_DIR ]] || SCRIPT_DIR=""
 
 # Deduplicate the nodefile
 HOSTFILE="$JOBNAME.nodes"
@@ -224,19 +232,20 @@ else
     sort -u $PBS_NODEFILE > $HOSTFILE
 fi
 
-cat << MPIEXEC_EOF > cmd_$JOBNAME.sh
+cat << MPIEXEC_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 {command}
 MPIEXEC_EOF
-chmod u+x cmd_$JOBNAME.sh
+chmod u+x ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 
-mpiexec {bind_cmd} none {overrides} -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
+mpiexec {bind_cmd} none {overrides} -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 
 [[ "{debug}" == "1" ]] && echo "All workers done"
 '''.format(command=command,
            task_blocks=task_blocks,
            debug=debug_num,
            overrides=self.overrides,
-           bind_cmd=self.bind_cmd)
+           bind_cmd=self.bind_cmd,
+           script_dir=script_dir)
         return x
 
 
@@ -256,10 +265,11 @@ class MpiRunLauncher(Launcher):
         self.bash_location = bash_location
         self.overrides = overrides
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -269,20 +279,23 @@ class MpiRunLauncher(Launcher):
 export CORES=$(getconf _NPROCESSORS_ONLN)
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
+SCRIPT_DIR="{script_dir}"
+[[ -d $SCRIPT_DIR ]] || SCRIPT_DIR=""
 
-cat << MPIRUN_EOF > cmd_$JOBNAME.sh
+cat << MPIRUN_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 {command}
 MPIRUN_EOF
-chmod u+x cmd_$JOBNAME.sh
+chmod u+x ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 
-mpirun -np $WORKERCOUNT {overrides} {bash_location} cmd_$JOBNAME.sh
+mpirun -np $WORKERCOUNT {overrides} {bash_location} ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 
 [[ "{debug}" == "1" ]] && echo "All workers done"
 '''.format(command=command,
            task_blocks=task_blocks,
            overrides=self.overrides,
            bash_location=self.bash_location,
-           debug=debug_num)
+           debug=debug_num,
+           script_dir=script_dir)
         return x
 
 
@@ -303,10 +316,11 @@ class SrunLauncher(Launcher):
         super().__init__(debug=debug)
         self.overrides = overrides
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -319,19 +333,22 @@ export NODES=$SLURM_JOB_NUM_NODES
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 [[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
 WORKERCOUNT={task_blocks}
+SCRIPT_DIR="{script_dir}"
+[[ -d $SCRIPT_DIR ]] || SCRIPT_DIR=""
 
-cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
+cat << SLURM_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh
 {command}
 SLURM_EOF
-chmod a+x cmd_$SLURM_JOB_NAME.sh
+chmod a+x ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh
 
-srun --ntasks {task_blocks} -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
+srun --ntasks {task_blocks} -l {overrides} bash ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh
 
 [[ "{debug}" == "1" ]] && echo "Done"
 '''.format(command=command,
            task_blocks=task_blocks,
            overrides=self.overrides,
-           debug=debug_num)
+           debug=debug_num,
+           script_dir=script_dir)
         return x
 
 
@@ -354,10 +371,11 @@ class SrunMPILauncher(Launcher):
         super().__init__(debug=debug)
         self.overrides = overrides
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
+        - script_dir (str): Path to the submit script directory
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -370,11 +388,13 @@ export NODES=$SLURM_JOB_NUM_NODES
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 [[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
 WORKERCOUNT={task_blocks}
+SCRIPT_DIR="{script_dir}"
+[[ -d $SCRIPT_DIR ]] || SCRIPT_DIR=""
 
-cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
+cat << SLURM_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh
 {command}
 SLURM_EOF
-chmod a+x cmd_$SLURM_JOB_NAME.sh
+chmod a+x ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh
 
 TASKBLOCKS={task_blocks}
 
@@ -385,7 +405,7 @@ then
     CORES_PER_BLOCK=$(($NODES * $CORES / $TASKBLOCKS))
     for blk in $(seq 1 1 $TASKBLOCKS):
     do
-        srun --ntasks $CORES_PER_BLOCK -l {overrides} bash cmd_$SLURM_JOB_NAME.sh &
+        srun --ntasks $CORES_PER_BLOCK -l {overrides} bash ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh &
     done
     wait
 else
@@ -394,7 +414,7 @@ else
     NODES_PER_BLOCK=$(( $NODES / $TASKBLOCKS ))
     for blk in $(seq 1 1 $TASKBLOCKS):
     do
-        srun --exclusive --nodes $NODES_PER_BLOCK -l {overrides} bash cmd_$SLURM_JOB_NAME.sh &
+        srun --exclusive --nodes $NODES_PER_BLOCK -l {overrides} bash ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh &
     done
     wait
 
@@ -405,7 +425,8 @@ fi
 '''.format(command=command,
            task_blocks=task_blocks,
            overrides=self.overrides,
-           debug=debug_num)
+           debug=debug_num,
+           script_dir=script_dir)
         return x
 
 
@@ -425,12 +446,13 @@ class AprunLauncher(Launcher):
         super().__init__(debug=debug)
         self.overrides = overrides
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - tasks_per_node (int) : Workers to launch per node
         - nodes_per_block (int) : Number of nodes in a block
+        - script_dir (str): Path to the submit script directory
 
         """
 
@@ -439,13 +461,15 @@ class AprunLauncher(Launcher):
 
         x = '''set -e
 WORKERCOUNT={tasks_per_block}
+SCRIPT_DIR="{script_dir}"
+[[ -d $SCRIPT_DIR ]] || SCRIPT_DIR=""
 
-cat << APRUN_EOF > cmd_$JOBNAME.sh
+cat << APRUN_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 {command}
 APRUN_EOF
-chmod a+x cmd_$JOBNAME.sh
+chmod a+x ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 
-aprun -n {tasks_per_block} -N {tasks_per_node} {overrides} /bin/bash cmd_$JOBNAME.sh &
+aprun -n {tasks_per_block} -N {tasks_per_node} {overrides} /bin/bash ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh &
 wait
 
 [[ "{debug}" == "1" ]] && echo "Done"
@@ -453,7 +477,8 @@ wait
            tasks_per_block=tasks_per_block,
            tasks_per_node=tasks_per_node,
            overrides=self.overrides,
-           debug=debug_num)
+           debug=debug_num,
+           script_dir=script_dir)
         return x
 
 
@@ -473,12 +498,13 @@ class JsrunLauncher(Launcher):
         super().__init__(debug=debug)
         self.overrides = overrides
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """
         Args:
-        - command (string): The command string to be launched
+        - command (str): The command string to be launched
         - tasks_per_node (int) : Workers to launch per node
         - nodes_per_block (int) : Number of nodes in a block
+        - script_dir (str): Path to the submit script directory
 
         """
 
@@ -487,13 +513,15 @@ class JsrunLauncher(Launcher):
 
         x = '''set -e
 WORKERCOUNT={tasks_per_block}
+SCRIPT_DIR="{script_dir}"
+[[ -d $SCRIPT_DIR ]] || SCRIPT_DIR=""
 
-cat << JSRUN_EOF > cmd_$JOBNAME.sh
+cat << JSRUN_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 {command}
 JSRUN_EOF
-chmod a+x cmd_$JOBNAME.sh
+chmod a+x ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 
-jsrun -n {tasks_per_block} -r {tasks_per_node} {overrides} /bin/bash cmd_$JOBNAME.sh &
+jsrun -n {tasks_per_block} -r {tasks_per_node} {overrides} /bin/bash ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh &
 wait
 
 [[ "{debug}" == "1" ]] && echo "Done"
@@ -501,5 +529,6 @@ wait
            tasks_per_block=tasks_per_block,
            tasks_per_node=tasks_per_node,
            overrides=self.overrides,
-           debug=debug_num)
+           debug=debug_num,
+           script_dir=script_dir)
         return x
