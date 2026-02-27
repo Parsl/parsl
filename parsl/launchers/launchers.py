@@ -142,6 +142,7 @@ export CORES=$(getconf _NPROCESSORS_ONLN)
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 SCRIPT_DIR="{script_dir}"
+[ -d "$SCRIPT_DIR" ] || SCRIPT_DIR=""
 
 # Deduplicate the nodefile
 SSHLOGINFILE="$JOBNAME.nodes"
@@ -221,6 +222,7 @@ export CORES=$(getconf _NPROCESSORS_ONLN)
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 SCRIPT_DIR="{script_dir}"
+[ -d "$SCRIPT_DIR" ] || SCRIPT_DIR=""
 
 # Deduplicate the nodefile
 HOSTFILE="$JOBNAME.nodes"
@@ -278,6 +280,7 @@ export CORES=$(getconf _NPROCESSORS_ONLN)
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 SCRIPT_DIR="{script_dir}"
+[ -d "$SCRIPT_DIR" ] || SCRIPT_DIR=""
 
 cat << MPIRUN_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 {command}
@@ -331,6 +334,7 @@ export NODES=$SLURM_JOB_NUM_NODES
 [[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
 WORKERCOUNT={task_blocks}
 SCRIPT_DIR="{script_dir}"
+[ -d "$SCRIPT_DIR" ] || SCRIPT_DIR=""
 
 cat << SLURM_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh
 {command}
@@ -385,6 +389,7 @@ export NODES=$SLURM_JOB_NUM_NODES
 [[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
 WORKERCOUNT={task_blocks}
 SCRIPT_DIR="{script_dir}"
+[ -d "$SCRIPT_DIR" ] || SCRIPT_DIR=""
 
 cat << SLURM_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$SLURM_JOB_NAME.sh
 {command}
@@ -457,6 +462,7 @@ class AprunLauncher(Launcher):
         x = '''set -e
 WORKERCOUNT={tasks_per_block}
 SCRIPT_DIR="{script_dir}"
+[ -d "$SCRIPT_DIR" ] || SCRIPT_DIR=""
 
 cat << APRUN_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 {command}
@@ -508,6 +514,7 @@ class JsrunLauncher(Launcher):
         x = '''set -e
 WORKERCOUNT={tasks_per_block}
 SCRIPT_DIR="{script_dir}"
+[ -d "$SCRIPT_DIR" ] || SCRIPT_DIR=""
 
 cat << JSRUN_EOF > ${{SCRIPT_DIR:+$SCRIPT_DIR/}}cmd_$JOBNAME.sh
 {command}
