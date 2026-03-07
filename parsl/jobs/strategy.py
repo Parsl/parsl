@@ -225,6 +225,13 @@ class Strategy:
                      prefix, self.executors[label].active_tasks, self.executors[label].active_slots, running, pending)
 
     def _case_1_no_tasks(self, executor: BlockProviderExecutor, prefix: str,) -> None:
+        """
+        Handle the situation where the executor has no active tasks.
+
+        If the executor is already at or below `min_blocks`, no action is taken.
+        Otherwise an executor idle timer is started and, once `max_idletime` is reached,
+        the executor scales in down to the minimum number of blocks.
+        """
         executor_state = self.executors[executor.label]
 
         # Case 1a: no tasks and at/below min_blocks -> no action
@@ -257,6 +264,13 @@ class Strategy:
             )
 
     def _case_2_overloaded(self, executor: BlockProviderExecutor, prefix: str,) -> None:
+        """
+        Handle the case where task demand exceeds available execution slots.
+
+        If the executor is not already at `max_blocks`, compute how many
+        additional blocks are required to satisfy the parallelism target
+        and request scaling out by the required number of blocks.
+        """
         executor_state = self.executors[executor.label]
 
         logger.debug("%s Strategy case 2: slots are overloaded - (slot_ratio = active_slots/active_tasks) < parallelism", prefix)
@@ -279,6 +293,13 @@ class Strategy:
         executor.scale_out_facade(excess_blocks)
 
     def _case_4a_tasks_no_slots(self, executor: BlockProviderExecutor, prefix: str) -> None:
+        """
+        Handle the case where tasks exist but no execution slots are available.
+
+        This branch covers the edge case where `parallelism == 0`. In that
+        configuration the overloaded condition (case 2) cannot trigger, so this
+        method ensures progress by requesting a single block when tasks are present
+        """
         executor_state = self.executors[executor.label]
 
         logger.debug("%s Strategy case 4a: No active slots but some active tasks - could scale out by a single block", prefix)
@@ -290,6 +311,15 @@ class Strategy:
             logger.debug("%s Not requesting any blocks, because at maxblocks already", prefix)
 
     def _case_4b_more_slots_than_tasks(self, executor: BlockProviderExecutor, prefix: str, strategy_type: str) -> None:
+        """
+        Handle the case where the executor has more slots than active tasks.
+
+        This strategy branch is specific to the HighThroughputExecutor (HTEX),
+        which supports a smart scale-in mechanism. Given that capability,
+        this method computes how many blocks correspond to the excess execution
+        capacity and requests scaling in by that amount, while respecting the
+        executor's minimum block limit.
+        """
         executor_state = self.executors[executor.label]
 
         logger.debug("%s Strategy case 4b: more slots than tasks", prefix)
