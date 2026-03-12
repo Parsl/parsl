@@ -35,7 +35,7 @@ class WrappedLauncher(Launcher):
         super().__init__(debug=debug)
         self.prepend = prepend
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, debug: bool = True, script_dir: str = "") -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         if tasks_per_node > 1:
             logger.warning('WrappedLauncher ignores the number of tasks per node. '
                            'You may be getting fewer workers than expected')
