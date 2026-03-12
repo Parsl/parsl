@@ -137,6 +137,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.launcher = launcher
         self.linger = linger
         self.resources = {}
+        self.script_dir = None
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
 
         env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
@@ -649,7 +650,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         job_name = self.generate_aws_id()
         wrapped_cmd = self.launcher(command,
                                     tasks_per_node,
-                                    self.nodes_per_block)
+                                    self.nodes_per_block,
+                                    self.script_dir)
         [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
 
         if not instance:

@@ -156,6 +156,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         self.launcher = launcher
         self.linger = linger
         self.resources = {}
+        self.script_dir = None
         self.instances = []
 
         env_specified = os.getenv("AZURE_CLIENT_ID") is not None and os.getenv(
@@ -232,7 +233,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         logger.info('Creating NIC')
         nic = self.create_nic(self.network_client)
 
-        wrapped_cmd = self.launcher(command, tasks_per_node, 1)
+        wrapped_cmd = self.launcher(command, tasks_per_node, 1, self.script_dir)
 
         cmd_str = Template(template_string).substitute(jobname=job_name,
                                                        user_script=wrapped_cmd,

@@ -89,6 +89,7 @@ class GoogleCloudProvider():
         self.parallelism = parallelism
         self.num_instances = 0
         self.launcher = launcher
+        self.script_dir = None
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -113,7 +114,8 @@ class GoogleCloudProvider():
         '''
         wrapped_cmd = self.launcher(command,
                                     tasks_per_node,
-                                    1)
+                                    1,
+                                    self.script_dir)
 
         instance, name = self.create_instance(command=wrapped_cmd)
         self.resources[name] = {"job_id": name, "status": JobStatus(translate_table[instance['status']])}
