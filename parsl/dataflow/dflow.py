@@ -28,6 +28,7 @@ from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import DependencyError, JoinError
+from parsl.dataflow.executor_selection import forced_executor
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import BasicMemoizer, Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -933,13 +934,28 @@ class DataFlowKernel:
         task_id = self.task_count
         self.task_count += 1
         if isinstance(executors, str) and executors.lower() == 'all':
-            choices = list(e for e in self.executors if e != '_parsl_internal')
+            forced = forced_executor.get()
+
+            if forced is not None:
+                if forced not in self.executors:
+                    raise ValueError(
+                        f"Task {task_id} forced executor '{forced}' not present "
+                        f"in available executors: {list(self.executors.keys())}"
+                    )
+                choices = [forced]
+            else:
+                choices = [e for e in self.executors if e != '_parsl_internal']
+
         elif isinstance(executors, list):
             choices = executors
+
         else:
-            raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
+            raise ValueError(
+                "Task {} supplied invalid type for executors: {}".format(task_id, type(executors))
+            )
+
         executor = random.choice(choices)
-        logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
+        logger.info("Task {} will be sent to executor {}".format(task_id, executor))
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
