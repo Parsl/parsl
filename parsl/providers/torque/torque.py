@@ -24,7 +24,7 @@ translate_table = {
     'M': JobState.COMPLETED,  # Moved to another server (PBS Pro)
     'T': JobState.PENDING,  # Transiting (PBS Pro)
     'U': JobState.HELD,  # User-suspended (PBS Pro)
-    'X': JobState.COMPLETED, # Subjob finished (PBS Pro)
+    'X': JobState.COMPLETED,  # Subjob finished (PBS Pro)
 }
 
 
