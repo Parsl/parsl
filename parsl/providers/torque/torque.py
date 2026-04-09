@@ -14,12 +14,17 @@ logger = logging.getLogger(__name__)
 translate_table = {
     'B': JobState.RUNNING,  # This state is returned for running array jobs
     'R': JobState.RUNNING,
-    'C': JobState.COMPLETED,  # Completed after having run
+    'C': JobState.COMPLETED,  # Completed after having run (TORQUE)
     'E': JobState.COMPLETED,  # Exiting after having run
+    'F': JobState.COMPLETED,  # Finished (PBS Pro)
     'H': JobState.HELD,  # Held
     'Q': JobState.PENDING,  # Queued, and eligible to run
     'W': JobState.PENDING,  # Job is waiting for it's execution time (-a option) to be reached
-    'S': JobState.HELD  # Suspended
+    'S': JobState.HELD,  # Suspended
+    'M': JobState.COMPLETED,  # Moved to another server (PBS Pro)
+    'T': JobState.PENDING,  # Transiting (PBS Pro)
+    'U': JobState.HELD,  # User-suspended (PBS Pro)
+    'X': JobState.COMPLETED, # Subjob finished (PBS Pro)
 }
 
 
