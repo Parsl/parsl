@@ -21,7 +21,6 @@ translate_table = {
     'Q': JobState.PENDING,  # Queued, and eligible to run
     'W': JobState.PENDING,  # Job is waiting for it's execution time (-a option) to be reached
     'S': JobState.HELD,  # Suspended
-    'M': JobState.COMPLETED,  # Moved to another server (PBS Pro)
     'T': JobState.PENDING,  # Transiting (PBS Pro)
     'U': JobState.HELD,  # User-suspended (PBS Pro)
     'X': JobState.COMPLETED,  # Subjob finished (PBS Pro)
