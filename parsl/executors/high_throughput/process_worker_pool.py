@@ -164,7 +164,7 @@ class Manager:
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
 
-        addresses = ','.join(tcp_url(a, port) for a in addresses.split(','))
+        addresses = {tcp_url(a, port) for a in addresses.split(',')}
         try:
             self._ix_url = probe_addresses(
                 self.zmq_context,
