@@ -362,8 +362,6 @@ class DataFlowKernel:
                 task_record['fail_history'] = []
                 self._update_task_state(task_record, States.pending)
 
-                logger.info("Task {} marked for retry".format(task_id))
-
             else:
                 logger.exception("Task {} failed after {} retry attempts".format(task_id,
                                                                                  task_record['try_id']))
@@ -498,9 +496,7 @@ class DataFlowKernel:
         """
         assert new_state in FINAL_STATES
         assert new_state not in FINAL_FAILURE_STATES
-        old_state = task_record['status']
 
-        logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
         self.memoizer.update_memo_result(task_record, result)
@@ -517,9 +513,7 @@ class DataFlowKernel:
         """
         assert new_state in FINAL_STATES
         assert new_state in FINAL_FAILURE_STATES
-        old_state = task_record['status']
 
-        logger.info(f"Task {task_record['id']} failed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
         self.memoizer.update_memo_exception(task_record, exception)
@@ -541,6 +535,10 @@ class DataFlowKernel:
         with self.task_state_counts_lock:
             if 'status' in task_record:
                 self.task_state_counts[task_record['status']] -= 1
+                logger.info(f"Task {task_record['id']} changing state from {task_record['status'].name} to {new_state.name}")
+            else:
+                logger.info(f"Task {task_record['id']} initializing state to {new_state.name}")
+
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
 
@@ -1016,7 +1014,7 @@ class DataFlowKernel:
                                                               task_record['func_name'],
                                                               waiting_message))
 
-        logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
+        logger.debug("Task %s has AppFuture: %r", task_id, task_record['app_fu'])
         self._update_task_state(task_record, States.pending)
 
         assert task_id not in self.tasks
