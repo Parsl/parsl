@@ -25,7 +25,7 @@ from parsl.data_provider.zip import ZipFileStaging
 from parsl.dataflow.memoization import BasicMemoizer
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
-from parsl.logconfigs.file import FileLogging
+from parsl.logconfigs.json import JSONLogging
 from parsl.monitoring import MonitoringHub
 from parsl.providers import LocalProvider
 
@@ -66,7 +66,7 @@ def fresh_config():
         project_name="parsl htex_local_alternate test configuration",
 
         # level 1 is even more debuggy than logging.DEBUG
-        initialize_logging=FileLogging(level=1)
+        initialize_logging=JSONLogging(level=1)
     )
 
 
