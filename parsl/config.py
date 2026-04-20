@@ -10,6 +10,7 @@ from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.logconfigs.base import LogConfig
 from parsl.monitoring import MonitoringHub
 from parsl.usage_tracking.api import UsageInformation
 from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
@@ -76,7 +77,7 @@ class Config(RepresentationMixin, UsageInformation):
     project_name: str, optional
         Option to deanonymize usage tracking data.
         If set, this value will be used as the project name in the usage tracking data and placed on the leaderboard.
-    initialize_logging : bool, optional
+    initialize_logging : bool or log config, optional
         Make DFK optionally not initialize any logging. Log messages
         will still be passed into the python logging system under the
         ``parsl`` logger name, but the logging system will not by default
@@ -105,7 +106,7 @@ class Config(RepresentationMixin, UsageInformation):
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: int = 0,
                  project_name: Optional[str] = None,
-                 initialize_logging: bool = True) -> None:
+                 initialize_logging: Union[bool, LogConfig] = True) -> None:
 
         executors = tuple(executors or [])
         if not executors:
