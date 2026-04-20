@@ -10,7 +10,8 @@ This can save time and computational resources.
 
 The memoization and checkpointing system is pluggable, with basic behaviour
 provided by the `BasicMemoizer`. The rest of this chapter refers to the
-behaviour of the `BasicMemoizer`.
+behaviour of the `BasicMemoizer`. Parsl also comes with `SQLiteMemoizer`
+which behaves differently and stores everything in an sqlite database.
 
 Memoization and checkpointing is done in two ways:
 
