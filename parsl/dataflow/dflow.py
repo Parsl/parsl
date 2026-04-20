@@ -1080,6 +1080,7 @@ class DataFlowKernel:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
+            executor.log_config = self.log_config
             if self.monitoring and executor.remote_monitoring_radio is not None:
                 executor.monitoring_messages = self.monitoring.resource_msgs
                 logger.debug("Starting monitoring receiver for executor %s "
