@@ -1,4 +1,5 @@
 import logging
+import os
 import math
 import pickle
 import subprocess
@@ -51,6 +52,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--port={worker_port} "
                       "--cert_dir {cert_dir} "
                       "--logdir={logdir} "
+                      "--logconf={logconf} "
                       "--block_id={{block_id}} "
                       "--hb_period={heartbeat_period} "
                       "{address_probe_timeout_string} "
@@ -423,6 +425,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                        poll_period=self.poll_period,
                                        cert_dir=self.cert_dir,
                                        logdir=self.worker_logdir,
+                                       logconf=self.logconf_path,
                                        cpu_affinity=self.cpu_affinity,
                                        enable_mpi_mode=enable_mpi_opts,
                                        mpi_launcher=self.mpi_launcher,
@@ -445,6 +448,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 "encrypted attribute is set to False. You must either change cert_dir to "
                 "None or encrypted to True."
             )
+
+        if self.log_config:
+            log_config_dir = os.path.join(self.logdir, "log_config")
+            os.makedirs(log_config_dir, mode=0o700, exist_ok=True)
+
+            self.logconf_path = os.path.join(log_config_dir, "log_config.pkl")
+            with open(self.logconf_path, "wb") as f:
+                pickle.dump(self.log_config, f)
+        else:
+            self.logconf_path = None
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
             self.loopback_address, self.interchange_port_range, self.cert_dir
