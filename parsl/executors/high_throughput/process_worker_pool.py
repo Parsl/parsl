@@ -501,8 +501,6 @@ class Manager:
 
     def start(self):
         """ Start the worker processes.
-
-        TODO: Move task receiving to a thread
         """
         procs: dict[int, SpawnProcess] = {}
         for worker_id in range(self.worker_count):
