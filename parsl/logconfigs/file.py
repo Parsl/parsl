@@ -1,11 +1,9 @@
 import logging
 import os
-
 from typing import Callable
 
-from parsl.logconfigs.base import LogConfig
-
 from parsl.log_utils import DEFAULT_FORMAT
+from parsl.logconfigs.base import LogConfig
 
 
 class FileLogging(LogConfig):

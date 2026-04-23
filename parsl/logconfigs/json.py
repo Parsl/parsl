@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-
 from typing import Callable
 
 from parsl.logconfigs.base import LogConfig

@@ -1,6 +1,6 @@
 import logging
-import os
 import math
+import os
 import pickle
 import subprocess
 import threading

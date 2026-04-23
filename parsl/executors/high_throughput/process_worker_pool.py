@@ -37,8 +37,8 @@ from parsl.executors.high_throughput.mpi_resource_management import (
     TaskScheduler,
 )
 from parsl.executors.high_throughput.probe import probe_addresses
-from parsl.logconfigs.base import LogConfig
 from parsl.log_utils import set_file_logger
+from parsl.logconfigs.base import LogConfig
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
