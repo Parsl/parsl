@@ -44,6 +44,7 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.logconfigs.base import LogConfig
 from parsl.logconfigs.file import FileLogging
+from parsl.logconfigs.remote import logging_wrapper
 from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
@@ -704,6 +705,16 @@ class DataFlowKernel:
                                                        logging_level=wrapper_logging_level,
                                                        sleep_dur=self.monitoring.resource_monitoring_interval,
                                                        monitor_resources=executor.monitor_resources(),
+                                                       run_dir=self.run_dir)
+
+        if self.log_config:
+            (function, args, kwargs) = logging_wrapper(f=function,
+                                                       args=args,
+                                                       kwargs=kwargs,
+                                                       run_id=self.run_id,
+                                                       task_id=task_id,
+                                                       try_id=try_id,
+                                                       log_config=self.log_config,
                                                        run_dir=self.run_dir)
 
         with self.submitter_lock:

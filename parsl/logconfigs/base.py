@@ -18,9 +18,9 @@ class LogConfig(abc.ABC):
     distributed system.
 
     A log configuration is identified across the distributed system by
-    the `uuid` attribute. This allows the `log_context` context manager to
-    only initialize a particular configuration once per process, and only
-    deinitialize it when all users of it are finished with it.
+    the `uuid` attribute. This is intended to allow code calling the
+    log_configuration class to only initialise a particular log configuration
+    once per process.
     """
 
     def __init__(self) -> None:
@@ -30,12 +30,14 @@ class LogConfig(abc.ABC):
     def initialize_logging(self, *, log_dir: str, log_name: str) -> Callable[[], None]:
         """Initialize logging in current process.
 
-        This should not be called by end users. Instead, users should use
-        `with log_context(config)` to ensure that the configuration is
-        initialized and deinitialized properly when there are overlapping
-        uses of the same configuration.
+        This should be implemented by users wanting to define their own log
+        configuration policies.
+
+        This should be called by Parsl components which which to initialize
+        logging according to a user supplied policy, rather than a hard-coded
+        log policy.
 
         This should return a callback to uninitialize the logging initialized
-        by this call. `log_context` will call that callback when appropriate.
+        by this call.
         """
         ...
