@@ -1,9 +1,4 @@
-import datetime
 import logging
-import os
-import time
-from functools import wraps
-from multiprocessing import Event
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 from parsl.logconfigs.base import LogConfig
@@ -27,14 +22,11 @@ def logging_wrapper(*,
     """
 
     def wrapped(_parsl_logging_wrapper_f, args: List[Any], **kwargs: Dict[str, Any]) -> Any:
-        name = f"task_{task_id}_{try_id}" 
+        name = f"task_{task_id}_{try_id}"
         cb = log_config.initialize_logging(log_dir=run_dir, log_name=name)
         try:
             return _parsl_logging_wrapper_f(*args, **kwargs)
-        finally: 
-            # TODO: after
+        finally:
             cb()
 
     return (wrapped, [f, args], kwargs)
-
-
