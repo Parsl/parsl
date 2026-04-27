@@ -3,6 +3,7 @@ from functools import partial
 from inspect import Parameter, signature
 
 from parsl.app.app import AppBase
+from parsl.app.errors import wrap_error
 from parsl.data_provider.files import File
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
@@ -127,7 +128,7 @@ class BashApp(AppBase):
         # doesn't support
         remote_fn = partial(remote_side_bash_executor, self.func)
         remote_fn.__name__ = self.func.__name__
-        self.wrapped_remote_function = remote_fn
+        self.wrapped_remote_function = wrap_error(remote_fn)
 
     def __call__(self, *args, **kwargs):
         """Handle the call to a Bash app.

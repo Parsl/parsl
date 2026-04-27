@@ -8,6 +8,7 @@ tblib.pickling_support.install()
 from functools import wraps
 
 from parsl.app.app import AppBase
+from parsl.app.errors import wrap_error
 from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.utils import AutoCancelTimer
 
@@ -38,7 +39,7 @@ class PythonApp(AppBase):
 
     def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, join=False):
         super().__init__(
-            func,
+            wrap_error(func),
             data_flow_kernel=data_flow_kernel,
             executors=executors,
             cache=cache,
