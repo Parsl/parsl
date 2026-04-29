@@ -688,9 +688,6 @@ def dbm_starter(resource_msgs: mpq.Queue,
                 logging_level: int,
                 exit_event: mpe.Event) -> None:
     """Start the database manager process
-
-    The DFK should start this function. The args, kwargs match that of the monitoring config
-
     """
     setproctitle("parsl: monitoring database")
 
