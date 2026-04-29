@@ -322,26 +322,25 @@ class DatabaseManager:
                                                             )
         self._resource_queue_pull_thread.start()
 
-        """
-        maintain a set to track the tasks that are already INSERTed into database
-        to prevent race condition that the first resource message (indicate 'running' state)
-        arrives before the first task message. In such a case, the resource table
-        primary key would be violated.
-        If that happens, the message will be added to deferred_resource_messages and processed later.
+        # The following three variables work together to maintain sets to
+        # track the tasks and tries that are already INSERTed into database
+        # to address a race condition that the first resource message
+        # (indicating that the task has begun running on a worker)
+        # arrives before the first task message from the DFK. In such a case,
+        # the code cannot UPDATE the relevant try table row, because it
+        # does not exist yet.
 
-        """
+        # When such a message arrives, it is added to deferred_resource_messages
+        # and processed later, after the relevant DFK-side message has been
+        # received and processed to create a row in the try table.
+
+        # Exactly one message per task/try can be deferred, which may not be
+        # enough when a try happens several times (for example when an
+        # executor performs its own Parsl-try unaware retries.
+
         inserted_tasks: Set[object] = set()
-
-        """
-        like inserted_tasks but for task,try tuples
-        """
-        inserted_tries: Set[Any] = set()
-
-        # for any task ID, we can defer exactly one message, which is the
-        # assumed-to-be-unique first message (with first message flag set).
-        # The code prior to this patch will discard previous message in
-        # the case of multiple messages to defer.
-        deferred_resource_messages: MonitoringMessage = {}
+        inserted_tries: Set[object] = set()
+        deferred_resource_messages: dict[str, MonitoringMessage] = {}
 
         exception_happened = False
 
@@ -412,7 +411,7 @@ class DatabaseManager:
                                 inserted_tries.add(task_try_id)
                                 try_insert_messages.append(msg)
 
-                                # check if there is a left_message for this task
+                                # check if there is a deferred message for this task
                                 if task_try_id in deferred_resource_messages:
                                     reprocessable_first_resource_messages.append(
                                         deferred_resource_messages.pop(task_try_id))
@@ -513,6 +512,9 @@ class DatabaseManager:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
+                                    # this might happen if a task/try is run multiple
+                                    # times by an executor (for example, the work queue
+                                    # executor can be configured to do this)
                                     logger.error(
                                         "Task {} already has a deferred resource message. "
                                         "Discarding previous message.".format(msg['task_id'])
