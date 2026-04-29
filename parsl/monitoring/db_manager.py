@@ -576,16 +576,13 @@ class DatabaseManager:
         if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
-            body = x[1]
-            self.pending_resource_queue.put(body)
+            self.pending_resource_queue.put(x[1])
         elif x[0] == MessageType.NODE_INFO:
-            assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
-
             logger.debug("Will put {} to pending node queue".format(x[1]))
             self.pending_node_queue.put(x[1])
         elif x[0] == MessageType.BLOCK_INFO:
             logger.debug("Will put {} to pending block queue".format(x[1]))
-            self.pending_block_queue.put(x[-1])
+            self.pending_block_queue.put(x[1])
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
 
