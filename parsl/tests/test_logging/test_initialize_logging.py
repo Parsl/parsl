@@ -4,6 +4,7 @@ import pytest
 
 import parsl
 from parsl.logconfigs.file import FileLogging
+from parsl.logconfigs.nolog import NoLogging
 
 
 @pytest.mark.local
@@ -14,10 +15,17 @@ def test_parsl_log_exists(tmpd_cwd):
 
 
 @pytest.mark.local
-def test_parsl_log_not_exists(tmpd_cwd):
+def test_parsl_log_not_exists_False_param(tmpd_cwd):
     with parsl.load(parsl.Config(run_dir=str(tmpd_cwd), initialize_logging=False)):
         assert not (pathlib.Path(parsl.dfk().run_dir) / "parsl.log").exists(), \
             "With initialize_logging=False, parsl.log should not exist in rundir after startup"
+
+
+@pytest.mark.local
+def test_parsl_log_not_exists_NoLogging_config(tmpd_cwd):
+    with parsl.load(parsl.Config(run_dir=str(tmpd_cwd), initialize_logging=NoLogging())):
+        assert not (pathlib.Path(parsl.dfk().run_dir) / "parsl.log").exists(), \
+            "With NoLogging, parsl.log should not exist in rundir after startup"
 
 
 @pytest.mark.local
