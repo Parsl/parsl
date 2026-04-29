@@ -8,13 +8,14 @@ import time
 from multiprocessing.context import SpawnProcess as SpawnProcessType
 from multiprocessing.queues import Queue as QueueType
 from multiprocessing.synchronize import Event as EventType
-from typing import Tuple
+from typing import Optional, Tuple
 
 import typeguard
 import zmq
 
 from parsl.addresses import tcp_url
 from parsl.log_utils import set_file_logger
+from parsl.logconfigs.base import LogConfig
 from parsl.monitoring.errors import MonitoringRouterStartError
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.types import TaggedMonitoringMessage
@@ -39,6 +40,7 @@ class MonitoringRouter:
 
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
+                 log_config: Optional[LogConfig],
                  resource_msgs: mpq.Queue,
                  exit_event: EventType,
                  ):
@@ -55,14 +57,20 @@ class MonitoringRouter:
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO
+        log_config: LogConfig, optional
+             Overrides default logging configuration with a LogConfig. logging_level will be
+             ignored when this parameter is specified.
         resource_msgs : multiprocessing.Queue
             A multiprocessing queue to receive messages to be routed onwards to the database process
         exit_event : Event
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
-        os.makedirs(run_dir, exist_ok=True)
-        set_file_logger(f"{run_dir}/monitoring_zmq_router.log",
-                        level=logging_level)
+        if log_config:
+            log_config.initialize_logging(log_dir=run_dir, log_name="monitoring_zmq_router")
+        else:
+            os.makedirs(run_dir, exist_ok=True)
+            set_file_logger(f"{run_dir}/monitoring_zmq_router.log",
+                            level=logging_level)
         logger.debug("Monitoring router starting")
 
         self.address = address
@@ -124,13 +132,15 @@ def zmq_router_starter(*,
                        port_range: Tuple[int, int],
 
                        run_dir: str,
-                       logging_level: int) -> None:
+                       logging_level: int,
+                       log_config: Optional[LogConfig]) -> None:
     setproctitle("parsl: monitoring zmq router")
     try:
         router = MonitoringRouter(address=address,
                                   port_range=port_range,
                                   run_dir=run_dir,
                                   logging_level=logging_level,
+                                  log_config=log_config,
                                   resource_msgs=resource_msgs,
                                   exit_event=exit_event)
     except Exception as e:
@@ -157,6 +167,7 @@ def start_zmq_receiver(*,
                        loopback_address: str,
                        port_range: Tuple[int, int],
                        logdir: str,
+                       log_config: Optional[LogConfig],
                        worker_debug: bool) -> ZMQRadioReceiver:
     comm_q = SpawnQueue(maxsize=10)
 
@@ -170,6 +181,7 @@ def start_zmq_receiver(*,
                                        "port_range": port_range,
                                        "run_dir": logdir,
                                        "logging_level": logging.DEBUG if worker_debug else logging.INFO,
+                                       "log_config": log_config,
                                        },
                                name="Monitoring-ZMQ-Router-Process",
                                daemon=True,

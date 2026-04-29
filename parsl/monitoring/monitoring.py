@@ -9,6 +9,7 @@ from typing import Any, Optional, Union
 
 import typeguard
 
+from parsl.logconfigs.base import LogConfig
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
     SpawnEvent,
@@ -114,7 +115,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> None:
+    def start(self, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike], log_config: Optional[LogConfig]) -> None:
 
         logger.debug("Starting MonitoringHub")
 
@@ -137,6 +138,7 @@ class MonitoringHub(RepresentationMixin):
                                              "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                              "db_url": self.logging_endpoint,
                                              "exit_event": self.dbm_exit_event,
+                                             "log_config": log_config,
                                              },
                                      name="Monitoring-DBM-Process",
                                      daemon=True,

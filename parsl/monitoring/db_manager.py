@@ -13,6 +13,7 @@ import typeguard
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.log_utils import set_file_logger
+from parsl.logconfigs.base import LogConfig
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
@@ -283,6 +284,7 @@ class DatabaseManager:
                  db_url: str = 'sqlite:///runinfo/monitoring.db',
                  run_dir: str = '.',
                  logging_level: int = logging.INFO,
+                 log_config: Optional[LogConfig] = None,
                  batching_interval: float = 1,
                  batching_threshold: float = 99999,
                  exit_event: mpe.Event
@@ -291,10 +293,14 @@ class DatabaseManager:
         self.workflow_end = False
         self.workflow_start_message: Optional[MonitoringMessage] = None
         self.run_dir = run_dir
-        os.makedirs(self.run_dir, exist_ok=True)
 
-        set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
-                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
+        if log_config:
+            log_config.initialize_logging(log_dir=self.run_dir, log_name="database_manager")
+        else:
+            os.makedirs(self.run_dir, exist_ok=True)
+
+            set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
+                            format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
 
         logger.info("Initializing Database Manager process")
 
@@ -686,11 +692,9 @@ def dbm_starter(resource_msgs: mpq.Queue,
                 db_url: str,
                 run_dir: str,
                 logging_level: int,
-                exit_event: mpe.Event) -> None:
+                exit_event: mpe.Event,
+                log_config: LogConfig) -> None:
     """Start the database manager process
-
-    The DFK should start this function. The args, kwargs match that of the monitoring config
-
     """
     setproctitle("parsl: monitoring database")
 
@@ -698,7 +702,8 @@ def dbm_starter(resource_msgs: mpq.Queue,
         dbm = DatabaseManager(db_url=db_url,
                               run_dir=run_dir,
                               logging_level=logging_level,
-                              exit_event=exit_event)
+                              exit_event=exit_event,
+                              log_config=log_config)
         logger.info("Starting dbm in dbm starter")
         dbm.start(resource_msgs)
     except KeyboardInterrupt:
