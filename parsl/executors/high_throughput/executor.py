@@ -474,6 +474,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                      loopback_address=self.loopback_address,
                                                      port_range=self.interchange_port_range,
                                                      logdir=self.logdir,
+                                                     log_config=self.log_config,
                                                      worker_debug=self.worker_debug,
                                                      )
             self.hub_zmq_port = self.zmq_monitoring.port
