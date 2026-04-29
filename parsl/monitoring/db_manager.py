@@ -306,6 +306,7 @@ class DatabaseManager:
         self.pending_node_queue: queue.Queue[MonitoringMessage] = queue.Queue()
         self.pending_block_queue: queue.Queue[MonitoringMessage] = queue.Queue()
         self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+        self.pending_worker_task_queue: queue.Queue[MonitoringMessage] = queue.Queue()
 
         self.external_exit_event = exit_event
 
@@ -337,15 +338,15 @@ class DatabaseManager:
         # Exactly one message per task/try can be deferred, which may not be
         # enough when a try happens several times (for example when an
         # executor performs its own Parsl-try unaware retries.
-
         inserted_tasks: Set[object] = set()
         inserted_tries: Set[object] = set()
-        deferred_resource_messages: dict[str, MonitoringMessage] = {}
+        deferred_worker_task_messages: dict[str, MonitoringMessage] = {}
 
         exception_happened = False
 
         while (not self._kill_event.is_set() or
                not self.pending_priority_queue.empty() or not self.pending_resource_queue.empty() or
+               not self.pending_worker_task_queue.empty() or
                not self.pending_node_queue.empty() or not self.pending_block_queue.empty() or
                not resource_queue.empty()):
 
@@ -363,14 +364,14 @@ class DatabaseManager:
                 # This is the list of resource messages which can be reprocessed as if they
                 # had just arrived because the corresponding first task message has been
                 # processed (corresponding by task id)
-                reprocessable_first_resource_messages = []
+                reprocessable_first_worker_task_messages = []
 
                 # end-of-task-run status messages - handled in similar way as
                 # for last resource messages to try to have symmetry... this
-                # needs a type annotation though reprocessable_first_resource_messages
+                # needs a type annotation though reprocessable_first_worker_task_messages
                 # doesn't... not sure why. Too lazy right now to figure out what,
                 # if any, more specific type than Any the messages have.
-                reprocessable_last_resource_messages: List[Any] = []
+                reprocessable_last_worker_task_messages: List[Any] = []
 
                 # Get a batch of priority messages
                 priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
@@ -412,9 +413,9 @@ class DatabaseManager:
                                 try_insert_messages.append(msg)
 
                                 # check if there is a deferred message for this task
-                                if task_try_id in deferred_resource_messages:
-                                    reprocessable_first_resource_messages.append(
-                                        deferred_resource_messages.pop(task_try_id))
+                                if task_try_id in deferred_worker_task_messages:
+                                    reprocessable_first_worker_task_messages.append(
+                                        deferred_worker_task_messages.pop(task_try_id))
                         else:
                             raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
 
@@ -487,21 +488,19 @@ class DatabaseManager:
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
 
                 """
-                Resource info messages
-
+                Worker task status messages
                 """
-                resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
+                worker_task_messages = self._get_messages_in_batch(self.pending_worker_task_queue)
 
-                if resource_messages:
+                if worker_task_messages:
                     logger.debug(
-                        "Got {} messages from resource queue, "
+                        "Got {} messages from worker task queue, "
                         "{} reprocessable as first messages, "
-                        "{} reprocessable as last messages".format(len(resource_messages),
-                                                                   len(reprocessable_first_resource_messages),
-                                                                   len(reprocessable_last_resource_messages)))
+                        "{} reprocessable as last messages".format(len(worker_task_messages),
+                                                                   len(reprocessable_first_worker_task_messages),
+                                                                   len(reprocessable_last_worker_task_messages)))
 
-                    insert_resource_messages = []
-                    for msg in resource_messages:
+                    for msg in worker_task_messages:
                         task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                         if msg['first_msg']:
                             # Update the running time to try table if first message
@@ -509,9 +508,9 @@ class DatabaseManager:
                             msg['task_try_time_running'] = msg['timestamp']
 
                             if task_try_id in inserted_tries:
-                                reprocessable_first_resource_messages.append(msg)
+                                reprocessable_first_worker_task_messages.append(msg)
                             else:
-                                if task_try_id in deferred_resource_messages:
+                                if task_try_id in deferred_worker_task_messages:
                                     # this might happen if a task/try is run multiple
                                     # times by an executor (for example, the work queue
                                     # executor can be configured to do this)
@@ -519,30 +518,44 @@ class DatabaseManager:
                                         "Task {} already has a deferred resource message. "
                                         "Discarding previous message.".format(msg['task_id'])
                                     )
-                                deferred_resource_messages[task_try_id] = msg
+                                deferred_worker_task_messages[task_try_id] = msg
                         elif msg['last_msg']:
                             # This assumes that the primary key has been added
                             # to the try table already, so doesn't use the same
                             # deferral logic as the first_msg case.
                             msg['task_status_name'] = States.running_ended.name
-                            reprocessable_last_resource_messages.append(msg)
+                            reprocessable_last_worker_task_messages.append(msg)
                         else:
-                            # Insert to resource table if not first/last (start/stop) message message
-                            insert_resource_messages.append(msg)
+                            raise RuntimeError("Bad worker task message that is neither first nor last")
 
-                    if insert_resource_messages:
-                        self._insert(table=RESOURCE, messages=insert_resource_messages)
-
-                if reprocessable_first_resource_messages:
-                    self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
+                if reprocessable_first_worker_task_messages:
+                    self._insert(table=STATUS, messages=reprocessable_first_worker_task_messages)
                     self._update(table=TRY,
                                  columns=['task_try_time_running',
                                           'run_id', 'task_id', 'try_id',
                                           'block_id', 'hostname'],
-                                 messages=reprocessable_first_resource_messages)
+                                 messages=reprocessable_first_worker_task_messages)
 
-                if reprocessable_last_resource_messages:
-                    self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
+                if reprocessable_last_worker_task_messages:
+                    self._insert(table=STATUS, messages=reprocessable_last_worker_task_messages)
+
+                """
+                Resource info messages
+
+                """
+                resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
+
+                if resource_messages:
+                    logger.debug("Got {} messages from resource queue".format(len(resource_messages)))
+
+                    insert_resource_messages = []
+                    for msg in resource_messages:
+                        task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
+                        insert_resource_messages.append(msg)
+
+                    if insert_resource_messages:
+                        self._insert(table=RESOURCE, messages=insert_resource_messages)
+
             except Exception:
                 logger.exception(
                     "Exception in db loop: this might have been a malformed message, "
@@ -579,6 +592,8 @@ class DatabaseManager:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             self.pending_resource_queue.put(x[1])
+        elif x[0] == MessageType.WORKER_TASK_INFO:
+            self.pending_worker_task_queue.put(x[1])
         elif x[0] == MessageType.NODE_INFO:
             logger.debug("Will put {} to pending node queue".format(x[1]))
             self.pending_node_queue.put(x[1])
