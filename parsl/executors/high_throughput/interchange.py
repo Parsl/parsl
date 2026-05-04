@@ -19,6 +19,7 @@ from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.log_utils import set_file_logger
+from parsl.logconfigs.base import LogConfig
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.base import MonitoringRadioSender
 from parsl.monitoring.radios.zmq import ZMQRadioSender
@@ -55,6 +56,7 @@ class Interchange:
                  cert_dir: Optional[str],
                  manager_selector: ManagerSelector,
                  run_id: str,
+                 log_config: Optional[LogConfig],
                  _check_python_mismatch: bool,
                  ) -> None:
         """
@@ -109,7 +111,13 @@ class Interchange:
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        set_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
+        if log_config:
+            log_config.initialize_logging(log_dir=self.logdir, log_name="interchange")
+            # discard the returned callback because the interchange doesn't usually do
+            # a normal shutdown
+        else:
+            set_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
+
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address

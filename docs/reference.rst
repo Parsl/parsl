@@ -187,6 +187,14 @@ Exceptions
     parsl.serialize.errors.DeserializationError
     parsl.serialize.errors.SerializationError
 
+Logging
+=======
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.logconfigs.base.LogConfig
 
 Monitoring
 ==========

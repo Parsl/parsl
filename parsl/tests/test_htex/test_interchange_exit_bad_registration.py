@@ -44,6 +44,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
                           "hub_address": None,
                           "hub_zmq_port": None,
                           "logdir": tmpd_cwd,
+                          "log_config": None,
                           "heartbeat_threshold": 120,
                           "poll_period": P_ms,
                           "logging_level": logging.DEBUG,

@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, Optional
 
 from typing_extensions import Literal, Self
 
+from parsl.logconfigs.base import LogConfig
 from parsl.monitoring.radios.base import MonitoringRadioReceiver, RadioConfig
 from parsl.monitoring.types import TaggedMonitoringMessage
 
@@ -72,6 +73,8 @@ class ParslExecutor(metaclass=ABCMeta):
 
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
+
+        self.log_config: Optional[LogConfig] = None
 
     def __enter__(self) -> Self:
         return self
