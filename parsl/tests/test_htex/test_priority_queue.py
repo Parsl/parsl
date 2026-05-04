@@ -30,12 +30,12 @@ def test_priority_queue(try_assert):
         max_workers_per_node=1,
         manager_selector=RandomManagerSelector(),
         provider=provider,
+        strategy="htex_auto_scale",
         worker_debug=True,  # needed to instrospect interchange logs
     )
 
     config = Config(
         executors=[htex],
-        strategy="htex_auto_scale",
         usage_tracking=LEVEL_1,
     )
 

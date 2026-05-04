@@ -29,10 +29,10 @@ def fresh_config(run_dir, strategy, db_url):
                     max_blocks=0,
                     launcher=SimpleLauncher(),
                 ),
+                strategy=strategy,
+                strategy_period=0.1,
             )
         ],
-        strategy=strategy,
-        strategy_period=0.1,
         monitoring=MonitoringHub(
                         logging_endpoint=db_url
         )
