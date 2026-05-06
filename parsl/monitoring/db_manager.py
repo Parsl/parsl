@@ -544,16 +544,9 @@ class DatabaseManager:
 
                 """
                 resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
-
                 if resource_messages:
                     logger.debug("Got {} messages from resource queue".format(len(resource_messages)))
-
-                    insert_resource_messages = []
-                    for msg in resource_messages:
-                        task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
-                        insert_resource_messages.append(msg)
-
-                    self._insert(table=RESOURCE, messages=insert_resource_messages)
+                    self._insert(table=RESOURCE, messages=resource_messages)
 
             except Exception:
                 logger.exception(
