@@ -553,8 +553,7 @@ class DatabaseManager:
                         task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                         insert_resource_messages.append(msg)
 
-                    if insert_resource_messages:
-                        self._insert(table=RESOURCE, messages=insert_resource_messages)
+                    self._insert(table=RESOURCE, messages=insert_resource_messages)
 
             except Exception:
                 logger.exception(
