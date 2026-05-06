@@ -120,7 +120,7 @@ def send_first_last_message(try_id: int,
 
     radio = radio_config.create_sender()
 
-    msg = (MessageType.RESOURCE_INFO,
+    msg = (MessageType.WORKER_TASK_INFO,
            {'run_id': run_id,
             'try_id': try_id,
             'task_id': task_id,
@@ -186,8 +186,6 @@ def monitor(pid: int,
         d["try_id"] = try_id
         d['resource_monitoring_interval'] = sleep_dur
         d['hostname'] = platform.node()
-        d['first_msg'] = False
-        d['last_msg'] = False
         d['timestamp'] = datetime.datetime.now()
 
         logging.debug("getting children")
@@ -265,6 +263,13 @@ def monitor(pid: int,
 
     next_send = time.time()
     accumulate_dur = 5.0  # TODO: make configurable?
+
+    logging.debug("Sending first resource message")
+    try:
+        d = accumulate_and_prepare()
+        radio.send((MessageType.RESOURCE_INFO, d))
+    except Exception:
+        logging.exception("Exception getting the resource usage. Not sending first usage to Hub", exc_info=True)
 
     while not terminate_event.is_set() and pm.is_running():
         logging.debug("start of monitoring loop")

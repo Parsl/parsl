@@ -38,6 +38,7 @@ from parsl.executors.high_throughput.mpi_resource_management import (
 )
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.log_utils import set_file_logger
+from parsl.logconfigs.base import LogConfig
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
@@ -87,7 +88,8 @@ class Manager:
                  mpi_launcher: str = "mpiexec",
                  available_accelerators: Sequence[str],
                  cert_dir: Optional[str],
-                 drain_period: Optional[int]):
+                 drain_period: Optional[int],
+                 log_config: Optional[LogConfig]):
         """
         Parameters
         ----------
@@ -160,6 +162,8 @@ class Manager:
         logger.info("Manager initializing")
 
         self._start_time = time.time()
+
+        self.log_config = log_config
 
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
@@ -595,6 +599,7 @@ class Manager:
                 self.heartbeat_period,
                 os.getpid(),
                 args.logdir,
+                self.log_config,
                 args.debug,
                 self.mpi_launcher,
             ),
@@ -639,11 +644,17 @@ def worker(
     task_queue_timeout: int,
     manager_pid: int,
     logdir: str,
+    log_config: LogConfig,
     debug: bool,
     mpi_launcher: str,
 ):
-    set_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
-                    level=logging.DEBUG if debug else logging.INFO)
+
+    if log_config:
+        path = os.path.join(logdir, "block-{}".format(block_id), pool_id)
+        log_config.initialize_logging(log_dir=path, log_name=f"worker_{worker_id}")
+    else:
+        set_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
+                        level=logging.DEBUG if debug else logging.INFO)
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -848,6 +859,12 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Process worker pool log directory",
     )
     parser.add_argument(
+        "-L",
+        "--logconf",
+        default=None,
+        help="Path to pickled log configuration object, default=None",
+    )
+    parser.add_argument(
         "-u",
         "--uid",
         default=str(uuid.uuid4()).split('-')[-1],
@@ -938,17 +955,29 @@ if __name__ == "__main__":
     parser = get_arg_parser()
     args = parser.parse_args()
 
-    os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
+    if args.logconf is None or args.logconf == "None":
+        os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
-    set_file_logger(
-        f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
-        level=logging.DEBUG if args.debug is True else logging.INFO
-    )
+        set_file_logger(
+            f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
+            level=logging.DEBUG if args.debug is True else logging.INFO
+        )
+        logconf = None
+    else:
+        with open(args.logconf, "rb") as f:
+            # This deliberately does not make the path directory. Creating directories
+            # can be extremely expensive on shared filesystems, and avoiding this for
+            # logging is a specific use case for this log configurability.
+            path = os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid)
+            logconf = pickle.load(f)
+            logconf.initialize_logging(log_dir=path, log_name="manager")
+
     logger.info(
         f"\n  Python version: {sys.version}"
         f"\n  Debug logging: {args.debug}"
         f"\n  Certificates dir: {args.cert_dir}"
         f"\n  Log dir: {args.logdir}"
+        f"\n  Log config path: {args.logconf}"
         f"\n  Manager ID: {args.uid}"
         f"\n  Block ID: {args.block_id}"
         f"\n  cores_per_worker: {args.cores_per_worker}"
@@ -988,7 +1017,8 @@ if __name__ == "__main__":
                           enable_mpi_mode=args.enable_mpi_mode,
                           mpi_launcher=args.mpi_launcher,
                           available_accelerators=args.available_accelerators,
-                          cert_dir=None if args.cert_dir == "None" else args.cert_dir)
+                          cert_dir=None if args.cert_dir == "None" else args.cert_dir,
+                          log_config=logconf)
         manager.start()
 
     except Exception:

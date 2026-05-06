@@ -13,7 +13,8 @@ def test_send_recv_message(tmpd_cwd, try_assert):
                            loopback_address=loopback,
                            port_range=(49152, 65535),
                            logdir=str(tmpd_cwd),
-                           worker_debug=False)
+                           worker_debug=False,
+                           log_config=None)
 
     s = ZMQRadioSender(loopback, r.port)
 

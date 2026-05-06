@@ -102,6 +102,14 @@ This plugin interface might be used to interface other task-like or future-like
 objects to the Parsl dependency mechanism, by describing how they can be
 interpreted as a Future.
 
+Log configuration
+-----------------
+
+The `LogConfig` class provides a place for log configuration, which is planned
+to extend across the various Python processes involved in a workflow
+execution.  Right now, it is only used by the initialize_logging parameter of
+the `DataFlowKernel`.
+
 Removed interfaces
 ------------------
 

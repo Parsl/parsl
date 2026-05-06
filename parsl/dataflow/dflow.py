@@ -42,6 +42,9 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
+from parsl.logconfigs.base import LogConfig
+from parsl.logconfigs.file import FileLogging
+from parsl.logconfigs.remote import logging_wrapper
 from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
@@ -91,10 +94,22 @@ class DataFlowKernel:
         self.run_dir = make_rundir(config.run_dir)
 
         self._logging_unregister_callback: Optional[Callable[[], None]]
-        if config.initialize_logging:
-            self._logging_unregister_callback = parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
-        else:
+
+        self.log_config: Optional[LogConfig]
+
+        if config.initialize_logging is True:
+            # This legacy behaviour deliberately does not pass log configuration
+            # to other components, so that they can preserve their own legacy
+            # logging behaviour.
+            self.log_config = None
+            dfk_log_config = FileLogging(level=logging.DEBUG)
+            self._logging_unregister_callback = dfk_log_config.initialize_logging(log_dir=self.run_dir, log_name="parsl")
+        elif config.initialize_logging is False:
+            self.log_config = None
             self._logging_unregister_callback = None
+        else:
+            self.log_config = config.initialize_logging
+            self._logging_unregister_callback = self.log_config.initialize_logging(log_dir=self.run_dir, log_name="parsl")
 
         logger.info("Starting DataFlowKernel with config\n{}".format(config))
 
@@ -115,7 +130,7 @@ class DataFlowKernel:
         self.monitoring_radio = None
 
         if self.monitoring:
-            self.monitoring.start(self.run_dir, self.config.run_dir)
+            self.monitoring.start(self.run_dir, self.config.run_dir, self.log_config)
             self.monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring.resource_msgs)
 
         self.time_began = datetime.datetime.now()
@@ -692,6 +707,16 @@ class DataFlowKernel:
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 
+        if self.log_config:
+            (function, args, kwargs) = logging_wrapper(f=function,
+                                                       args=args,
+                                                       kwargs=kwargs,
+                                                       run_id=self.run_id,
+                                                       task_id=task_id,
+                                                       try_id=try_id,
+                                                       log_config=self.log_config,
+                                                       run_dir=self.run_dir)
+
         with self.submitter_lock:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
 
@@ -1066,6 +1091,7 @@ class DataFlowKernel:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
+            executor.log_config = self.log_config
             if self.monitoring and executor.remote_monitoring_radio is not None:
                 executor.monitoring_messages = self.monitoring.resource_msgs
                 logger.debug("Starting monitoring receiver for executor %s "
