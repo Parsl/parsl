@@ -557,8 +557,6 @@ class DatabaseManager:
                     insert_resource_messages = []
                     for msg in resource_messages:
                         task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
-                        assert 'first_msg' not in msg, f"TODO: to guide me removing: {msg}"
-                        assert 'last_msg' not in msg, f"TODO: to guide me removing: {msg}"
                         insert_resource_messages.append(msg)
 
                     if insert_resource_messages:
@@ -709,7 +707,7 @@ def dbm_starter(resource_msgs: mpq.Queue,
                 run_dir: str,
                 logging_level: int,
                 exit_event: mpe.Event,
-                log_config: LogConfig) -> None:
+                log_config: Optional[LogConfig]) -> None:
     """Start the database manager process
     """
     setproctitle("parsl: monitoring database")
