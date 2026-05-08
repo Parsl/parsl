@@ -30,11 +30,11 @@ def local_config():
                     min_blocks=_min_blocks,
                     launcher=SingleNodeLauncher(),
                 ),
+                max_idletime=0.5,
+                strategy='htex_auto_scale',
+                strategy_period=0.1
             )
         ],
-        max_idletime=0.5,
-        strategy='htex_auto_scale',
-        strategy_period=0.1
     )
 
 
@@ -111,7 +111,7 @@ def test_scale_out(tmpd_cwd, try_assert):
     # It does this by hooking the callback of the job status poller, and
     # waiting until it has run.
 
-    old_cb = dfk.job_status_poller.callback
+    old_cb = dfk.executors['htex_local'].job_status_poller.callback
 
     strategy_iterated = Event()
 
@@ -120,7 +120,7 @@ def test_scale_out(tmpd_cwd, try_assert):
         strategy_iterated.set()
         return r
 
-    dfk.job_status_poller.callback = hook_cb
+    dfk.executors['htex_local'].job_status_poller.callback = hook_cb
 
     # hack strategies to run more frequently. this allo
     # dfk.job_status_poller.

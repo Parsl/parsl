@@ -13,11 +13,6 @@ def local_config():
     # see the comments inside test_regression for reasoning about why each
     # of these parameters is set why it is.
     return Config(
-        max_idletime=1,
-
-        strategy='htex_auto_scale',
-        strategy_period=1,
-
         executors=[
             HighThroughputExecutor(
                 label="htex_local",
@@ -28,6 +23,9 @@ def local_config():
                     max_blocks=1,
                     launcher=WrappedLauncher(prepend="sleep inf ; "),
                 ),
+                max_idletime=1,
+                strategy='htex_auto_scale',
+                strategy_period=1,
             )
         ],
     )

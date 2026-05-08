@@ -18,7 +18,7 @@ def fresh_config():
                     max_blocks=1,
                     launcher=SimpleLauncher(),
                 ),
+                strategy='none',
             )
         ],
-        strategy='none',
     )

@@ -8,7 +8,17 @@ from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
 from functools import cached_property
 from itertools import compress
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
@@ -18,6 +28,10 @@ from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
+
+if TYPE_CHECKING:
+    from parsl.jobs.job_status_poller import JobStatusPoller
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +62,27 @@ class BlockProviderExecutor(ParslExecutor):
     themselves.
     """
 
-    def __init__(self, *,
-                 provider: Optional[ExecutionProvider],
-                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]]):
+    def __init__(
+        self,
+        *,
+        provider: Optional[ExecutionProvider],
+        block_error_handler: Union[
+            bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]
+        ],
+        strategy: str = "simple",
+        strategy_period: Union[float, int] = 5,
+        max_idletime: float = 120.0,
+    ):
         super().__init__()
         self._provider = provider
+
+        # Executor-scoped strategy configuration
+        self.strategy = strategy
+        self.strategy_period = strategy_period
+        self.max_idletime = max_idletime
+
+        self.job_status_poller: Optional["JobStatusPoller"] = None
+
         self.block_error_handler: Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]
         if isinstance(block_error_handler, bool):
             if block_error_handler:
@@ -97,6 +127,15 @@ class BlockProviderExecutor(ParslExecutor):
         super().start()
         if self.monitoring_messages:
             self.submit_monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring_messages)
+
+    def start_job_status_poller(self):
+        from parsl.jobs.job_status_poller import JobStatusPoller
+        self.job_status_poller = JobStatusPoller(
+            strategy=self.strategy,
+            strategy_period=self.strategy_period,
+            max_idletime=self.max_idletime,
+        )
+        self.job_status_poller.add_executors([self])
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
@@ -368,3 +407,12 @@ class BlockProviderExecutor(ParslExecutor):
                 self._simulated_status[block_id] = s
             self.send_monitoring_info(new_status)
         return block_ids
+
+    def shutdown(self):
+        # force scale in of all blocks on shutdown
+        self.max_idletime = 0.0
+        if self.job_status_poller is not None:
+            logger.info("Closing job status poller")
+            self.job_status_poller.close()
+            logger.info("Terminated job status poller")
+        return super().shutdown()

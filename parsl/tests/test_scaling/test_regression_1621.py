@@ -57,11 +57,11 @@ def test_one_block(tmpd_cwd):
                 cores_per_worker=1,
                 encrypted=True,
                 provider=oneshot_provider,
-                worker_logdir_root=str(tmpd_cwd)
+                worker_logdir_root=str(tmpd_cwd),
+                strategy='simple',
+                strategy_period=0.1
             )
         ],
-        strategy='simple',
-        strategy_period=0.1
     )
 
     with parsl.load(config):

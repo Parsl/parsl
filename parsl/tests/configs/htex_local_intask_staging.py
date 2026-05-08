@@ -13,6 +13,7 @@ config = Config(
             worker_debug=True,
             cores_per_worker=1,
             encrypted=True,
+            strategy='none',
             provider=LocalProvider(
                 init_blocks=1,
                 max_blocks=1,
@@ -21,5 +22,4 @@ config = Config(
             storage_access=[HTTPInTaskStaging(), FTPInTaskStaging(), NoOpFileStaging()]
         )
     ],
-    strategy='none',
 )

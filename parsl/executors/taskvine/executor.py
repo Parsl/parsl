@@ -73,6 +73,18 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             with respect to other executors.
             Default is "TaskVineExecutor".
 
+        strategy : str, optional
+            Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
+            or `None`.
+            If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
+            deprecated.
+
+        strategy_period : float or int, optional
+            How often the scaling strategy should be executed. Default is 5 seconds.
+
+        max_idletime : float, optional
+            The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
+
         worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']]
             Choose to use Parsl provider, TaskVine factory, or
             manual user-provided workers to scale workers.
@@ -103,6 +115,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     @typeguard.typechecked
     def __init__(self,
                  label: str = "TaskVineExecutor",
+                 strategy: str = "simple",
+                 strategy_period: Union[float, int] = 5,
+                 max_idletime: float = 120.0,
                  worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']] = 'factory',
                  function_exec_mode: Union[Literal['regular'], Literal['serverless']] = 'regular',
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
@@ -122,7 +137,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Initialize the parent class with the execution provider and block error handling enabled.
         # If provider is None, then no worker is launched via the provider method.
         BlockProviderExecutor.__init__(self, provider=provider,
-                                       block_error_handler=True)
+                                       block_error_handler=True,
+                                       strategy=strategy,
+                                       strategy_period=strategy_period,
+                                       max_idletime=max_idletime)
 
         # Raise an exception if there's a problem importing TaskVine
         try:
@@ -293,6 +311,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self.initialize_scaling()
 
         self._collector_thread.start()
+
+        self.start_job_status_poller()
 
         logger.debug("All components in TaskVineExecutor started")
 
@@ -590,6 +610,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the TaskVine system submission.
         """
+        super().shutdown()
         logger.debug("TaskVine shutdown started")
         self._should_stop.set()
 
@@ -609,8 +630,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._ready_task_queue.join_thread()
         self._finished_task_queue.close()
         self._finished_task_queue.join_thread()
-
-        super().shutdown()
 
         logger.debug("TaskVine shutdown completed")
 

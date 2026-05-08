@@ -31,9 +31,9 @@ def make_config():
                 heartbeat_period=2,
                 heartbeat_threshold=4,
                 encrypted=False,
+                strategy='none',
             )
         ],
-        strategy='none',
     )
 
 

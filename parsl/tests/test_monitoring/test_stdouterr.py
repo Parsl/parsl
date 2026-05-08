@@ -30,11 +30,11 @@ def fresh_config(run_dir):
                     init_blocks=1,
                     min_blocks=1,
                     max_blocks=1,
-                )
+                ),
+                strategy='simple',
+                strategy_period=0.1,
             )
         ],
-        strategy='simple',
-        strategy_period=0.1,
         monitoring=MonitoringHub(),
     )
 

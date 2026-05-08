@@ -70,8 +70,8 @@ def workqueue_config():
 def taskvine_config():
     from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
     c = Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
-                                           worker_launch_method='provider')],
-               strategy_period=0.5,
+                                           worker_launch_method='provider',
+                                           strategy_period=0.5)],
 
                monitoring=MonitoringHub(resource_monitoring_interval=1))
     return c

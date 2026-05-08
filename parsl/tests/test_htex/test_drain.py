@@ -32,10 +32,10 @@ def local_config():
                     max_blocks=0,
                     launcher=SimpleLauncher(),
                 ),
+                strategy='none',
+                strategy_period=0.1
             )
         ],
-        strategy='none',
-        strategy_period=0.1
     )
 
 
