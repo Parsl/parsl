@@ -1,5 +1,4 @@
 import logging
-import os
 import pathlib
 from typing import Callable
 
@@ -17,7 +16,7 @@ class FileLogging(LogConfig):
 
     def initialize_logging(self, *, log_dir: pathlib.Path, log_name: str) -> Callable[[], None]:
 
-        os.makedirs(log_dir, exist_ok=True)
+        log_dir.mkdir(exist_ok=True)
         filename = log_dir.joinpath(log_name + ".log")
 
         handler = logging.FileHandler(filename)
