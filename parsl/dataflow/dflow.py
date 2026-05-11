@@ -6,6 +6,7 @@ import datetime
 import inspect
 import logging
 import os
+import pathlib
 import random
 import sys
 import threading
@@ -102,13 +103,13 @@ class DataFlowKernel:
             # logging behaviour.
             self.log_config = None
             dfk_log_config = FileLogging(level=logging.DEBUG)
-            self._logging_unregister_callback = dfk_log_config.initialize_logging(log_dir=self.run_dir, log_name="parsl")
+            self._logging_unregister_callback = dfk_log_config.initialize_logging(log_dir=pathlib.Path(self.run_dir), log_name="parsl")
         elif config.initialize_logging is False:
             self.log_config = None
             self._logging_unregister_callback = None
         else:
             self.log_config = config.initialize_logging
-            self._logging_unregister_callback = self.log_config.initialize_logging(log_dir=self.run_dir, log_name="parsl")
+            self._logging_unregister_callback = self.log_config.initialize_logging(log_dir=pathlib.Path(self.run_dir), log_name="parsl")
 
         logger.info("Starting DataFlowKernel with config\n{}".format(config))
 

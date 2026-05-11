@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import pathlib
 from collections.abc import Callable
 
 
@@ -18,7 +19,7 @@ class LogConfig(abc.ABC):
     """
 
     @abc.abstractmethod
-    def initialize_logging(self, *, log_dir: str, log_name: str) -> Callable[[], None]:
+    def initialize_logging(self, *, log_dir: pathlib.Path, log_name: str) -> Callable[[], None]:
         """Initialize logging in current process.
 
         This should be implemented by users wanting to define their own log

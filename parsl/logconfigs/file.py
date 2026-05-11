@@ -1,5 +1,6 @@
 import logging
 import os
+import pathlib
 from typing import Callable
 
 from parsl.log_utils import DEFAULT_FORMAT
@@ -14,10 +15,10 @@ class FileLogging(LogConfig):
         self.format_string = DEFAULT_FORMAT
         self.level = level
 
-    def initialize_logging(self, *, log_dir: str, log_name: str) -> Callable[[], None]:
+    def initialize_logging(self, *, log_dir: pathlib.Path, log_name: str) -> Callable[[], None]:
 
         os.makedirs(log_dir, exist_ok=True)
-        filename = log_dir + "/" + log_name + ".log"
+        filename = log_dir.joinpath(log_name + ".log")
 
         handler = logging.FileHandler(filename)
         handler.setLevel(self.level)
