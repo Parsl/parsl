@@ -670,7 +670,7 @@ class DataFlowKernel:
         try:
             executor = self.executors[executor_label]
         except Exception:
-            logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
+            logger.exception("Task {} requested invalid executor {}".format(task_id, executor_label))
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
         try_id = task_record['fail_count']
