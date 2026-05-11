@@ -107,7 +107,7 @@ Log configuration
 
 The `LogConfig` class provides a place for log configuration, which is planned
 to extend across the various Python processes involved in a workflow
-execution.  Right now, it is only used by the initialize_logging parameter of
+execution.  Right now, it is only used by the ``initialize_logging`` parameter of
 the `DataFlowKernel`.
 
 Removed interfaces
