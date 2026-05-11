@@ -33,9 +33,9 @@ class LogConfig(abc.ABC):
         This should be implemented by users wanting to define their own log
         configuration policies.
 
-        This should be called by Parsl components which which to initialize
-        logging according to a user supplied policy, rather than a hard-coded
-        log policy.
+        This should be called by Parsl components to initialize logging
+        according to a user supplied policy, rather than a hard-coded log
+        policy.
 
         This should return a callback to uninitialize the logging initialized
         by this call.
