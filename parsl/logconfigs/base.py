@@ -9,7 +9,7 @@ class LogConfig(abc.ABC):
     """Implementations of this class can initialize Parsl logging.
 
     Parsl logging is built around Python's `logging` system, with
-    an Parsl-provided configuration system that allows multiple
+    a Parsl-provided configuration system that allows multiple
     configurations to be initialized and deinitialized within the
     same process.
 
