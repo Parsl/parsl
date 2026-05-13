@@ -43,7 +43,7 @@ class FileLogging(LogConfig):
             futures_logger.setLevel(min(futures_logger.level, self.level))
         futures_logger.addHandler(handler)
 
-        def unregister_callback():
+        def unregister_callback() -> None:
             logger.removeHandler(handler)
             futures_logger.removeHandler(handler)
 
