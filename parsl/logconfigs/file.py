@@ -11,7 +11,7 @@ class FileLogging(LogConfig):
 
     def __init__(self, *, format_string: str = DEFAULT_FORMAT, level: int = logging.DEBUG):
         super().__init__()
-        self.format_string = DEFAULT_FORMAT
+        self.format_string = format_string
         self.level = level
 
     def initialize_logging(self, *, log_dir: pathlib.Path, log_name: str) -> Callable[[], None]:
