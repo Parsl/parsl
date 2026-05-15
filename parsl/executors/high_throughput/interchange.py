@@ -405,9 +405,6 @@ class Interchange:
 
             python_mismatch: bool = ix_minor_py != mgr_minor_py
             parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
-            logger.warning(f"Yadu : {self._check_python_mismatch=}")
-            logger.warning(f"Yadu : {python_mismatch=} {ix_minor_py=} {mgr_minor_py=}")
-            logger.warning(f"Yadu : {parsl_mismatch=}  {ix_parsl_v=} {mgr_parsl_v=}")
             if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
                 kill_event.set()
                 vm_exc = VersionMismatch(

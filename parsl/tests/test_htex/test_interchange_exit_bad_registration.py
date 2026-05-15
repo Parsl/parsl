@@ -122,17 +122,17 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
 @pytest.mark.local
 @pytest.mark.parametrize(
     "worker_version_info", [
-    {"parsl_v": PARSL_VERSION,
-     "python_v": "0.0.0", # python_v mismatch
-     },
-    {"parsl_v": "0.0.0",  # parsl_v mismatch}
-     "python_v": "{}.{}.{}".format(sys.version_info.major,
-     sys.version_info.minor,
-     sys.version_info.micro)
-     },
-    {"parsl_v": "0.0.0",  # parsl_v mismatch and
-     "python_v": "0.0.0", # python_v mismatch
-     }]
+        {"parsl_v": PARSL_VERSION,
+         "python_v": "0.0.0",  # python_v mismatch
+         },
+        {"parsl_v": "0.0.0",  # parsl_v mismatch
+         "python_v": "{}.{}.{}".format(sys.version_info.major,
+                                       sys.version_info.minor,
+                                       sys.version_info.micro)
+         },
+        {"parsl_v": "0.0.0",  # parsl_v mismatch and
+         "python_v": "0.0.0",  # python_v mismatch
+         }]
 )
 def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_version_info):
     """Test that the interchange will ignore version checks
@@ -209,7 +209,6 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
            'total_memory': psutil.virtual_memory().total,
            }.update(worker_version_info)
 
-
     # connect to worker port and send this message.
 
     context = zmq.Context()
@@ -223,7 +222,6 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
     task_channel.connect(f"tcp://127.0.0.1:{worker_port}")
 
     task_channel.send(pickle.dumps(msg))
-
 
     # Run a command against the interchange to confirm that the interchange has
     # not failed, this call will hang if the interchange exits early
