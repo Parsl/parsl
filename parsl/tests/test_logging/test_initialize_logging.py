@@ -31,6 +31,19 @@ def test_parsl_log_FileLogging(tmpd_cwd):
 
 
 @pytest.mark.local
+def test_parsl_log_FileLogging_format(tmpd_cwd):
+    msg = "XXXYYY %(message)s"
+    with parsl.load(parsl.Config(run_dir=str(tmpd_cwd), initialize_logging=FileLogging(format_string=msg))):
+        logfile = pathlib.Path(parsl.dfk().run_dir) / "parsl.log"
+        assert logfile.exists(), \
+            "With FileLogging, parsl.log should exist in rundir after startup"
+    with open(logfile, "r") as f:
+        ls = f.readlines()
+        assert len(ls) >= 1, "logfile should contain lines"
+        assert ls[0].startswith("XXXYYY "), "logged lines should match format string"
+
+
+@pytest.mark.local
 def test_parsl_log_JSONLogging(tmpd_cwd):
     with parsl.load(parsl.Config(run_dir=str(tmpd_cwd), initialize_logging=JSONLogging())):
         logger = logging.getLogger(__name__)
