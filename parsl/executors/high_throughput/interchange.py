@@ -105,8 +105,9 @@ class Interchange:
 
         _check_python_mismatch : bool
             If True, the interchange and worker managers must run the same version of
-            Python. Running different versions can cause inter-process communication
-            errors, so proceed with caution.
+            Python and Parsl. Running different versions can cause inter-process
+            communication errors, so proceed with caution.
+            Default: True
         """
         self.cert_dir = cert_dir
         self.logdir = logdir
@@ -413,7 +414,7 @@ class Interchange:
 
             python_mismatch: bool = ix_minor_py != mgr_minor_py
             parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
-            if parsl_mismatch or (self._check_python_mismatch and python_mismatch):
+            if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
                 kill_event.set()
                 vm_exc = VersionMismatch(
                     f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",

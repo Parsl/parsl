@@ -111,9 +111,9 @@ class DataFlowKernel:
             self.log_config = config.initialize_logging
             self._logging_unregister_callback = self.log_config.initialize_logging(log_dir=pathlib.Path(self.run_dir), log_name="parsl")
 
-        logger.info("Starting DataFlowKernel with config\n{}".format(config))
+        logger.info("Starting DataFlowKernel with config\n%r", config)
 
-        logger.info("Parsl version: {}".format(get_version()))
+        logger.info("Parsl version: %s", get_version())
 
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_start_message()
@@ -143,13 +143,13 @@ class DataFlowKernel:
             self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
-                logger.debug("Considering candidate for workflow name: {}".format(frame.filename))
+                logger.debug("Considering candidate for workflow name: %s", frame.filename)
                 fname = os.path.basename(str(frame.filename))
                 parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
-                    logger.debug("Using {} as workflow name".format(fname))
+                    logger.debug("Using %s as workflow name", fname)
                     break
             else:
                 logger.debug("Could not choose a name automatically")
@@ -363,7 +363,7 @@ class DataFlowKernel:
                 task_record['fail_cost'] += 1
 
             if isinstance(e, DependencyError):
-                logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
+                logger.info("Task %s failed due to dependency failure so skipping retries", task_id)
                 self._complete_task_exception(task_record, States.dep_fail, e)
 
             elif task_record['fail_cost'] <= self._config.retries:
@@ -378,8 +378,7 @@ class DataFlowKernel:
                 self._update_task_state(task_record, States.pending)
 
             else:
-                logger.exception("Task {} failed after {} retry attempts".format(task_id,
-                                                                                 task_record['try_id']))
+                logger.exception("Task %s failed after %s retry attempts", task_id, task_record['try_id'])
                 self._complete_task_exception(task_record, States.failed, e)
 
         else:
@@ -480,7 +479,7 @@ class DataFlowKernel:
                 raise TypeError(f"Unknown joinable type {type(joinable)}")
 
             if exceptions_tids:
-                logger.debug("Task {} failed due to failure of an inner join future".format(outer_task_id))
+                logger.debug("Task %s failed due to failure of an inner join future", outer_task_id)
                 e = JoinError(exceptions_tids, outer_task_id)
                 # We keep the history separately, since the future itself could be
                 # tossed.
@@ -636,8 +635,7 @@ class DataFlowKernel:
                     exec_fu = Future()
                     exec_fu.set_exception(e)
             else:
-                logger.info(
-                    "Task {} failed due to dependency failure".format(task_id))
+                logger.info("Task %s failed due to dependency failure", task_id)
 
                 exec_fu = Future()
                 exec_fu.set_exception(DependencyError(exceptions_tids,
@@ -675,7 +673,7 @@ class DataFlowKernel:
 
         memo_fu = self.memoizer.check_memo(task_record)
         if memo_fu:
-            logger.info("Reusing cached result for task {}".format(task_id))
+            logger.info("Reusing cached result for task %s", task_id)
             task_record['from_memo'] = True
             assert isinstance(memo_fu, Future)
             return memo_fu
@@ -685,7 +683,7 @@ class DataFlowKernel:
         try:
             executor = self.executors[executor_label]
         except Exception:
-            logger.exception("Task {} requested invalid executor {}".format(task_id, executor_label))
+            logger.exception("Task %s requested invalid executor %s", task_id, executor_label)
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
         try_id = task_record['fail_count']
@@ -782,13 +780,13 @@ class DataFlowKernel:
                 # while the DataFuture-contained original will not be modified by any staging.
                 f_copy = file.cleancopy()
 
-                logger.debug("Submitting stage out for output file {}".format(repr(file)))
+                logger.debug("Submitting stage out for output file %r", file)
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
-                    logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
+                    logger.debug("Adding a dependency on stageout future for %r", file)
                     df = DataFuture(stageout_fut, file, tid=app_fut.tid)
                 else:
-                    logger.debug("No stageout dependency for {}".format(repr(file)))
+                    logger.debug("No stageout dependency for %r", file)
                     df = DataFuture(app_fut, file, tid=app_fut.tid)
 
                 # this is a hook for post-task stageout
@@ -797,7 +795,7 @@ class DataFlowKernel:
                 rewritable_func = self.data_manager.replace_task_stage_out(f_copy, rewritable_func, executor)
                 return rewritable_func, f_copy, df
             else:
-                logger.debug("Not performing output staging for: {}".format(repr(file)))
+                logger.debug("Not performing output staging for: %r", file)
                 return rewritable_func, file, DataFuture(app_fut, file, tid=app_fut.tid)
 
         for idx, file in enumerate(outputs):
@@ -952,7 +950,7 @@ class DataFlowKernel:
         else:
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
-        logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
+        logger.debug("Task %s will be sent to executor %s", task_id, executor)
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
@@ -1025,9 +1023,7 @@ class DataFlowKernel:
         else:
             waiting_message = "not waiting on any dependency"
 
-        logger.info("Task {} submitted for App {}, {}".format(task_id,
-                                                              task_record['func_name'],
-                                                              waiting_message))
+        logger.info("Task %s submitted for App %s, %s", task_id, task_record['func_name'], waiting_message)
 
         logger.debug("Task %s has AppFuture: %r", task_id, task_record['app_fu'])
         self._update_task_state(task_record, States.pending)
@@ -1055,7 +1051,7 @@ class DataFlowKernel:
             try:
                 d.add_done_callback(callback_adapter)
             except Exception as e:
-                logger.error("add_done_callback got an exception {} which will be ignored".format(e))
+                logger.error("add_done_callback got an exception %s which will be ignored", e)
 
         self.launch_if_ready(task_record)
 
@@ -1073,7 +1069,7 @@ class DataFlowKernel:
 
         with self.task_state_counts_lock:
             for state in States:
-                logger.info("Tasks in state {}: {}".format(str(state), self.task_state_counts[state]))
+                logger.info("Tasks in state %s: %s", state, self.task_state_counts[state])
 
         logger.info("End of summary")
 
