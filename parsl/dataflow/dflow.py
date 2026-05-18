@@ -130,7 +130,7 @@ class DataFlowKernel:
         self.monitoring_radio = None
 
         if self.monitoring:
-            self.monitoring.start(self.run_dir, self.config.run_dir)
+            self.monitoring.start(self.run_dir, self.config.run_dir, self.log_config)
             self.monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring.resource_msgs)
 
         self.time_began = datetime.datetime.now()
