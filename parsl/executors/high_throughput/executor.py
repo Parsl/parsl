@@ -580,6 +580,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "cert_dir": self.cert_dir,
                               "manager_selector": self.manager_selector,
                               "run_id": self.run_id,
+                              "log_config": self.log_config,
                               "_check_python_mismatch": self._check_python_mismatch,
                               }
 
