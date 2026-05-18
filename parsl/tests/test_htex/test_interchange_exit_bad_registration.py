@@ -162,6 +162,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
                           "hub_address": None,
                           "hub_zmq_port": None,
                           "logdir": tmpd_cwd,
+                          "log_config": None,
                           "heartbeat_threshold": 120,
                           "poll_period": P_ms,
                           "logging_level": logging.DEBUG,
