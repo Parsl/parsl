@@ -34,7 +34,6 @@ extras_require = {
     'kubernetes' : ['kubernetes'],
     'docs' : [
         'ipython<=8.6.0',
-        'nbsphinx',
         'sphinx>=7.4,<8',
         'sphinx_rtd_theme'
     ],
