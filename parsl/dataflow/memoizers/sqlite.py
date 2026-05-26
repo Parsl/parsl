@@ -27,6 +27,8 @@ class SQLiteMemoizer(Memoizer):
     def __init__(self, *, checkpoint_dir: str | None = None):
         self.checkpoint_dir = checkpoint_dir
         self._db_lock = threading.Lock()
+        self._connection: Optional[sqlite3.Connection] = None
+        self._cursor: Optional[sqlite3.Cursor] = None
 
     def start(self, *, run_dir: str, config_run_dir: str) -> None:
         self.run_dir = run_dir
@@ -45,10 +47,12 @@ class SQLiteMemoizer(Memoizer):
             self._cursor.execute("CREATE TABLE IF NOT EXISTS checkpoints(key PRIMARY KEY, result)")
 
     def close(self) -> None:
+        assert self._connection is not None, "calling protocol error: memoizer must have been started"
         logger.debug("Closing sqlite3 connection")
         self._connection.close()
 
     def check_memo(self, task: TaskRecord) -> Optional[Future]:
+        assert self._cursor is not None, "calling protocol error: memoizer must have been started"
         task_id = task['id']
 
         if not task['memoize']:
@@ -80,6 +84,7 @@ class SQLiteMemoizer(Memoizer):
             return memo_fu
 
     def update_memo_result(self, task: TaskRecord, result: Any) -> None:
+        assert self._cursor is not None, "calling protocol error: memozier must have been started"
 
         if not task['memoize'] or 'hashsum' not in task:
             logger.debug("preconditions for memo not satisfied")
