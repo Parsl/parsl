@@ -39,7 +39,8 @@ class SQLiteMemoizer(Memoizer):
         self.db_path = Path(dir) / "checkpoint.sqlite3"
         logger.info("Starting with db_path %r", self.db_path)
 
-        assert sqlite3.threadsafety == 3, "sqlite3 was not built with the right thread safety level"
+        assert sqlite3.threadsafety == 3, \
+            f"sqlite3 was not built with the right thread safety level: required level 3, this environment is level {sqlite3.threadsafety}"
         self._connection = sqlite3.connect(self.db_path, check_same_thread=False)
 
         # >= python 3.12, can use autocommit=True in this self._connection call, as recommended in
