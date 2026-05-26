@@ -3,8 +3,7 @@ from setuptools import find_packages, setup
 with open('parsl/version.py') as f:
     exec(f.read())
 
-with open('requirements.txt') as f:
-    install_requires = f.readlines()
+install_requires = []
 
 extras_require = {
     'monitoring' : [
