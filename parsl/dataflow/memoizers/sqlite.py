@@ -44,7 +44,7 @@ class SQLiteMemoizer(Memoizer):
         with self._db_lock:
             self._cursor.execute("CREATE TABLE IF NOT EXISTS checkpoints(key PRIMARY KEY, result)")
 
-    def close(self):
+    def close(self) -> None:
         logger.debug("Closing sqlite3 connection")
         self._connection.close()
 
