@@ -6,6 +6,7 @@ import threading
 import time
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
+from functools import cached_property
 from itertools import compress
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -46,6 +47,7 @@ class BlockProviderExecutor(ParslExecutor):
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
     """
+
     def __init__(self, *,
                  provider: Optional[ExecutionProvider],
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]]):
@@ -85,6 +87,11 @@ class BlockProviderExecutor(ParslExecutor):
         self._status = {}  # type: Dict[str, JobStatus]
 
         self.submit_monitoring_radio: Optional[MultiprocessingQueueRadioSender] = None
+
+    @cached_property
+    def _scale_prefix(self) -> str:
+        """Prefix used for logging messages about scaling"""
+        return f'[Scaling executor {self.label}]'
 
     def start(self):
         super().start()
@@ -197,10 +204,10 @@ class BlockProviderExecutor(ParslExecutor):
             raise ScalingFailed(self, "No execution provider available")
         block_ids = []
         monitoring_status_changes = {}
-        logger.info(f"Scaling out by {n} blocks")
+        logger.info("%s Scaling out by %d blocks", self._scale_prefix, n)
         for _ in range(n):
             block_id = str(self._block_id_counter.get_id())
-            logger.info(f"Allocated block ID {block_id}")
+            logger.info("%s Allocated block ID %s", self._scale_prefix, block_id)
             try:
                 job_id = self._launch_block(block_id)
 
@@ -243,25 +250,24 @@ class BlockProviderExecutor(ParslExecutor):
 
         # Cancel the blocks provisioned
         if self.provider:
-            logger.info(f"Scaling in jobs: {job_ids_to_kill}")
+            logger.info("%s Scaling in jobs: %s", self._scale_prefix, str(job_ids_to_kill))
             r = self.provider.cancel(job_ids_to_kill)
             job_ids = self._filter_scale_in_ids(job_ids_to_kill, r)
             block_ids_killed = [self.job_ids_to_block[job_id] for job_id in job_ids]
             return block_ids_killed
         else:
-            logger.error("No execution provider available to scale in")
+            logger.error("%s No execution provider available to scale in", self._scale_prefix)
             return []
 
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
         job_name = f"parsl.{self.label}.block-{block_id}"
-        logger.debug("Submitting to provider with job_name %s", job_name)
+        logger.debug("%s Submitting to provider with job_name %s", self._scale_prefix, job_name)
         job_id = self.provider.submit(launch_cmd, 1, job_name)
         if job_id:
-            logger.debug(f"Launched block {block_id} on executor {self.label} with job ID {job_id}")
+            logger.debug("%s Launched block %s with job ID %s", self._scale_prefix, block_id, str(job_id))
         else:
-            raise ScalingFailed(self,
-                                "Attempt to provision nodes did not return a job ID")
+            raise ScalingFailed(self, "Attempt to provision nodes did not return a job ID")
         return job_id
 
     @abstractmethod
@@ -313,7 +319,7 @@ class BlockProviderExecutor(ParslExecutor):
             delta_status = {}
             for block_id in self._status:
                 if block_id not in previous_status \
-                   or previous_status[block_id].state != self._status[block_id].state:
+                        or previous_status[block_id].state != self._status[block_id].state:
                     delta_status[block_id] = self._status[block_id]
 
             if delta_status:

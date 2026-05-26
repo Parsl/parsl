@@ -289,9 +289,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.loopback_address = loopback_address
 
         if self.address:
-            self.all_addresses = address
+            self.all_addresses = {self.address}
         else:
-            self.all_addresses = ','.join(get_all_addresses())
+            self.all_addresses = get_all_addresses()
 
         self.max_workers_per_node = max_workers_per_node or float("inf")
 
@@ -411,7 +411,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
                                        address_probe_timeout_string=address_probe_timeout_string,
-                                       addresses=self.all_addresses,
+                                       addresses=",".join(self.all_addresses),
                                        worker_port=self.worker_port,
                                        cores_per_worker=self.cores_per_worker,
                                        mem_per_worker=self.mem_per_worker,
@@ -580,6 +580,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "cert_dir": self.cert_dir,
                               "manager_selector": self.manager_selector,
                               "run_id": self.run_id,
+                              "log_config": self.log_config,
                               "_check_python_mismatch": self._check_python_mismatch,
                               }
 

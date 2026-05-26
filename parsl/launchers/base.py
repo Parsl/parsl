@@ -11,7 +11,7 @@ class Launcher(RepresentationMixin, metaclass=ABCMeta):
         self.debug = debug
 
     @abstractmethod
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, script_dir: str = "") -> str:
         """ Wraps the command with the Launcher calls.
         """
         pass
