@@ -2,6 +2,7 @@
 import datetime
 import logging
 import os
+import pathlib
 import pickle
 import platform
 import sys
@@ -19,6 +20,7 @@ from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.log_utils import set_file_logger
+from parsl.logconfigs.base import LogConfig
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.base import MonitoringRadioSender
 from parsl.monitoring.radios.zmq import ZMQRadioSender
@@ -55,6 +57,7 @@ class Interchange:
                  cert_dir: Optional[str],
                  manager_selector: ManagerSelector,
                  run_id: str,
+                 log_config: Optional[LogConfig],
                  _check_python_mismatch: bool,
                  ) -> None:
         """
@@ -102,14 +105,21 @@ class Interchange:
 
         _check_python_mismatch : bool
             If True, the interchange and worker managers must run the same version of
-            Python. Running different versions can cause inter-process communication
-            errors, so proceed with caution.
+            Python and Parsl. Running different versions can cause inter-process
+            communication errors, so proceed with caution.
+            Default: True
         """
         self.cert_dir = cert_dir
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        set_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
+        if log_config:
+            log_config.initialize_logging(log_dir=pathlib.Path(self.logdir), log_name="interchange")
+            # discard the returned callback because the interchange doesn't usually do
+            # a normal shutdown
+        else:
+            set_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
+
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -404,7 +414,7 @@ class Interchange:
 
             python_mismatch: bool = ix_minor_py != mgr_minor_py
             parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
-            if parsl_mismatch or (self._check_python_mismatch and python_mismatch):
+            if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
                 kill_event.set()
                 vm_exc = VersionMismatch(
                     f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",

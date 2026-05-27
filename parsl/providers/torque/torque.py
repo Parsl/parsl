@@ -14,12 +14,16 @@ logger = logging.getLogger(__name__)
 translate_table = {
     'B': JobState.RUNNING,  # This state is returned for running array jobs
     'R': JobState.RUNNING,
-    'C': JobState.COMPLETED,  # Completed after having run
+    'C': JobState.COMPLETED,  # Completed after having run (TORQUE)
     'E': JobState.COMPLETED,  # Exiting after having run
+    'F': JobState.COMPLETED,  # Finished (PBS Pro)
     'H': JobState.HELD,  # Held
     'Q': JobState.PENDING,  # Queued, and eligible to run
     'W': JobState.PENDING,  # Job is waiting for it's execution time (-a option) to be reached
-    'S': JobState.HELD  # Suspended
+    'S': JobState.HELD,  # Suspended
+    'T': JobState.PENDING,  # Transiting (PBS Pro)
+    'U': JobState.HELD,  # User-suspended (PBS Pro)
+    'X': JobState.COMPLETED,  # Subjob finished (PBS Pro)
 }
 
 
@@ -178,7 +182,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
                                                   tasks_per_node,
-                                                  self.nodes_per_block)
+                                                  self.nodes_per_block,
+                                                  self.script_dir)
 
         logger.debug("Writing submit script")
         self._write_submit_script(self.template_string, script_path, job_name, job_config)
