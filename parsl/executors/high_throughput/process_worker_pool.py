@@ -72,7 +72,7 @@ class Manager:
 
     """
     def __init__(self, *,
-                 addresses,
+                 addresses: str,
                  address_probe_timeout,
                  port,
                  cores_per_worker,
