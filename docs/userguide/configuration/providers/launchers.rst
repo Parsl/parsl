@@ -55,6 +55,7 @@ Common cases for configuring a launcher include:
 2. Launching Parsl inside of Shifter containers by prepending the command to start
    Parsl with the :class:`~parsl.launchers.WrappedLauncher`.
 
+.. _label-worker-init:
 
 Worker Initialization
 ---------------------
