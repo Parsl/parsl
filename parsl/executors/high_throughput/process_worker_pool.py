@@ -76,7 +76,7 @@ class Manager:
                  address_probe_timeout,
                  port,
                  cores_per_worker,
-                 mem_per_worker,
+                 mem_per_worker: Optional[float],
                  max_workers_per_node,
                  prefetch_capacity,
                  uid,
@@ -111,7 +111,7 @@ class Manager:
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0.
 
-        mem_per_worker : float
+        mem_per_worker : optional float
              GB of memory required per worker. If this option is specified, the node manager
              will check the available memory at startup and limit the number of workers such that
              the there's sufficient memory for each worker. If set to None, memory on node is not
@@ -883,8 +883,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-m",
         "--mem_per_worker",
-        default=0,
-        help="GB of memory assigned to each worker process. Default=0, no assignment",
+        help="GB of memory assigned to each worker process. 'None' means no assignment.",
     )
     parser.add_argument(
         "-P",
