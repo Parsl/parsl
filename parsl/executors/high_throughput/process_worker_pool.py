@@ -75,9 +75,9 @@ class Manager:
                  addresses: str,
                  address_probe_timeout,
                  port,
-                 cores_per_worker,
+                 cores_per_worker: float,
                  mem_per_worker: Optional[float],
-                 max_workers_per_node,
+                 max_workers_per_node: Optional[int],
                  prefetch_capacity,
                  uid,
                  block_id,
@@ -117,7 +117,7 @@ class Manager:
              the there's sufficient memory for each worker. If set to None, memory on node is not
              considered in the determination of workers to be launched on node by the manager.
 
-        max_workers_per_node : int | float
+        max_workers_per_node : optional int
              Caps the maximum number of workers that can be launched.
 
         prefetch_capacity : int
@@ -204,14 +204,20 @@ class Manager:
         self.max_workers_per_node = max_workers_per_node
         self.prefetch_capacity = prefetch_capacity
 
-        mem_slots = max_workers_per_node
+        # self.worker_count will initially based on core count, and then will
+        # optionally be reduced by the other worker count restricting actions.
+        # This has the effect of computing the minimum of whichever restrictions
+        # were supplied.
+
+        self.worker_count: int = math.floor(cores_on_node / cores_per_worker)
+
         # Avoid a divide by 0 error.
         if mem_per_worker and mem_per_worker > 0:
             mem_slots = math.floor(available_mem_on_node / mem_per_worker)
+            self.worker_count = min(self.worker_count, mem_slots)
 
-        self.worker_count: int = min(max_workers_per_node,
-                                     mem_slots,
-                                     math.floor(cores_on_node / cores_per_worker))
+        if max_workers_per_node:
+            self.worker_count = min(self.worker_count, max_workers_per_node)
 
         self._mp_manager = SpawnContext.Manager()  # Starts a server process
         self._tasks_in_progress = self._mp_manager.dict()
@@ -889,8 +895,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--max_workers_per_node",
-        default=float('inf'),
-        help="Caps the maximum workers that can be launched, default:infinity",
+        default=None,
+        help="Caps the maximum workers that can be launched, default: no cap",
     )
     parser.add_argument(
         "-p",
@@ -1001,7 +1007,7 @@ if __name__ == "__main__":
                           cores_per_worker=float(args.cores_per_worker),
                           mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
                           max_workers_per_node=(
-                              args.max_workers_per_node if args.max_workers_per_node == float('inf')
+                              None if args.max_workers_per_node is None
                               else int(args.max_workers_per_node)
                           ),
                           prefetch_capacity=int(args.prefetch_capacity),
