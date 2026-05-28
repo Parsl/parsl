@@ -169,11 +169,11 @@ class Manager:
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
 
-        addresses = {tcp_url(a, port) for a in addresses.split(',')}
+        address_set = {tcp_url(a, port) for a in addresses.split(',')}
         try:
             self._ix_url = probe_addresses(
                 self.zmq_context,
-                addresses,
+                address_set,
                 timeout_ms=1_000 * address_probe_timeout,
                 identity=uid.encode('utf-8'),
             )
