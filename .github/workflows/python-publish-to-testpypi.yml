@@ -32,6 +32,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-tags: true
+        fetch-depth: 0
 
     - name: Check if this commit is already released
       id: already_released

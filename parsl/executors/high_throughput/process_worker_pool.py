@@ -72,11 +72,11 @@ class Manager:
 
     """
     def __init__(self, *,
-                 addresses,
+                 addresses: str,
                  address_probe_timeout,
                  port,
                  cores_per_worker,
-                 mem_per_worker,
+                 mem_per_worker: Optional[float],
                  max_workers_per_node,
                  prefetch_capacity,
                  uid,
@@ -111,7 +111,7 @@ class Manager:
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0.
 
-        mem_per_worker : float
+        mem_per_worker : optional float
              GB of memory required per worker. If this option is specified, the node manager
              will check the available memory at startup and limit the number of workers such that
              the there's sufficient memory for each worker. If set to None, memory on node is not
@@ -169,11 +169,11 @@ class Manager:
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
 
-        addresses = {tcp_url(a, port) for a in addresses.split(',')}
+        address_set = {tcp_url(a, port) for a in addresses.split(',')}
         try:
             self._ix_url = probe_addresses(
                 self.zmq_context,
-                addresses,
+                address_set,
                 timeout_ms=1_000 * address_probe_timeout,
                 identity=uid.encode('utf-8'),
             )
@@ -232,8 +232,6 @@ class Manager:
                 self.pending_result_queue
             )
         self.ready_worker_count = SpawnContext.Value("i", 0)
-
-        self.tasks_per_round = 1
 
         self.heartbeat_period = heartbeat_period
         self.heartbeat_threshold = heartbeat_threshold
@@ -881,8 +879,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-m",
         "--mem_per_worker",
-        default=0,
-        help="GB of memory assigned to each worker process. Default=0, no assignment",
+        help="GB of memory assigned to each worker process. 'None' means no assignment.",
     )
     parser.add_argument(
         "-P",
