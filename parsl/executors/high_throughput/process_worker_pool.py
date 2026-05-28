@@ -235,8 +235,6 @@ class Manager:
 
         self.max_queue_size = self.prefetch_capacity + self.worker_count
 
-        self.tasks_per_round = 1
-
         self.heartbeat_period = heartbeat_period
         self.heartbeat_threshold = heartbeat_threshold
         self.poll_period = poll_period
