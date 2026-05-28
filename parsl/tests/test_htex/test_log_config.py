@@ -28,7 +28,7 @@ def test_log_fileconfig(tmpd_cwd):
     msg = f"{token} %(message)s"
     with parsl.load(parsl.Config(initialize_logging=FileLogging(format_string=msg),
                                  run_dir=str(tmpd_cwd),
-                                 executors=[HighThroughputExecutor(label="htex")])):
+                                 executors=[HighThroughputExecutor(label="htex", max_workers_per_node=1)])):
         # ensure that enough has started to run a task - so that includes everything
         # all the way to a worker, on the task execution path
         noop_app().result()
@@ -36,7 +36,8 @@ def test_log_fileconfig(tmpd_cwd):
         interchange_logfile = pathlib.Path(parsl.dfk().run_dir) / "htex" / "interchange.log"
 
         # assume in this configuration that there is only one subdirectory of block-0,
-        # and that it is the directory for a started worker pool.
+        # that it is the directory for a started worker pool, and that the worker that completed
+        # the above app invocation is worker 0 (the only worker).
         pool_dir = next((pathlib.Path(parsl.dfk().run_dir) / "htex" / "block-0").iterdir())
         manager_logfile = pool_dir / "manager.log"
         worker_logfile = pool_dir / "worker_0.log"
