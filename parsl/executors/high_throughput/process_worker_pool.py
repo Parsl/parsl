@@ -233,8 +233,6 @@ class Manager:
             )
         self.ready_worker_count = SpawnContext.Value("i", 0)
 
-        self.max_queue_size = self.prefetch_capacity + self.worker_count
-
         self.heartbeat_period = heartbeat_period
         self.heartbeat_threshold = heartbeat_threshold
         self.poll_period = poll_period
