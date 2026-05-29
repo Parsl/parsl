@@ -29,6 +29,7 @@ from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.execute_task import execute_task
 from parsl.executors.high_throughput.errors import WorkerLost
+from parsl.executors.high_throughput.max_workers import compute_max_workers
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
     compose_all,
@@ -75,9 +76,9 @@ class Manager:
                  addresses: str,
                  address_probe_timeout: int,
                  port: int,
-                 cores_per_worker,
+                 cores_per_worker: float,
                  mem_per_worker: Optional[float],
-                 max_workers_per_node,
+                 max_workers_per_node: Optional[int],
                  prefetch_capacity: int,
                  uid: str,
                  block_id: str,
@@ -117,7 +118,7 @@ class Manager:
              the there's sufficient memory for each worker. If set to None, memory on node is not
              considered in the determination of workers to be launched on node by the manager.
 
-        max_workers_per_node : int | float
+        max_workers_per_node : optional int
              Caps the maximum number of workers that can be launched.
 
         prefetch_capacity : int
@@ -201,17 +202,25 @@ class Manager:
         else:
             available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
 
+        # Define accelerator available, adjust worker count accordingly
+        self.available_accelerators = available_accelerators
+        self.accelerators_available = len(available_accelerators) > 0
+
         self.max_workers_per_node = max_workers_per_node
         self.prefetch_capacity = prefetch_capacity
 
-        mem_slots = max_workers_per_node
-        # Avoid a divide by 0 error.
-        if mem_per_worker and mem_per_worker > 0:
-            mem_slots = math.floor(available_mem_on_node / mem_per_worker)
+        worker_count = compute_max_workers(mem_per_node=available_mem_on_node,
+                                           mem_per_worker=mem_per_worker,
+                                           cores_per_node=cores_on_node,
+                                           cores_per_worker=cores_per_worker,
+                                           configured_max_workers_per_node=max_workers_per_node,
+                                           accelerators=available_accelerators)
 
-        self.worker_count: int = min(max_workers_per_node,
-                                     mem_slots,
-                                     math.floor(cores_on_node / cores_per_worker))
+        # this assert narrows the type of worker_count down to a non-optional int
+        assert worker_count is not None, "cores-based bound is always available, so worker count should always exist"
+        self.worker_count = worker_count
+
+        logger.info("Manager will spawn %s workers", self.worker_count)
 
         self._mp_manager = SpawnContext.Manager()  # Starts a server process
         self._tasks_in_progress = self._mp_manager.dict()
@@ -245,13 +254,6 @@ class Manager:
             self.drain_time = float('inf')
 
         self.cpu_affinity = cpu_affinity
-
-        # Define accelerator available, adjust worker count accordingly
-        self.available_accelerators = available_accelerators
-        self.accelerators_available = len(available_accelerators) > 0
-        if self.accelerators_available:
-            self.worker_count = min(len(self.available_accelerators), self.worker_count)
-        logger.info("Manager will spawn {} workers".format(self.worker_count))
 
     def create_reg_message(self) -> dict:
         """ Creates a registration message to identify the worker to the interchange
@@ -889,8 +891,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--max_workers_per_node",
-        default=float('inf'),
-        help="Caps the maximum workers that can be launched, default:infinity",
+        default=None,
+        help="Caps the maximum workers that can be launched, default: no cap",
     )
     parser.add_argument(
         "-p",
@@ -1001,7 +1003,7 @@ if __name__ == "__main__":
                           cores_per_worker=float(args.cores_per_worker),
                           mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
                           max_workers_per_node=(
-                              args.max_workers_per_node if args.max_workers_per_node == float('inf')
+                              None if args.max_workers_per_node is None
                               else int(args.max_workers_per_node)
                           ),
                           prefetch_capacity=int(args.prefetch_capacity),
