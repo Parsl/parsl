@@ -258,7 +258,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers_per_node: Optional[Union[int, float]] = None,
+                 max_workers_per_node: Optional[int] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
                  prefetch_capacity: int = 0,
