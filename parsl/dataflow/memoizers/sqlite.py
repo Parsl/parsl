@@ -43,11 +43,11 @@ class SQLiteMemoizer(Memoizer):
             f"sqlite3 was not built with the right thread safety level: required level 3, this environment is level {sqlite3.threadsafety}"
         self._connection = sqlite3.connect(self.db_path, check_same_thread=False)
 
-        # https://peps.python.org/pep-0249/ states that setting the autocommit attribute is
-        # deprecated, and >= Python 3.12, this should become the autocommit parameter to the above
-        # sqlite3.connect call.
-        assert hasattr(self._connection, "autocommit")
-        self._connection.autocommit = True
+        # >= python 3.12, can use autocommit=True in this self._connection call, as recommended in
+        # https://docs.python.org/3/library/sqlite3.html#sqlite3-transaction-control-autocommit
+        # but until then, use legacy transaction control via isolation level.
+        assert hasattr(self._connection, "isolation_level")
+        self._connection.isolation_level = None
 
         self._cursor = self._connection.cursor()
 
