@@ -23,6 +23,7 @@ def uuid_app():
 
 
 @pytest.mark.local
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="requires python3.11 or higher")
 def test_loading_checkpoint(tmpd_cwd):
     """Load memoization table from previous checkpoint
     """
@@ -42,6 +43,7 @@ def exception_app():
 
 
 @pytest.mark.local
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="requires python3.11 or higher")
 def test_no_exceptions(tmpd_cwd):
     with parsl_configured(tmpd_cwd, SQLiteMemoizer(checkpoint_dir=tmpd_cwd)):
         e = exception_app().exception()
