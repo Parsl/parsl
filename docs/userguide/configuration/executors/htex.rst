@@ -1,3 +1,5 @@
+.. _label-htex:
+
 The High-Throughput Executor
 ============================
 

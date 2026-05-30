@@ -19,7 +19,7 @@ from importlib.metadata import distributions
 from multiprocessing.context import SpawnProcess
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
-from typing import Callable, Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import psutil
 import zmq
@@ -72,25 +72,25 @@ class Manager:
 
     """
     def __init__(self, *,
-                 addresses,
-                 address_probe_timeout,
-                 port,
+                 addresses: str,
+                 address_probe_timeout: int,
+                 port: int,
                  cores_per_worker,
-                 mem_per_worker,
+                 mem_per_worker: Optional[float],
                  max_workers_per_node,
-                 prefetch_capacity,
-                 uid,
-                 block_id,
-                 heartbeat_threshold,
-                 heartbeat_period,
-                 poll_period,
-                 cpu_affinity,
+                 prefetch_capacity: int,
+                 uid: str,
+                 block_id: str,
+                 heartbeat_threshold: int,
+                 heartbeat_period: int,
+                 poll_period: int,
+                 cpu_affinity: str,
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
                  available_accelerators: Sequence[str],
                  cert_dir: Optional[str],
                  drain_period: Optional[int],
-                 log_config: Optional[LogConfig]):
+                 log_config: Optional[LogConfig]) -> None:
         """
         Parameters
         ----------
@@ -111,7 +111,7 @@ class Manager:
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0.
 
-        mem_per_worker : float
+        mem_per_worker : optional float
              GB of memory required per worker. If this option is specified, the node manager
              will check the available memory at startup and limit the number of workers such that
              the there's sufficient memory for each worker. If set to None, memory on node is not
@@ -169,11 +169,11 @@ class Manager:
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
 
-        addresses = {tcp_url(a, port) for a in addresses.split(',')}
+        address_set = {tcp_url(a, port) for a in addresses.split(',')}
         try:
             self._ix_url = probe_addresses(
                 self.zmq_context,
-                addresses,
+                address_set,
                 timeout_ms=1_000 * address_probe_timeout,
                 identity=uid.encode('utf-8'),
             )
@@ -232,10 +232,6 @@ class Manager:
                 self.pending_result_queue
             )
         self.ready_worker_count = SpawnContext.Value("i", 0)
-
-        self.max_queue_size = self.prefetch_capacity + self.worker_count
-
-        self.tasks_per_round = 1
 
         self.heartbeat_period = heartbeat_period
         self.heartbeat_threshold = heartbeat_threshold
@@ -301,7 +297,7 @@ class Manager:
         logger.debug("Sent drain")
 
     @wrap_with_logs
-    def interchange_communicator(self, pair_setup: threading.Event):
+    def interchange_communicator(self, pair_setup: threading.Event) -> None:
         """ Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
         """
@@ -380,7 +376,7 @@ class Manager:
                 self.drain_time = float('inf')
 
             poll_duration_s = max(0, next_interesting_event_time - time.time())
-            socks = dict(poller.poll(timeout=poll_duration_s * 1000))
+            socks = dict(poller.poll(timeout=math.floor(poll_duration_s * 1000)))
 
             if socks.get(ix_sock) == zmq.POLLIN:
                 pkl_msg = ix_sock.recv()
@@ -422,7 +418,7 @@ class Manager:
         logger.info("Exiting")
 
     @wrap_with_logs
-    def ferry_result(self, may_connect: threading.Event):
+    def ferry_result(self, may_connect: threading.Event) -> None:
         """ Listens on the pending_result_queue and ferries results to the interchange
          connected thread
         """
@@ -448,7 +444,7 @@ class Manager:
         notify_sock.close()
         logger.debug("Exiting")
 
-    def worker_watchdog(self, procs: dict[int, SpawnProcess]):
+    def worker_watchdog(self, procs: dict[int, SpawnProcess]) -> None:
         """Keeps workers alive."""
         logger.debug("Starting worker watchdog")
 
@@ -478,7 +474,7 @@ class Manager:
         logger.debug("Exiting")
 
     @wrap_with_logs
-    def handle_monitoring_messages(self):
+    def handle_monitoring_messages(self) -> None:
         """Transfer messages from the managed monitoring queue to the result queue.
 
         We separate the queues so that the result queue does not rely on a manager
@@ -504,7 +500,7 @@ class Manager:
 
         logger.debug("Exiting")
 
-    def start(self):
+    def start(self) -> None:
         """ Start the worker processes.
         """
         procs: dict[int, SpawnProcess] = {}
@@ -616,7 +612,7 @@ def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: Dict, node_i
         os.environ[key] = prefix_table[key]
 
 
-def _init_mpi_env(mpi_launcher: str, resource_spec: Dict):
+def _init_mpi_env(mpi_launcher: str, resource_spec: Dict) -> None:
     for varname in resource_spec:
         envname = "PARSL_" + str(varname).upper()
         os.environ[envname] = str(resource_spec[varname])
@@ -648,7 +644,7 @@ def worker(
     log_config: LogConfig,
     debug: bool,
     mpi_launcher: str,
-):
+) -> None:
 
     if log_config:
         path = pathlib.Path(logdir) / f"block-{block_id}" / pool_id
@@ -753,7 +749,7 @@ def worker(
 
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
-    def manager_is_alive():
+    def manager_is_alive() -> bool:
         try:
             # This does not kill the process, but instead raises
             # an exception if the process doesn't exist
@@ -830,7 +826,7 @@ def worker(
 
 def get_arg_parser() -> argparse.ArgumentParser:
 
-    def strategyorlist(s: str):
+    def strategyorlist(s: str) -> Union[str, list]:
         s = s.lower()
         allowed_strategies = ("none", "block", "alternating", "block-reverse")
         if s in allowed_strategies:
@@ -883,8 +879,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-m",
         "--mem_per_worker",
-        default=0,
-        help="GB of memory assigned to each worker process. Default=0, no assignment",
+        help="GB of memory assigned to each worker process. 'None' means no assignment.",
     )
     parser.add_argument(
         "-P",
