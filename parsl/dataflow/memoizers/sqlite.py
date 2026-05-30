@@ -39,16 +39,8 @@ class SQLiteMemoizer(Memoizer):
         self.db_path = Path(dir) / "checkpoint.sqlite3"
         logger.info("Starting with db_path %r", self.db_path)
 
-        assert sqlite3.threadsafety == 3, \
-            f"sqlite3 was not built with the right thread safety level: required level 3, this environment is level {sqlite3.threadsafety}"
-        self._connection = sqlite3.connect(self.db_path, check_same_thread=False)
-
-        # https://peps.python.org/pep-0249/ states that setting the autocommit attribute is
-        # deprecated, and >= Python 3.12, this should become the autocommit parameter to the above
-        # sqlite3.connect call.
-        assert hasattr(self._connection, "autocommit")
-        self._connection.autocommit = True
-
+        assert sqlite3.threadsafety == 3, "sqlite3 was not built with the right thread safety level"
+        self._connection = sqlite3.connect(self.db_path, check_same_thread=False, autocommit=True)
         self._cursor = self._connection.cursor()
 
         with self._db_lock:
