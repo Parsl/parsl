@@ -545,11 +545,15 @@ class DataFlowKernel:
         """
 
         with self.task_state_counts_lock:
+            extra = {"parsl.dfk": self.run_id,
+                     "parsl.task": task_record['id'],
+                     "parsl.task_state": new_state.name
+                     }
             if 'status' in task_record:
                 self.task_state_counts[task_record['status']] -= 1
-                logger.info(f"Task {task_record['id']} changing state from {task_record['status'].name} to {new_state.name}")
+                logger.info(f"Task {task_record['id']} changing state from {task_record['status'].name} to {new_state.name}", extra=extra)
             else:
-                logger.info(f"Task {task_record['id']} initializing state to {new_state.name}")
+                logger.info(f"Task {task_record['id']} initializing state to {new_state.name}", extra=extra)
 
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
