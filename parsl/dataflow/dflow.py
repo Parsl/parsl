@@ -43,7 +43,7 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
-from parsl.logconfigs.base import LogConfig
+from parsl.logconfigs.base import LogConfig, oneshot_initialize_logging
 from parsl.logconfigs.file import FileLogging
 from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
@@ -109,7 +109,9 @@ class DataFlowKernel:
             self._logging_unregister_callback = None
         else:
             self.log_config = config.initialize_logging
-            self._logging_unregister_callback = self.log_config.initialize_logging(log_dir=pathlib.Path(self.run_dir), log_name="parsl")
+            self._logging_unregister_callback = oneshot_initialize_logging(log_config=self.log_config,
+                                                                           log_dir=pathlib.Path(self.run_dir),
+                                                                           log_name="parsl")
 
         logger.info("Starting DataFlowKernel with config\n%r", config)
 
