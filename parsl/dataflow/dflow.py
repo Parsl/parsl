@@ -133,8 +133,7 @@ class DataFlowKernel:
             self.monitoring.start(self.run_dir, self.config.run_dir, self.log_config)
             self.monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring.resource_msgs)
 
-        self.time_began = datetime.datetime.now()
-        self.time_completed: Optional[datetime.datetime] = None
+        time_began = datetime.datetime.now()
 
         logger.info("Run id is: " + self.run_id)
 
@@ -155,7 +154,7 @@ class DataFlowKernel:
                 logger.debug("Could not choose a name automatically")
                 self.workflow_name = "unnamed"
 
-        self.workflow_version = str(self.time_began.replace(microsecond=0))
+        self.workflow_version = str(time_began.replace(microsecond=0))
         if self.monitoring is not None and self.monitoring.workflow_version is not None:
             self.workflow_version = self.monitoring.workflow_version
 
@@ -164,8 +163,7 @@ class DataFlowKernel:
                                                     sys.version_info.minor,
                                                     sys.version_info.micro),
                 'parsl_version': get_version(),
-                "time_began": self.time_began,
-                'time_completed': None,
+                "time_began": time_began,
                 'run_id': self.run_id,
                 'workflow_name': self.workflow_name,
                 'workflow_version': self.workflow_version,
@@ -1160,15 +1158,14 @@ class DataFlowKernel:
             logger.info(f"Shut down executor {executor.label}")
 
         logger.info("Terminated executors")
-        self.time_completed = datetime.datetime.now()
+        time_completed = datetime.datetime.now()
 
         if self.monitoring_radio:
             logger.info("Sending final monitoring message")
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        {'tasks_failed_count': self.task_state_counts[States.failed],
                                         'tasks_completed_count': self.task_state_counts[States.exec_done],
-                                        "time_began": self.time_began,
-                                        'time_completed': self.time_completed,
+                                        'time_completed': time_completed,
                                         'run_id': self.run_id, 'rundir': self.run_dir}))
 
         if self.monitoring:
