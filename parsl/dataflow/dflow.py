@@ -1073,6 +1073,10 @@ class DataFlowKernel:
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
+            logger.info("Adding executor %s of type %s.%s", executor.label, type(executor).__module__, type(executor).__name__,
+                        extra={"parsl.executor.label": executor.label,
+                               "parsl.executor.type": type(executor).__module__ + "." + type(executor).__name__
+                               })
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.log_config = self.log_config
