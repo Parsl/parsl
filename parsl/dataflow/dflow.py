@@ -1036,7 +1036,8 @@ class DataFlowKernel:
         else:
             waiting_message = "not waiting on any dependency"
 
-        logger.info("Task %s submitted for App %s, %s", task_id, task_record['func_name'], waiting_message)
+        logger.info("Task %s submitted for App %s, %s", task_id, task_record['func_name'], waiting_message,
+                    extra={"parsl.task": task_id, "parsl.app_name": task_record['func_name']})
 
         logger.debug("Task %s has AppFuture: %r", task_id, task_record['app_fu'])
         self._update_task_state(task_record, States.pending)
