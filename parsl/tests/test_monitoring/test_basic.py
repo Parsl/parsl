@@ -88,7 +88,7 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
     db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
 
     config = fresh_config()
-    config.run_dir = tmpd_cwd
+    config.run_dir = str(tmpd_cwd)
     config.monitoring.logging_endpoint = db_url
 
     with parsl.load(config):
@@ -117,6 +117,10 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
                                          "AND task_try_time_running is NULL"))
         (c, ) = result.first()
         assert c == 0
+
+        result = connection.execute(text("SELECT COUNT(*) FROM workflow WHERE time_began IS NOT NULL AND time_completed IS NOT NULL"))
+        (c, ) = result.first()
+        assert c == 1, "start/end times should be populated"
 
         if isinstance(config.executors[0], HighThroughputExecutor):
             # The node table is specific to the HighThroughputExecutor

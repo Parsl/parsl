@@ -206,7 +206,7 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
             raise RuntimeError("Config module does not define config or fresh_config")
 
         if parsl_conf.run_dir == "runinfo":  # the default
-            parsl_conf.run_dir = tmpd_cwd_session / parsl_conf.run_dir
+            parsl_conf.run_dir = str(tmpd_cwd_session / parsl_conf.run_dir)
         dfk = parsl.load(parsl_conf)
 
         for ex in dfk.executors.values():
@@ -249,7 +249,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
             assert isinstance(c, parsl.Config)
 
             if c.run_dir == "runinfo":  # the default
-                c.run_dir = tmpd_cwd_session / c.run_dir
+                c.run_dir = str(tmpd_cwd_session / c.run_dir)
 
             dfk = parsl.load(c)
 

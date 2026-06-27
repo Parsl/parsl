@@ -182,7 +182,8 @@ class PBSProProvider(TorqueProvider):
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
                                                   tasks_per_node,
-                                                  self.nodes_per_block)
+                                                  self.nodes_per_block,
+                                                  self.script_dir)
 
         logger.debug("Writing submit script")
         self._write_submit_script(self.template_string, script_path, job_name, job_config)

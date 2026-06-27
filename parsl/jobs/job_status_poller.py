@@ -11,23 +11,18 @@ logger = logging.getLogger(__name__)
 class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
                  strategy_period: Union[float, int]) -> None:
-        self._executors = []  # type: List[BlockProviderExecutor]
+        self._executors: List[BlockProviderExecutor] = []
         self._strategy = Strategy(strategy=strategy,
                                   max_idletime=max_idletime)
         super().__init__(self.poll, interval=strategy_period, name="JobStatusPoller")
 
     def poll(self) -> None:
-        self._update_state()
-        self._run_error_handlers(self._executors)
+        for executor in self._executors:
+            # Update status
+            executor.poll_facade()
+            executor.handle_errors(executor.status_facade)
+
         self._strategy.strategize(self._executors)
-
-    def _run_error_handlers(self, executors: List[BlockProviderExecutor]) -> None:
-        for e in executors:
-            e.handle_errors(e.status_facade)
-
-    def _update_state(self) -> None:
-        for item in self._executors:
-            item.poll_facade()
 
     def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:

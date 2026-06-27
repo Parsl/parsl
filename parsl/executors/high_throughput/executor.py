@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 import pickle
 import subprocess
 import threading
@@ -51,6 +52,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--port={worker_port} "
                       "--cert_dir {cert_dir} "
                       "--logdir={logdir} "
+                      "--logconf={logconf} "
                       "--block_id={{block_id}} "
                       "--hb_period={heartbeat_period} "
                       "{address_probe_timeout_string} "
@@ -79,7 +81,7 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
     launch_cmd : str
         Command line string to launch the process_worker_pool from the provider. The command line string
         will be formatted with appropriate values for the following values (debug, task_url, result_url,
-        cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For example:
+        cores_per_worker, nodes_per_block, heartbeat_period, heartbeat_threshold, logdir). For example:
         launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
 
     interchange_launch_cmd : Sequence[str]
@@ -151,7 +153,7 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         In case of a remote file system, specify the path to where logs will be kept.
 
     encrypted : bool
-        Flag to enable/disable encryption (CurveZMQ). Default is False.
+        Flag to enable/disable encryption (CurveZMQ). Default is True.
 
     manager_selector: ManagerSelector
         Determines what strategy the interchange uses to select managers during task distribution.
@@ -256,7 +258,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers_per_node: Optional[Union[int, float]] = None,
+                 max_workers_per_node: Optional[int] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
                  prefetch_capacity: int = 0,
@@ -268,7 +270,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False,
+                 encrypted: bool = True,
                  remote_monitoring_radio: Optional[RadioConfig] = None):
 
         logger.debug("Initializing HighThroughputExecutor")
@@ -289,9 +291,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.loopback_address = loopback_address
 
         if self.address:
-            self.all_addresses = address
+            self.all_addresses = {self.address}
         else:
-            self.all_addresses = ','.join(get_all_addresses())
+            self.all_addresses = get_all_addresses()
 
         self.max_workers_per_node = max_workers_per_node or float("inf")
 
@@ -411,7 +413,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
                                        address_probe_timeout_string=address_probe_timeout_string,
-                                       addresses=self.all_addresses,
+                                       addresses=",".join(self.all_addresses),
                                        worker_port=self.worker_port,
                                        cores_per_worker=self.cores_per_worker,
                                        mem_per_worker=self.mem_per_worker,
@@ -423,6 +425,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                        poll_period=self.poll_period,
                                        cert_dir=self.cert_dir,
                                        logdir=self.worker_logdir,
+                                       logconf=self.logconf_path,
                                        cpu_affinity=self.cpu_affinity,
                                        enable_mpi_mode=enable_mpi_opts,
                                        mpi_launcher=self.mpi_launcher,
@@ -445,6 +448,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 "encrypted attribute is set to False. You must either change cert_dir to "
                 "None or encrypted to True."
             )
+
+        if self.log_config:
+            log_config_dir = os.path.join(self.logdir, "log_config")
+            os.makedirs(log_config_dir, mode=0o700, exist_ok=True)
+
+            self.logconf_path = os.path.join(log_config_dir, "log_config.pkl")
+            with open(self.logconf_path, "wb") as f:
+                pickle.dump(self.log_config, f)
+        else:
+            self.logconf_path = None
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
             self.loopback_address, self.interchange_port_range, self.cert_dir
@@ -580,6 +593,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "cert_dir": self.cert_dir,
                               "manager_selector": self.manager_selector,
                               "run_id": self.run_id,
+                              "log_config": self.log_config,
                               "_check_python_mismatch": self._check_python_mismatch,
                               }
 

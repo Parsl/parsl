@@ -2,11 +2,13 @@
 import time
 from concurrent.futures import Executor
 from contextlib import AbstractContextManager
-from typing import Callable, Dict, Iterable, Iterator, Literal, Optional
+from typing import Callable, Dict, Iterable, Iterator, Literal, Optional, TypeVar
 from warnings import warn
 
 from parsl import Config, DataFlowKernel, load
 from parsl.app.python import PythonApp
+
+T = TypeVar('T')
 
 
 class ParslPoolExecutor(Executor, AbstractContextManager):
@@ -88,7 +90,8 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
         return app(*args, **kwargs)
 
     # TODO (wardlt): This override can go away when Parsl supports cancel
-    def map(self, fn: Callable, *iterables: Iterable, timeout: Optional[float] = None, chunksize: int = 1) -> Iterator:
+    def map(self, fn: Callable[..., T], *iterables: Iterable, timeout: Optional[float] = None,
+            chunksize: int = 1, buffersize: Optional[int] = None) -> Iterator[T]:
         """Returns an iterator equivalent to map(fn, iter).
 
         Args:
@@ -96,9 +99,10 @@ class ParslPoolExecutor(Executor, AbstractContextManager):
                 passed iterables.
             timeout: The maximum number of seconds to wait. If None, then there
                 is no limit on the wait time.
-            chunksize: If greater than one, the iterables will be chopped into
-                chunks of size chunksize and submitted to the process pool.
-                If set to one, the items in the list will be sent one at a time.
+            chunksize: This parameter is ignored. Caution should be exercised
+                if expecting behaviour as documented in the base `concurrent.futures.Executor` class.
+            buffersize: This parameter is ignored. Caution should be exercised
+                if expecting behaviour as documented in the base `concurrent.futures.Executor` class.
 
         Returns:
             An iterator equivalent to: map(func, ``*iterables``) but the calls may

@@ -131,6 +131,7 @@ def test_worker_dynamic_import_happy_path(tmpd_cwd):
             task_queue_timeout=0,
             manager_pid=os.getpid(),
             logdir=str(tmpd_cwd),
+            log_config=None,
             debug=True,
             mpi_launcher="",
         )
@@ -180,6 +181,7 @@ def test_worker_bad_dynamic_import(tmpd_cwd):
             task_queue_timeout=0,
             manager_pid=os.getpid(),
             logdir=str(tmpd_cwd),
+            log_config=None,
             debug=True,
             mpi_launcher="",
         )
