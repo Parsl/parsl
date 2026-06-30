@@ -90,7 +90,9 @@ def oneshot_initialize_logging(*, log_config: LogConfig, log_dir: pathlib.Path, 
     with _initialized_log_context_lock:
         if log_config.uuid in _initialized_log_contexts:
             _initialized_log_contexts[log_config.uuid].count += 1
-            logger.debug('Configuration %r already initialized', log_config)
+            logger.debug('Configuration %r already initialized, now with %s references',
+                         log_config,
+                         _initialized_log_contexts[log_config.uuid].count)
         else:
             logger.debug('Initializing %r', log_config)
             _initialized_log_contexts[log_config.uuid] = _ConfigReference(
