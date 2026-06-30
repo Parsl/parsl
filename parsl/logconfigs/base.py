@@ -56,7 +56,7 @@ _initialized_log_contexts: dict[uuid.UUID, _ConfigReference] = {}
 _initialized_log_context_lock: threading.Lock = threading.Lock()
 
 
-def oneshot_initialize_logging(*, log_config: LogConfig, log_dir: pathlib.Path, log_name: str) -> Callable:
+def oneshot_initialize_logging(*, log_config: LogConfig, log_dir: pathlib.Path, log_name: str) -> None:
     """Initialized the LogConfig if it is not currently initialized.
 
     This is scoped per-interpreter, the same as the global state for the
@@ -105,15 +105,14 @@ def oneshot_initialize_logging(*, log_config: LogConfig, log_dir: pathlib.Path, 
 
         assert log_config.uuid in _initialized_log_contexts
 
-    def uninit() -> None:
-        with _initialized_log_context_lock:
-            assert log_config.uuid in _initialized_log_contexts, f"log context for {log_config} not found, perhaps too many uninitializations"
-            assert _initialized_log_contexts[log_config.uuid].count >= 1, \
-                f"log context for {log_config} has bad reference count {_initialized_log_contexts[log_config.uuid].count}"
-            _initialized_log_contexts[log_config.uuid].count -= 1
-            if _initialized_log_contexts[log_config.uuid].count < 1:
-                logger.debug('All references removed for %r', log_config)
-                _initialized_log_contexts[log_config.uuid].uninit_callback()
-                del _initialized_log_contexts[log_config.uuid]
 
-    return uninit
+def oneshot_uninitialize_logging(*, log_config: LogConfig) -> None:
+    with _initialized_log_context_lock:
+        assert log_config.uuid in _initialized_log_contexts, f"log context for {log_config} not found, perhaps too many uninitializations"
+        assert _initialized_log_contexts[log_config.uuid].count >= 1, \
+            f"log context for {log_config} has bad reference count {_initialized_log_contexts[log_config.uuid].count}"
+        _initialized_log_contexts[log_config.uuid].count -= 1
+        if _initialized_log_contexts[log_config.uuid].count < 1:
+            logger.debug('All references removed for %r', log_config)
+            _initialized_log_contexts[log_config.uuid].uninit_callback()
+            del _initialized_log_contexts[log_config.uuid]

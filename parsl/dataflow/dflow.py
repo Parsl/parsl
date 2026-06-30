@@ -43,7 +43,11 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
-from parsl.logconfigs.base import LogConfig, oneshot_initialize_logging
+from parsl.logconfigs.base import (
+    LogConfig,
+    oneshot_initialize_logging,
+    oneshot_uninitialize_logging,
+)
 from parsl.logconfigs.file import FileLogging
 from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
@@ -108,10 +112,13 @@ class DataFlowKernel:
             self.log_config = None
             self._logging_unregister_callback = None
         else:
+            c = config.initialize_logging
+            assert c is not None, "type of initialize_logging was not properly narrowed to LogConfig"
             self.log_config = config.initialize_logging
-            self._logging_unregister_callback = oneshot_initialize_logging(log_config=self.log_config,
-                                                                           log_dir=pathlib.Path(self.run_dir),
-                                                                           log_name="parsl")
+            oneshot_initialize_logging(log_config=c,
+                                       log_dir=pathlib.Path(self.run_dir),
+                                       log_name="parsl")
+            self._logging_unregister_callback = lambda: oneshot_uninitialize_logging(log_config=c)
 
         logger.info("Starting DataFlowKernel with config\n%r", config)
 
