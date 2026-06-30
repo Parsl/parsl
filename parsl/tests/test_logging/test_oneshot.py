@@ -54,7 +54,7 @@ def test_nested(tmpd_cwd):
 
 @pytest.mark.local
 def test_sequential(tmpd_cwd):
-    """Test that if a log context can be released completely, and then reinitialized."""
+    """Test that a log context can be released completely, and then reinitialized."""
     lc = Mock(spec=b.LogConfig)
     lc.uuid = uuid.uuid4()
 
