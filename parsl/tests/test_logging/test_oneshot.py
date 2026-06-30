@@ -10,7 +10,7 @@ import parsl.logconfigs.base as b
 
 @pytest.mark.local
 def test_simple(tmpd_cwd):
-    lc = Mock()
+    lc = Mock(spec=b.LogConfig)
     lc.uuid = uuid.uuid4()
 
     assert b._initialized_log_contexts == {}, "precondition"
@@ -30,7 +30,7 @@ def test_simple(tmpd_cwd):
 
 @pytest.mark.local
 def test_nested(tmpd_cwd):
-    lc = Mock()
+    lc = Mock(spec=b.LogConfig)
     lc.uuid = uuid.uuid4()
 
     assert b._initialized_log_contexts == {}, "precondition"
@@ -55,7 +55,7 @@ def test_nested(tmpd_cwd):
 @pytest.mark.local
 def test_sequential(tmpd_cwd):
     """Test that if a log context can be released completely, and then reinitialized."""
-    lc = Mock()
+    lc = Mock(spec=b.LogConfig)
     lc.uuid = uuid.uuid4()
 
     assert b._initialized_log_contexts == {}, "precondition"
