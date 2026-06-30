@@ -176,6 +176,8 @@ class DataFlowKernel:
                 'host': gethostname(),
         }
 
+        loggable_workflow_info = {"parsl.workflow_info." + k: v for k, v in workflow_info.items()}
+        logger.info("Workflow startup information: %r", workflow_info, extra={"parsl.dfk": self.run_id} | loggable_workflow_info)
         if self.monitoring_radio:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
@@ -547,11 +549,15 @@ class DataFlowKernel:
         """
 
         with self.task_state_counts_lock:
+            extra = {"parsl.dfk": self.run_id,
+                     "parsl.task": task_record['id'],
+                     "parsl.task_state": new_state.name
+                     }
             if 'status' in task_record:
                 self.task_state_counts[task_record['status']] -= 1
-                logger.info(f"Task {task_record['id']} changing state from {task_record['status'].name} to {new_state.name}")
+                logger.info(f"Task {task_record['id']} changing state from {task_record['status'].name} to {new_state.name}", extra=extra)
             else:
-                logger.info(f"Task {task_record['id']} initializing state to {new_state.name}")
+                logger.info(f"Task {task_record['id']} initializing state to {new_state.name}", extra=extra)
 
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
@@ -1075,6 +1081,10 @@ class DataFlowKernel:
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
+            logger.info("Adding executor %s of type %s.%s", executor.label, type(executor).__module__, type(executor).__name__,
+                        extra={"parsl.executor.label": executor.label,
+                               "parsl.executor.type": type(executor).__module__ + "." + type(executor).__name__
+                               })
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.log_config = self.log_config
@@ -1162,13 +1172,16 @@ class DataFlowKernel:
         logger.info("Terminated executors")
         time_completed = datetime.datetime.now()
 
+        workflow_info = {'tasks_failed_count': self.task_state_counts[States.failed],
+                         'tasks_completed_count': self.task_state_counts[States.exec_done],
+                         'time_completed': time_completed,
+                         'run_id': self.run_id, 'rundir': self.run_dir}
+
+        loggable_workflow_info = {"parsl.workflow_info." + k: v for k, v in workflow_info.items()}
+        logger.info("Workflow shutdown information: %r", workflow_info, extra={"parsl.dfk": self.run_id} | loggable_workflow_info)
         if self.monitoring_radio:
             logger.info("Sending final monitoring message")
-            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
-                                       {'tasks_failed_count': self.task_state_counts[States.failed],
-                                        'tasks_completed_count': self.task_state_counts[States.exec_done],
-                                        'time_completed': time_completed,
-                                        'run_id': self.run_id, 'rundir': self.run_dir}))
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO, workflow_info))
 
         if self.monitoring:
             logger.info("Terminating monitoring")
