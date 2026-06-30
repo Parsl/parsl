@@ -174,6 +174,8 @@ class DataFlowKernel:
                 'host': gethostname(),
         }
 
+        loggable_workflow_info = {"parsl.workflow_info." + k: v for k, v in workflow_info.items()}
+        logger.info("Workflow startup information: %r", workflow_info, extra={"parsl.dfk": self.run_id} | loggable_workflow_info)
         if self.monitoring_radio:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
@@ -1168,13 +1170,16 @@ class DataFlowKernel:
         logger.info("Terminated executors")
         time_completed = datetime.datetime.now()
 
+        workflow_info = {'tasks_failed_count': self.task_state_counts[States.failed],
+                         'tasks_completed_count': self.task_state_counts[States.exec_done],
+                         'time_completed': time_completed,
+                         'run_id': self.run_id, 'rundir': self.run_dir}
+
+        loggable_workflow_info = {"parsl.workflow_info." + k: v for k, v in workflow_info.items()}
+        logger.info("Workflow shutdown information: %r", workflow_info, extra={"parsl.dfk": self.run_id} | loggable_workflow_info)
         if self.monitoring_radio:
             logger.info("Sending final monitoring message")
-            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
-                                       {'tasks_failed_count': self.task_state_counts[States.failed],
-                                        'tasks_completed_count': self.task_state_counts[States.exec_done],
-                                        'time_completed': time_completed,
-                                        'run_id': self.run_id, 'rundir': self.run_dir}))
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO, workflow_info))
 
         if self.monitoring:
             logger.info("Terminating monitoring")
