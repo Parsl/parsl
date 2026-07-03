@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 # TODO: clarify what is meant by "cores" vs CPUs or hyperthreads
 # specifically in reference to what the python API returns, so that
 # when you specify manually you should be specifying the same thing.
-# TODO: shoudl cores_per_node be a float for consistency?
-#   in a bare metal situation thats unlikely but in fractional node
-#   occupancy its plausible
+# TODO: note about cores per node being a float because that might
+# be whats happening in some fractional node use situation, and it
+# keeps all the resource quantities as floats.
 def compute_max_workers(*,
                         mem_per_node: Optional[float],
                         mem_per_worker: Optional[float],
-                        cores_per_node: Optional[int],
+                        cores_per_node: Optional[float],
                         cores_per_worker: Optional[float],
                         configured_max_workers_per_node: Optional[int],
                         accelerators: Sequence) -> Optional[int]:
