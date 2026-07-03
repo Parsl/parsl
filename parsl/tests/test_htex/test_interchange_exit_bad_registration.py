@@ -227,8 +227,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
 
     # Run a command against the interchange to confirm that the interchange has
     # not failed, this call will hang if the interchange exits early
-    output = command_client.run("MANAGERS", max_retries=0, timeout_s=1)
-    logging.warning(f"MANAGERS = {output=}")
+    command_client.run("MANAGERS", max_retries=0, timeout_s=1)
     # check that the interchange exits within some reasonable time
 
     interchange_proc.terminate()
