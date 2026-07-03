@@ -303,20 +303,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         self.max_workers_per_node = max_workers_per_node
 
-        # Determine the number of workers per node for scaling
-        workers_per_node = compute_max_workers(mem_per_node=self.provider.mem_per_node if hasattr(self.provider, 'mem_per_node') else None,
-                                               mem_per_worker=mem_per_worker,
-                                               cores_per_node=self.provider.cores_per_node if hasattr(self.provider, 'cores_per_node') else None,
-                                               cores_per_worker=cores_per_worker,
-                                               configured_max_workers_per_node=max_workers_per_node,
-                                               accelerators=available_accelerators)
-
-        if workers_per_node is None:
-            # our best guess as there are no configured hints
-            self._workers_per_node = 1
-        else:
-            self._workers_per_node = workers_per_node
-
         self._task_counter = 0
 
         if remote_monitoring_radio is not None:
@@ -398,6 +384,21 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def initialize_scaling(self):
         """Compose the launch command and scale out the initial blocks.
         """
+
+        # Determine the number of workers per node for scaling
+        workers_per_node = compute_max_workers(mem_per_node=self.provider.mem_per_node if hasattr(self.provider, 'mem_per_node') else None,
+                                               mem_per_worker=self.mem_per_worker,
+                                               cores_per_node=self.provider.cores_per_node if hasattr(self.provider, 'cores_per_node') else None,
+                                               cores_per_worker=self.cores_per_worker,
+                                               configured_max_workers_per_node=self.max_workers_per_node,
+                                               accelerators=self.available_accelerators)
+
+        if workers_per_node is None:
+            logger.warning("Assuming 1 worker per node for scaling, which is likely incorrect")
+            self._workers_per_node = 1
+        else:
+            self._workers_per_node = workers_per_node
+
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers_per_node = "" if self.max_workers_per_node is None else "--max_workers_per_node={}".format(self.max_workers_per_node)
         enable_mpi_opts = "--enable_mpi_mode " if self.enable_mpi_mode else ""
