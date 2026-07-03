@@ -5,13 +5,6 @@ from typing import Optional, Sequence
 logger = logging.getLogger(__name__)
 
 
-# TODO: document the units of these memory parameters
-# TODO: clarify what is meant by "cores" vs CPUs or hyperthreads
-# specifically in reference to what the python API returns, so that
-# when you specify manually you should be specifying the same thing.
-# TODO: note about cores per node being a float because that might
-# be whats happening in some fractional node use situation, and it
-# keeps all the resource quantities as floats.
 def compute_max_workers(*,
                         mem_per_node: Optional[float],
                         mem_per_worker: Optional[float],
@@ -21,10 +14,25 @@ def compute_max_workers(*,
                         accelerators: Sequence) -> Optional[int]:
     """Calculate a maximum worker count.
 
-    Each parameter is optionality: either as None or as an empty sequence.
+    Each parameter is optional: either as None or as an empty sequence.
 
     If there is no maximum, because there are insufficient constraints, then
     return None.
+
+    mem_per_node:  total memory on a worker node, in GB
+
+    mem_per_worker:  memory to be allocated to each worker
+
+    cores_per_node:  number of cores on a worker node. To disambiguate the overloaded
+      use of cpu, core and cpu thread in different places:  Cores in this context
+      generally should be read in the sense of the number returned by SpawnContext.cpu_count()
+      and os.cpu_count().
+
+    cores_per_worker:  number of cores to be allocated to each worker
+
+    configured_max_workers_per_node: user specific maximum of number of workers per node
+
+    accelerators:  number of accelerators per node
     """
 
     # Each possible limit can add an additional upper bound into this set.
