@@ -20,7 +20,7 @@ from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.log_utils import set_file_logger
-from parsl.logconfigs.base import LogConfig
+from parsl.logconfigs.base import LogConfig, oneshot_initialize_logging
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.base import MonitoringRadioSender
 from parsl.monitoring.radios.zmq import ZMQRadioSender
@@ -114,7 +114,7 @@ class Interchange:
         os.makedirs(self.logdir, exist_ok=True)
 
         if log_config:
-            log_config.initialize_logging(log_dir=pathlib.Path(self.logdir), log_name="interchange")
+            oneshot_initialize_logging(log_config=log_config, log_dir=pathlib.Path(self.logdir), log_name="interchange")
             # discard the returned callback because the interchange doesn't usually do
             # a normal shutdown
         else:

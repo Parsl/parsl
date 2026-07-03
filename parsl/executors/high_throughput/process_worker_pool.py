@@ -40,7 +40,7 @@ from parsl.executors.high_throughput.mpi_resource_management import (
 )
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.log_utils import set_file_logger
-from parsl.logconfigs.base import LogConfig
+from parsl.logconfigs.base import LogConfig, oneshot_initialize_logging
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
@@ -650,7 +650,7 @@ def worker(
 
     if log_config:
         path = pathlib.Path(logdir) / f"block-{block_id}" / pool_id
-        log_config.initialize_logging(log_dir=path, log_name=f"worker_{worker_id}")
+        oneshot_initialize_logging(log_config=log_config, log_dir=path, log_name=f"worker_{worker_id}")
     else:
         set_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
                         level=logging.DEBUG if debug else logging.INFO)
@@ -968,7 +968,7 @@ if __name__ == "__main__":
             # logging is a specific use case for this log configurability.
             path = os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid)
             logconf = pickle.load(f)
-            logconf.initialize_logging(log_dir=pathlib.Path(path), log_name="manager")
+            oneshot_initialize_logging(log_config=logconf, log_dir=pathlib.Path(path), log_name="manager")
 
     logger.info(
         f"\n  Python version: {sys.version}"
