@@ -98,12 +98,12 @@ class BlockProviderExecutor(ParslExecutor):
         if self.monitoring_messages:
             self.submit_monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring_messages)
 
-    def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
-        """Given a list of block ids and a list of corresponding status strings,
+    def _make_status_dict(self, block_ids: Sequence[str], status_list: Sequence[JobStatus]) -> Dict[str, JobStatus]:
+        """Given a sequence of block ids and a sequence of corresponding status strings,
         returns a dictionary mapping each block id to the corresponding status
 
-        :param block_ids: the list of block ids
-        :param status_list: the list of job status strings
+        :param block_ids: the sequence of block ids
+        :param status_list: the sequence of job status strings
         :return: the resulting dictionary
         """
         if len(block_ids) != len(status_list):
@@ -179,7 +179,7 @@ class BlockProviderExecutor(ParslExecutor):
         return self._tasks
 
     @property
-    def provider(self):
+    def provider(self) -> Optional[ExecutionProvider]:
         return self._provider
 
     def _filter_scale_in_ids(self, to_kill: Sequence[Any], killed: Sequence[bool]) -> Sequence[Any]:
@@ -200,8 +200,8 @@ class BlockProviderExecutor(ParslExecutor):
     def scale_out_facade(self, n: int) -> List[str]:
         """Scales out the number of blocks by "blocks"
         """
-        if not self.provider:
-            raise ScalingFailed(self, "No execution provider available")
+        assert self.provider is not None, \
+            "scale_out_facade should only be called on executors with a valid provider"
         block_ids = []
         monitoring_status_changes = {}
         logger.info("%s Scaling out by %d blocks", self._scale_prefix, n)
@@ -260,6 +260,9 @@ class BlockProviderExecutor(ParslExecutor):
             return []
 
     def _launch_block(self, block_id: str) -> Any:
+        assert self.provider is not None, \
+            "_launch_block should only be called on executors with a valid provider"
+
         launch_cmd = self._get_launch_command(block_id)
         job_name = f"parsl.{self.label}.block-{block_id}"
         logger.debug("%s Submitting to provider with job_name %s", self._scale_prefix, job_name)

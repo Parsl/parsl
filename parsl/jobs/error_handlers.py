@@ -13,6 +13,7 @@ def noop_error_handler(executor: status_handling.BlockProviderExecutor, status: 
 
 def simple_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3) -> None:
     (total_jobs, failed_jobs) = _count_jobs(status)
+    assert executor.provider is not None, "error handlers should only be called on executors which have a provider"
     if hasattr(executor.provider, "init_blocks"):
         threshold = max(1, executor.provider.init_blocks)
 
