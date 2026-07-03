@@ -21,7 +21,7 @@ def compute_max_workers(*,
                         accelerators: Sequence) -> Optional[int]:
     """Calculate a maximum worker count.
 
-    Each parameter has optionality: either as None or as an empty sequence.
+    Each parameter is optionality: either as None or as an empty sequence.
 
     If there is no maximum, because there are insufficient constraints, then
     return None.
