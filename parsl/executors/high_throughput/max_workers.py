@@ -37,10 +37,6 @@ def compute_max_workers(*,
         logger.debug("Adding upper bound %s due to configured max workers per node", configured_max_workers_per_node)
         upper_bounds.add(configured_max_workers_per_node)
 
-    # TODO: the invocatoin of compute_max_workers either needs to guard against
-    # provider.cores_per_node existing, or it might be the case now that it
-    # always exists in provider base?
-
     if cores_per_node and cores_per_worker:
         core_slots = math.floor(cores_per_node / cores_per_worker)
         logger.debug("Adding upper bound %s due to %s cores per node, %s cores per worker", core_slots, cores_per_node, cores_per_worker)
