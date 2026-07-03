@@ -19,20 +19,26 @@ def compute_max_workers(*,
     If there is no maximum, because there are insufficient constraints, then
     return None.
 
-    mem_per_node:  total memory on a worker node, in GB
+    mem_per_node: optional float, GB
+      total memory on a worker node
 
-    mem_per_worker:  memory to be allocated to each worker
+    mem_per_worker: optional float, GB
+      memory to be allocated to each worker
 
-    cores_per_node:  number of cores on a worker node. To disambiguate the overloaded
+    cores_per_node: optional float
+      number of cores on a worker node. To disambiguate the overloaded
       use of cpu, core and cpu thread in different places:  Cores in this context
       generally should be read in the sense of the number returned by SpawnContext.cpu_count()
       and os.cpu_count().
 
-    cores_per_worker:  number of cores to be allocated to each worker
+    cores_per_worker: optional float
+      number of cores to be allocated to each worker
 
-    configured_max_workers_per_node: user specific maximum of number of workers per node
+    configured_max_workers_per_node: optional int
+      user specific maximum of number of workers per node
 
-    accelerators:  number of accelerators per node
+    accelerators: optional int
+      number of accelerators per node
     """
 
     # Each possible limit can add an additional upper bound into this set.
