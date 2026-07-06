@@ -38,4 +38,4 @@ jobs:
       - name: Test Parsl with HTCondor Config
         run: |
           . venv/bin/activate
-          pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/htcondor_local.py --random-order --durations 10
+          (./start.sh &) && sleep 20s && pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/htcondor_local.py --random-order --durations 10
