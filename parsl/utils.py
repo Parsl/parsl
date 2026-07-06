@@ -514,7 +514,4 @@ def execute_wait(cmd: str, walltime: Optional[int] = None) -> Tuple[int, str, st
     else:
         logger.debug("Execution of command in process %s completed normally", proc.pid)
 
-    logger.debug("BENC: execute_wait returned:")
-    logger.debug(f"BENC: stdout={stdout}")
-    logger.debug(f"BENC: stderr={stderr}")
     return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
