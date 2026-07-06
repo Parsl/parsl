@@ -26,7 +26,8 @@ jobs:
       - name: Install Dependencies and Parsl
         run: |
           dnf install -y python3.12 python3-virtualenv
-          su - submituser -c bash -c "cp -av ${GITHUB_WORKSPACE}/ ."
+          su - submituser -c bash -c "echo cp -av ${GITHUB_WORKSPACE}/ ./"
+          su - submituser -c bash -c "cp -av ${GITHUB_WORKSPACE}/* ./"
           su - submituser -c bash -c "virtualenv ./venv --python=3.12"
           su - submituser -c bash -c ". ./venv/bin/activate ; pip install . -r test-requirements.txt"
 
