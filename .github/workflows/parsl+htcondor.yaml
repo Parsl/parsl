@@ -26,16 +26,12 @@ jobs:
       - name: Install Dependencies and Parsl
         run: |
           dnf install -y python3.12 python3-virtualenv
-          virtualenv ./venv --python=3.12
-          . ./venv/bin/activate
-          pip install . -r test-requirements.txt
+          su - submituser -c bash -c 'virtualenv ./venv --python=3.12 ; . ./venv/bin/activate ; pip install . -r test-requirements.txt'
 
       - name: Verify Parsl Installation
         run: |
-          . venv/bin/activate
-          pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/local_threads.py --random-order --durations 10
+          su - submituser -c bash -c '. venv/bin/activate ; pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/local_threads.py --random-order --durations 10'
 
       - name: Test Parsl with HTCondor Config
         run: |
-          . venv/bin/activate
-          (/start.sh &) && sleep 20s && pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/htcondor_local.py --random-order --durations 10
+          (/start.sh &) && su - submituser -c bash -c '. venv/bin/activate ; sleep 20s && pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/htcondor_local.py --random-order --durations 10'
