@@ -9,7 +9,7 @@ jobs:
     permissions:
       packages: read
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         container: ["htcondor/mini:latest"]
     timeout-minutes: 30
@@ -25,10 +25,10 @@ jobs:
 
       - name: Install Dependencies and Parsl
         run: |
-          apt update && apt install -y python3.13-venv
-          python3 -m venv ./venv
+          dnf install python3.12
+          python3 -m venv ./venv --python=3.12
           . ./venv/bin/activate
-          CC=/usr/lib64/openmpi/bin/mpicc pip3 install . -r test-requirements.txt
+          pip install . -r test-requirements.txt
 
       - name: Verify Parsl Installation
         run: |
