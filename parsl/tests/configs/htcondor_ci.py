@@ -10,6 +10,7 @@ def fresh_config():
             HighThroughputExecutor(
                 label="docker_htcondor",
                 provider=CondorProvider(
+                    worker_init=". ~/venv/bin/activate",
                     nodes_per_block=1,
                     init_blocks=1,
                     min_blocks=1,
