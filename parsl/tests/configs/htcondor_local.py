@@ -1,7 +1,7 @@
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.providers import CondorProvider
 from parsl.launchers import SimpleLauncher
+from parsl.providers import CondorProvider
 
 
 def fresh_config():
