@@ -366,7 +366,7 @@ How can my tasks survive ``WorkerLost`` and ``ManagerLost`` at the end of a batc
 When a batch job ends, pilot workers will be terminated by the batch system,
 and any tasks running there will fail. With `HighThroughputExecutor`,
 this failure will be reported as a `parsl.executors.high_throughput.errors.WorkerLost` or
-`parsl.executors.high_throughput.interchange.ManagerLost` in the task future.
+`parsl.executors.high_throughput.errors.ManagerLost` in the task future.
 
 To mitigate against this:
 

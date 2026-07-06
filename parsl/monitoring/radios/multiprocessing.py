@@ -1,9 +1,14 @@
-from multiprocessing.queues import Queue
+from multiprocessing import Queue
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import (
+    MonitoringRadioReceiver,
+    MonitoringRadioSender,
+    RadioConfig,
+)
+from parsl.utils import RepresentationMixin
 
 
-class MultiprocessingQueueRadioSender(MonitoringRadioSender):
+class MultiprocessingQueueRadioSender(MonitoringRadioSender, RepresentationMixin):
     """A monitoring radio which connects over a multiprocessing Queue.
     This radio is intended to be used on the submit side, where components
     in the submit process, or processes launched by multiprocessing, will have
@@ -15,3 +20,19 @@ class MultiprocessingQueueRadioSender(MonitoringRadioSender):
 
     def send(self, message: object) -> None:
         self.queue.put(message)
+
+
+class MultiprocessingQueueRadio(RadioConfig):
+    def create_sender(self) -> MonitoringRadioSender:
+        return MultiprocessingQueueRadioSender(self._queue)
+
+    def create_receiver(self, *, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+        # This object is only for use with an in-process thread-pool so it
+        # is fine to store a reference to the message queue directly.
+        self._queue = resource_msgs
+        return MultiprocessingQueueRadioReceiver()
+
+
+class MultiprocessingQueueRadioReceiver(MonitoringRadioReceiver):
+    def shutdown(self) -> None:
+        pass

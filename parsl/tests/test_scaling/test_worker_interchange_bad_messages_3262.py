@@ -1,7 +1,3 @@
-import os
-import signal
-import time
-
 import pytest
 import zmq
 
@@ -61,11 +57,11 @@ def test_bad_messages(try_assert, msg):
 
     with parsl.load(c):
 
-        # send a bad message into the interchange on the task_outgoing worker
+        # send a bad message into the interchange on the worker_sock worker
         # channel, and then check that the interchange is still alive enough
         # that we can scale out a block and run a task.
 
-        (task_port, result_port) = htex.command_client.run("WORKER_PORTS")
+        worker_port = htex.command_client.run("WORKER_BINDS")
 
         context = zmq.Context()
         channel_timeout = 10000  # in milliseconds
@@ -75,7 +71,7 @@ def test_bad_messages(try_assert, msg):
 
         task_channel.set_hwm(0)
         task_channel.setsockopt(zmq.SNDTIMEO, channel_timeout)
-        task_channel.connect(f"tcp://localhost:{task_port}")
+        task_channel.connect(f"tcp://localhost:{worker_port}")
 
         task_channel.send(msg)
 

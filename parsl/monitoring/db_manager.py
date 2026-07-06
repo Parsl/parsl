@@ -1,7 +1,9 @@
 import datetime
 import logging
 import multiprocessing.queues as mpq
+import multiprocessing.synchronize as mpe
 import os
+import pathlib
 import queue
 import threading
 import time
@@ -12,12 +14,13 @@ import typeguard
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.log_utils import set_file_logger
+from parsl.logconfigs.base import LogConfig, oneshot_initialize_logging
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
-logger = logging.getLogger("database_manager")
+logger = logging.getLogger(__name__)
 
 X = TypeVar('X')
 
@@ -278,25 +281,29 @@ class Database:
 
 class DatabaseManager:
     def __init__(self,
+                 *,
                  db_url: str = 'sqlite:///runinfo/monitoring.db',
                  run_dir: str = '.',
                  logging_level: int = logging.INFO,
+                 log_config: Optional[LogConfig] = None,
                  batching_interval: float = 1,
                  batching_threshold: float = 99999,
+                 exit_event: mpe.Event
                  ):
 
         self.workflow_end = False
         self.workflow_start_message: Optional[MonitoringMessage] = None
         self.run_dir = run_dir
-        os.makedirs(self.run_dir, exist_ok=True)
 
-        logger.propagate = False
+        if log_config:
+            oneshot_initialize_logging(log_config=log_config, log_dir=pathlib.Path(self.run_dir), log_name="database_manager")
+        else:
+            os.makedirs(self.run_dir, exist_ok=True)
 
-        set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
-                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
-                        name="database_manager")
+            set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
+                            format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
 
-        logger.debug("Initializing Database Manager process")
+        logger.info("Initializing Database Manager process")
 
         self.db = Database(db_url)
         self.batching_interval = batching_interval
@@ -306,6 +313,9 @@ class DatabaseManager:
         self.pending_node_queue: queue.Queue[MonitoringMessage] = queue.Queue()
         self.pending_block_queue: queue.Queue[MonitoringMessage] = queue.Queue()
         self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+        self.pending_worker_task_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+
+        self.external_exit_event = exit_event
 
     def start(self,
               resource_queue: mpq.Queue) -> None:
@@ -320,33 +330,32 @@ class DatabaseManager:
                                                             )
         self._resource_queue_pull_thread.start()
 
-        """
-        maintain a set to track the tasks that are already INSERTed into database
-        to prevent race condition that the first resource message (indicate 'running' state)
-        arrives before the first task message. In such a case, the resource table
-        primary key would be violated.
-        If that happens, the message will be added to deferred_resource_messages and processed later.
+        # The following three variables work together to maintain sets to
+        # track the tasks and tries that are already INSERTed into database
+        # to address a race condition that the first resource message
+        # (indicating that the task has begun running on a worker)
+        # arrives before the first task message from the DFK. In such a case,
+        # the code cannot UPDATE the relevant try table row, because it
+        # does not exist yet.
 
-        """
+        # When such a message arrives, it is added to deferred_resource_messages
+        # and processed later, after the relevant DFK-side message has been
+        # received and processed to create a row in the try table.
+
+        # Exactly one message per task/try can be deferred, which may not be
+        # enough when a try happens several times (for example when an
+        # executor performs its own Parsl-try unaware retries.
         inserted_tasks: Set[object] = set()
-
-        """
-        like inserted_tasks but for task,try tuples
-        """
-        inserted_tries: Set[Any] = set()
-
-        # for any task ID, we can defer exactly one message, which is the
-        # assumed-to-be-unique first message (with first message flag set).
-        # The code prior to this patch will discard previous message in
-        # the case of multiple messages to defer.
-        deferred_resource_messages: MonitoringMessage = {}
+        inserted_tries: Set[object] = set()
+        deferred_worker_task_messages: dict[str, MonitoringMessage] = {}
 
         exception_happened = False
 
         while (not self._kill_event.is_set() or
-               self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
-               self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
-               resource_queue.qsize() != 0):
+               not self.pending_priority_queue.empty() or not self.pending_resource_queue.empty() or
+               not self.pending_worker_task_queue.empty() or
+               not self.pending_node_queue.empty() or not self.pending_block_queue.empty() or
+               not resource_queue.empty()):
 
             """
             WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
@@ -355,21 +364,21 @@ class DatabaseManager:
             try:
                 logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}""".format(
                                   self._kill_event.is_set(),
-                                  self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
-                                  self.pending_node_queue.qsize() != 0, self.pending_block_queue.qsize() != 0,
-                                  resource_queue.qsize() != 0))
+                                  not self.pending_priority_queue.empty(), not self.pending_resource_queue.empty(),
+                                  not self.pending_node_queue.empty(), not self.pending_block_queue.empty(),
+                                  not resource_queue.empty()))
 
                 # This is the list of resource messages which can be reprocessed as if they
                 # had just arrived because the corresponding first task message has been
                 # processed (corresponding by task id)
-                reprocessable_first_resource_messages = []
+                reprocessable_first_worker_task_messages = []
 
                 # end-of-task-run status messages - handled in similar way as
                 # for last resource messages to try to have symmetry... this
-                # needs a type annotation though reprocessable_first_resource_messages
+                # needs a type annotation though reprocessable_first_worker_task_messages
                 # doesn't... not sure why. Too lazy right now to figure out what,
                 # if any, more specific type than Any the messages have.
-                reprocessable_last_resource_messages: List[Any] = []
+                reprocessable_last_worker_task_messages: List[Any] = []
 
                 # Get a batch of priority messages
                 priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
@@ -410,10 +419,10 @@ class DatabaseManager:
                                 inserted_tries.add(task_try_id)
                                 try_insert_messages.append(msg)
 
-                                # check if there is a left_message for this task
-                                if task_try_id in deferred_resource_messages:
-                                    reprocessable_first_resource_messages.append(
-                                        deferred_resource_messages.pop(task_try_id))
+                                # check if there is a deferred message for this task
+                                if task_try_id in deferred_worker_task_messages:
+                                    reprocessable_first_worker_task_messages.append(
+                                        deferred_worker_task_messages.pop(task_try_id))
                         else:
                             raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
 
@@ -486,84 +495,93 @@ class DatabaseManager:
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
 
                 """
-                Resource info messages
-
+                Worker task status messages
                 """
-                resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
+                worker_task_messages = self._get_messages_in_batch(self.pending_worker_task_queue)
 
-                if resource_messages:
+                if worker_task_messages:
                     logger.debug(
-                        "Got {} messages from resource queue, "
+                        "Got {} messages from worker task queue, "
                         "{} reprocessable as first messages, "
-                        "{} reprocessable as last messages".format(len(resource_messages),
-                                                                   len(reprocessable_first_resource_messages),
-                                                                   len(reprocessable_last_resource_messages)))
+                        "{} reprocessable as last messages".format(len(worker_task_messages),
+                                                                   len(reprocessable_first_worker_task_messages),
+                                                                   len(reprocessable_last_worker_task_messages)))
 
-                    insert_resource_messages = []
-                    for msg in resource_messages:
+                    for msg in worker_task_messages:
                         task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                         if msg['first_msg']:
                             # Update the running time to try table if first message
                             msg['task_status_name'] = States.running.name
                             msg['task_try_time_running'] = msg['timestamp']
 
-                            if task_try_id in inserted_tries:  # TODO: needs to become task_id and try_id, and check against inserted_tries
-                                reprocessable_first_resource_messages.append(msg)
+                            if task_try_id in inserted_tries:
+                                reprocessable_first_worker_task_messages.append(msg)
                             else:
-                                if task_try_id in deferred_resource_messages:
+                                if task_try_id in deferred_worker_task_messages:
+                                    # this might happen if a task/try is run multiple
+                                    # times by an executor (for example, the work queue
+                                    # executor can be configured to do this)
                                     logger.error(
                                         "Task {} already has a deferred resource message. "
                                         "Discarding previous message.".format(msg['task_id'])
                                     )
-                                deferred_resource_messages[task_try_id] = msg
+                                deferred_worker_task_messages[task_try_id] = msg
                         elif msg['last_msg']:
                             # This assumes that the primary key has been added
                             # to the try table already, so doesn't use the same
                             # deferral logic as the first_msg case.
                             msg['task_status_name'] = States.running_ended.name
-                            reprocessable_last_resource_messages.append(msg)
+                            reprocessable_last_worker_task_messages.append(msg)
                         else:
-                            # Insert to resource table if not first/last (start/stop) message message
-                            insert_resource_messages.append(msg)
+                            raise RuntimeError("Bad worker task message that is neither first nor last")
 
-                    if insert_resource_messages:
-                        self._insert(table=RESOURCE, messages=insert_resource_messages)
-
-                if reprocessable_first_resource_messages:
-                    self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
+                if reprocessable_first_worker_task_messages:
+                    self._insert(table=STATUS, messages=reprocessable_first_worker_task_messages)
                     self._update(table=TRY,
                                  columns=['task_try_time_running',
                                           'run_id', 'task_id', 'try_id',
                                           'block_id', 'hostname'],
-                                 messages=reprocessable_first_resource_messages)
+                                 messages=reprocessable_first_worker_task_messages)
 
-                if reprocessable_last_resource_messages:
-                    self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
+                if reprocessable_last_worker_task_messages:
+                    self._insert(table=STATUS, messages=reprocessable_last_worker_task_messages)
+
+                """
+                Resource info messages
+
+                """
+                resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
+                if resource_messages:
+                    logger.debug("Got {} messages from resource queue".format(len(resource_messages)))
+                    self._insert(table=RESOURCE, messages=resource_messages)
+
             except Exception:
                 logger.exception(
                     "Exception in db loop: this might have been a malformed message, "
                     "or some other error. monitoring data may have been lost"
                 )
                 exception_happened = True
+
+            if self.external_exit_event.is_set():
+                self.close()
+
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
-    @wrap_with_logs(target="database_manager")
-    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, kill_event: threading.Event) -> None:
+    @wrap_with_logs
+    def _migrate_logs_to_internal(self, logs_queue: mpq.Queue, kill_event: threading.Event) -> None:
         logger.info("Starting _migrate_logs_to_internal")
 
-        while not kill_event.is_set() or logs_queue.qsize() != 0:
+        while not kill_event.is_set() or not logs_queue.empty():
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
-                         kill_event.is_set(), logs_queue.qsize() != 0)
+                         kill_event.is_set(), not logs_queue.empty())
+
             try:
                 x = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
-                if x == 'STOP':
-                    self.close()
-                else:
-                    self._dispatch_to_internal(x)
+                self._dispatch_to_internal(x)
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
         assert isinstance(x, tuple)
@@ -572,16 +590,15 @@ class DatabaseManager:
         if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
-            body = x[1]
-            self.pending_resource_queue.put(body)
+            self.pending_resource_queue.put(x[1])
+        elif x[0] == MessageType.WORKER_TASK_INFO:
+            self.pending_worker_task_queue.put(x[1])
         elif x[0] == MessageType.NODE_INFO:
-            assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
-
-            logger.info("Will put {} to pending node queue".format(x[1]))
+            logger.debug("Will put {} to pending node queue".format(x[1]))
             self.pending_node_queue.put(x[1])
         elif x[0] == MessageType.BLOCK_INFO:
-            logger.info("Will put {} to pending block queue".format(x[1]))
-            self.pending_block_queue.put(x[-1])
+            logger.debug("Will put {} to pending block queue".format(x[1]))
+            self.pending_block_queue.put(x[1])
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
 
@@ -676,33 +693,32 @@ class DatabaseManager:
         self._kill_event.set()
 
 
-@wrap_with_logs(target="database_manager")
+@wrap_with_logs
 @typeguard.typechecked
-def dbm_starter(exception_q: mpq.Queue,
-                resource_msgs: mpq.Queue,
+def dbm_starter(resource_msgs: mpq.Queue,
                 db_url: str,
                 run_dir: str,
-                logging_level: int) -> None:
+                logging_level: int,
+                exit_event: mpe.Event,
+                log_config: Optional[LogConfig]) -> None:
     """Start the database manager process
-
-    The DFK should start this function. The args, kwargs match that of the monitoring config
-
     """
     setproctitle("parsl: monitoring database")
 
     try:
         dbm = DatabaseManager(db_url=db_url,
                               run_dir=run_dir,
-                              logging_level=logging_level)
+                              logging_level=logging_level,
+                              exit_event=exit_event,
+                              log_config=log_config)
         logger.info("Starting dbm in dbm starter")
         dbm.start(resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("dbm.start exception")
-        exception_q.put(("DBM", str(e)))
         dbm.close()
 
     logger.info("End of dbm_starter")

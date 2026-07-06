@@ -2,6 +2,7 @@ import logging
 import math
 import os
 import re
+import sys
 import time
 from typing import Any, Dict, Optional
 
@@ -50,6 +51,28 @@ squeue_translate_table = {
 }
 
 
+if sys.version_info < (3, 12):
+    from itertools import islice
+    from typing import Iterable
+
+    def batched(
+        iterable: Iterable[tuple[object, Any]], n: int, *, strict: bool = False
+    ):
+        """Batched
+        Turns a list into a batch of size n. This code is from
+        https://docs.python.org/3.12/library/itertools.html#itertools.batched
+        and in versions 3.12+ this can be replaced with
+        itertools.batched
+        """
+        if n < 1:
+            raise ValueError("n must be at least one")
+        iterator = iter(iterable)
+        while batch := tuple(islice(iterator, n)):
+            yield batch
+else:
+    from itertools import batched
+
+
 class SlurmProvider(ClusterProvider, RepresentationMixin):
     """Slurm Execution Provider
 
@@ -79,6 +102,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     mem_per_node : int
         Specify the real memory to provision per node in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
+    gpus_per_node: int
+        Specify the number of GPUs to provision per node. If set to None, executors
+        request no gpus. Default: None
+    gres: str
+        Slurm GRES options to request arbitrary resources.
+        `Refer to slurm docs <https://slurm.schedmd.com/gres.html>`_
     init_blocks : int
         Number of blocks to provision at the start of the run. Default is 1.
     min_blocks : int
@@ -99,6 +128,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         symbolic group for the job ID.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
+    cmd_timeout : int (Default = 10)
+        Number of seconds to wait for slurm commands to finish. For schedulers with many this
+        may need to be increased to wait longer for scheduler information.
+    status_batch_size: int (Default = 50)
+        Number of jobs to batch together in calls to the scheduler status. For schedulers
+        with many jobs this may need to be decreased to get jobs in smaller batches.
     exclusive : bool (Default = True)
         Requests nodes which are not shared with other running jobs.
     launcher : Launcher
@@ -118,6 +153,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
                  mem_per_node: Optional[int] = None,
+                 gpus_per_node: Optional[int] = None,
+                 gres: Optional[str] = None,
                  init_blocks: int = 1,
                  min_blocks: int = 0,
                  max_blocks: int = 1,
@@ -127,6 +164,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  regex_job_id: str = r"Submitted batch job (?P<id>\S*)",
                  worker_init: str = '',
                  cmd_timeout: int = 10,
+                 status_batch_size: int = 50,
                  exclusive: bool = True,
                  launcher: Launcher = SingleNodeLauncher()):
         label = 'slurm'
@@ -143,11 +181,15 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.partition = partition
         self.cores_per_node = cores_per_node
         self.mem_per_node = mem_per_node
+        self.gpus_per_node = gpus_per_node
+        self.gres = gres
         self.exclusive = exclusive
         self.account = account
         self.qos = qos
         self.constraint = constraint
         self.clusters = clusters
+        # Used to batch requests to sacct/squeue for long jobs lists
+        self.status_batch_size = status_batch_size
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
@@ -161,6 +203,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
         if clusters:
             self.scheduler_options += "#SBATCH --clusters={}\n".format(clusters)
+        if gpus_per_node:
+            self.scheduler_options += "#SBATCH --gpus-per-node={}\n".format(gpus_per_node)
+        if gres:
+            self.scheduler_options += "#SBATCH --gres={}\n".format(gres)
 
         self.regex_job_id = regex_job_id
         self.worker_init = worker_init + '\n'
@@ -199,22 +245,23 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-        job_id_list = ','.join(
-            [jid for jid, job in self.resources.items() if not job['status'].terminal]
-        )
-        if not job_id_list:
-            logger.debug('No active jobs, skipping status update')
+        active_jobs = {jid: job for jid, job in self.resources.items() if not job["status"].terminal}
+        if len(active_jobs) == 0:
+            logger.debug("No active jobs, skipping status update")
             return
 
-        cmd = self._cmd.format(job_id_list)
-        logger.debug("Executing %s", cmd)
-        retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sacct/squeue returned %s %s", stdout, stderr)
-
-        # Execute_wait failed. Do no update
-        if retcode != 0:
-            logger.warning("sacct/squeue failed with non-zero exit code {}".format(retcode))
-            return
+        stdout = ""
+        for job_batch in batched(active_jobs.items(), self.status_batch_size):
+            job_id_list = ",".join(jid for jid, job in job_batch if not job["status"].terminal)
+            cmd = self._cmd.format(job_id_list)
+            logger.debug("Executing %s", cmd)
+            retcode, batch_stdout, batch_stderr = self.execute_wait(cmd)
+            logger.debug(f"sacct/squeue returned {retcode} {batch_stdout} {batch_stderr}")
+            stdout += batch_stdout
+            # Execute_wait failed. Do no update
+            if retcode != 0:
+                logger.warning("sacct/squeue failed with non-zero exit code {}".format(retcode))
+                return
 
         jobs_missing = set(self.resources.keys())
         for line in stdout.split('\n'):
@@ -294,7 +341,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
                                                   tasks_per_node,
-                                                  self.nodes_per_block)
+                                                  self.nodes_per_block,
+                                                  self.script_dir)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)

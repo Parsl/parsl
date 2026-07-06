@@ -24,7 +24,7 @@ from parsl.executors.flux.execute_parsl_task import __file__ as _WORKER_PATH
 from parsl.executors.flux.flux_instance_manager import __file__ as _MANAGER_PATH
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
-from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize import deserialize, pack_apply_message
 from parsl.serialize.errors import SerializationError
 from parsl.utils import RepresentationMixin
 
@@ -224,13 +224,14 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
         # add a ``weakref.finalize()`` function for joining the executor thread
         weakref.finalize(
             self,
-            lambda x, y: x.set() or y.join(),
+            lambda x, y: x.set() or y.join(),  # type: ignore[func-returns-value]
             self._stop_event,
             self._submission_thread,
         )
 
     def start(self):
         """Called when DFK starts the executor when the config is loaded."""
+        super().start()
         os.makedirs(self.working_dir, exist_ok=True)
         self._submission_thread.start()
 
@@ -246,6 +247,8 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
             self._stop_event.set()
         if wait:
             self._submission_thread.join()
+
+        super().shutdown()
 
     def submit(
         self,
@@ -281,10 +284,8 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
             infile = os.path.join(self.working_dir, f"{task_id}_in{os.extsep}pkl")
             outfile = os.path.join(self.working_dir, f"{task_id}_out{os.extsep}pkl")
             try:
-                fn_buf = pack_res_spec_apply_message(
-                    func, args, kwargs,
-                    resource_specification={},
-                    buffer_threshold=1024 * 1024
+                fn_buf = pack_apply_message(
+                    func, args, kwargs, buffer_threshold=1 << 20,
                 )
             except TypeError:
                 raise SerializationError(func.__name__)

@@ -42,7 +42,8 @@ def test_connected_managers_packages():
     f = dummy()
     assert f.result() is None
 
-    htex: parsl.HighThroughputExecutor = parsl.dfk().executors['htex_local']
+    htex = parsl.dfk().executors['htex_local']
+    assert isinstance(htex, parsl.HighThroughputExecutor)
     managers_info_list = htex.connected_managers()
     managers_packages = htex.connected_managers_packages()
 

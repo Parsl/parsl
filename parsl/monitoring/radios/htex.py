@@ -1,27 +1,33 @@
 import logging
 import pickle
+from multiprocessing.queues import Queue
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import (
+    MonitoringRadioReceiver,
+    MonitoringRadioSender,
+    RadioConfig,
+)
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
+class HTEXRadio(RadioConfig, RepresentationMixin):
+    def create_sender(self) -> MonitoringRadioSender:
+        return HTEXRadioSender()
+
+    def create_receiver(self, *, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+        return HTEXRadioReceiver()
+
+
 class HTEXRadioSender(MonitoringRadioSender):
 
-    def __init__(self, monitoring_url: str, timeout: int = 10):
-        """
-        Parameters
-        ----------
-
-        monitoring_url : str
-            URL of the form <scheme>://<IP>:<PORT>
-        timeout : int
-            timeout, default=10s
-        """
-        logger.info("htex-based monitoring channel initialising")
+    def __init__(self) -> None:
+        # there is nothing to initialize
+        pass
 
     def send(self, message: object) -> None:
-        """ Sends a message to the UDP receiver
+        """ Sends a message via HTEX result channel.
 
         Parameter
         ---------
@@ -38,9 +44,7 @@ class HTEXRadioSender(MonitoringRadioSender):
         result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
 
         # this message needs to go in the result queue tagged so that it is treated
-        # i) as a monitoring message by the interchange, and then further more treated
-        # as a RESOURCE_INFO message when received by monitoring (rather than a NODE_INFO
-        # which is the implicit default for messages from the interchange)
+        # as a monitoring message by the interchange.
 
         # for the interchange, the outer wrapper, this needs to be a dict:
 
@@ -54,4 +58,8 @@ class HTEXRadioSender(MonitoringRadioSender):
         else:
             logger.error("result_queue is uninitialized - cannot put monitoring message")
 
-        return
+
+class HTEXRadioReceiver(MonitoringRadioReceiver):
+    def shutdown(self) -> None:
+        # there is nothing to shut down
+        pass

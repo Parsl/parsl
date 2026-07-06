@@ -114,17 +114,15 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    def _is_alive(self, job_dict):
-        retcode, stdout, stderr = execute_wait(
-            'ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
-                job_dict['remote_pid']), self.cmd_timeout)
-        for line in stdout.split('\n'):
-            if line.startswith("STATUS:"):
-                status = line.split("STATUS:")[1].strip()
-                if status == "0":
-                    return True
-                else:
-                    return False
+    @staticmethod
+    def _is_alive(job_dict) -> bool:
+        try:
+            os.kill(job_dict['remote_pid'], 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            pass  # exists; just no permissions to send signal
+        return True
 
     def _job_file_path(self, script_path: str, suffix: str) -> str:
         path = '{0}{1}'.format(script_path, suffix)
@@ -199,7 +197,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_command = self.worker_init + f'\nexport JOBNAME={job_name}\n' + self.launcher(command, tasks_per_node, self.nodes_per_block)
+        wrap_command = (self.worker_init + f'\nexport JOBNAME={job_name}\n' +
+                        self.launcher(command, tasks_per_node, self.nodes_per_block, self.script_dir))
 
         self._write_submit_script(wrap_command, script_path)
 
@@ -230,8 +229,9 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                                   stdout, stderr)
         for line in stdout.split('\n'):
             if line.startswith("PID:"):
-                remote_pid = line.split("PID:")[1].strip()
-                job_id = remote_pid
+                job_id = line.split("PID:")[1].strip()
+                remote_pid = int(job_id)
+                break
         if job_id is None:
             raise SubmitException(job_name, "Channel failed to start remote command/retrieve PID")
 

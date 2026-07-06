@@ -56,6 +56,10 @@ will be used.
 Memoization/checkpointing
 -------------------------
 
+The default checkpoint/memoization system can be replaced by supplying an
+instance of the `Memoizer` class. This instance is queried before an app is
+launched, and is given details of completed apps.
+
 When parsl memoizes/checkpoints an app parameter, it does so by computing a
 hash of that parameter that should be the same if that parameter is the same
 on subsequent invocations. This isn't straightforward to do for arbitrary
@@ -97,6 +101,14 @@ such as tuples, lists, sets and dicts.
 This plugin interface might be used to interface other task-like or future-like
 objects to the Parsl dependency mechanism, by describing how they can be
 interpreted as a Future.
+
+Log configuration
+-----------------
+
+The `LogConfig` class provides a place for log configuration, which is planned
+to extend across the various Python processes involved in a workflow
+execution.  Right now, it is only used by the ``initialize_logging`` parameter of
+the `DataFlowKernel`.
 
 Removed interfaces
 ------------------

@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import parsl
@@ -18,6 +20,10 @@ apps = []
 
 @pytest.mark.local
 @pytest.mark.radical
+@pytest.mark.skipif(
+    os.environ.get("RADICAL_CI") != "1",
+    reason="Only runs in Radical CI workflow"
+)
 def test_radical_mpi(n=7):
     # rank size should be > 1 for the
     # radical runtime system to run this function in MPI env

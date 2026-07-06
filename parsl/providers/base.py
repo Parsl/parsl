@@ -33,7 +33,28 @@ class ExecutionProvider(metaclass=ABCMeta):
           [cancel]     <--------|----+
                                 |
                                 +-------------------
-     """
+
+    In addition to the listed methods, an ExecutionProvider instance must always
+    have these attributes, which both default to `None`:
+
+      mem_per_node: Real memory to provision per node in GB.
+
+                    Providers which set this attribute should ask for mem_per_node of memory
+                    when provisioning resources, and set the corresponding environment
+                    variable PARSL_MEMORY_GB before executing submitted commands.
+
+                    If this attribute is set, executors may use it to calculate how many tasks can
+                    run concurrently per node.
+
+      cores_per_node: Number of cores to provision per node.
+
+                    Providers which set this attribute should ask for cores_per_node cores
+                    when provisioning resources, and set the corresponding environment
+                    variable PARSL_CORES before executing submitted commands.
+
+                    If this attribute is set, executors may use it to calculate how many tasks can
+                    run concurrently per node.
+    """
 
     @abstractmethod
     def __init__(self) -> None:
@@ -44,8 +65,8 @@ class ExecutionProvider(metaclass=ABCMeta):
         self.script_dir: Optional[str]
         self.parallelism: float
         self.resources: Dict[object, Any]
-        self._cores_per_node: Optional[int] = None
-        self._mem_per_node: Optional[float] = None
+        self.cores_per_node: Optional[int] = None
+        self.mem_per_node: Optional[float] = None
         pass
 
     @abstractmethod
@@ -110,40 +131,6 @@ class ExecutionProvider(metaclass=ABCMeta):
     def label(self) -> str:
         ''' Provides the label for this provider '''
         pass
-
-    @property
-    def mem_per_node(self) -> Optional[float]:
-        """Real memory to provision per node in GB.
-
-        Providers which set this property should ask for mem_per_node of memory
-        when provisioning resources, and set the corresponding environment
-        variable PARSL_MEMORY_GB before executing submitted commands.
-
-        If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node.
-        """
-        return self._mem_per_node
-
-    @mem_per_node.setter
-    def mem_per_node(self, value: float) -> None:
-        self._mem_per_node = value
-
-    @property
-    def cores_per_node(self) -> Optional[int]:
-        """Number of cores to provision per node.
-
-        Providers which set this property should ask for cores_per_node cores
-        when provisioning resources, and set the corresponding environment
-        variable PARSL_CORES before executing submitted commands.
-
-        If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node.
-        """
-        return self._cores_per_node
-
-    @cores_per_node.setter
-    def cores_per_node(self, value: int) -> None:
-        self._cores_per_node = value
 
     @property
     @abstractmethod

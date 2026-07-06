@@ -34,7 +34,6 @@ def fresh_config(run_dir, strategy, db_url):
         strategy=strategy,
         strategy_period=0.1,
         monitoring=MonitoringHub(
-                        hub_address="localhost",
                         logging_endpoint=db_url
         )
     )
