@@ -103,7 +103,10 @@ class MPIExecutor(HighThroughputExecutor):
 
         self.max_workers_per_block = max_workers_per_block
 
-        if not isinstance(self.provider.launcher, SimpleLauncher):
+        assert isinstance(self.provider, ExecutionProvider), \
+            "HTEX initialization should always make self.provider a provider"
+
+        if not hasattr(self.provider, 'launcher') or not isinstance(self.provider.launcher, SimpleLauncher):
             raise TypeError("mpi_mode requires the provider to be configured to use a SimpleLauncher")
 
         if mpi_launcher not in VALID_LAUNCHERS:

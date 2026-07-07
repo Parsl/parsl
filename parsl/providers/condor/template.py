@@ -7,6 +7,7 @@ transfer_input_files    = ${input_files}
 machine_count           = ${nodes}
 output                  = ${submit_script_dir}/${job_name}.stdout
 error                   = ${submit_script_dir}/${job_name}.stderr
+log                     = ${submit_script_dir}/${job_name}.log
 executable              = /bin/bash
 arguments               = ${job_script}
 requirements            = ${requirements}

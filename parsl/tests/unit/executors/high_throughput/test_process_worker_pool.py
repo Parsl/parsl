@@ -2,6 +2,7 @@ import os
 import pickle
 import sys
 from argparse import ArgumentError
+from typing import Any, Dict
 from unittest import mock
 
 import pytest
@@ -86,9 +87,9 @@ def _always_raise(*a, **k):
 
 
 @pytest.mark.local
-def test_worker_dynamic_import_happy_path(tmpd_cwd):
+def test_worker_dynamic_import_happy_path(tmpd_cwd) -> None:
     import_str = f"{_always_raise.__module__}.{_always_raise.__name__}"
-    task_exec = {
+    task_exec: Dict[str, Any] = {
         "f": import_str,
         "a": (1, 2),
         "k": {"a": "b"},
@@ -145,7 +146,7 @@ def test_worker_dynamic_import_happy_path(tmpd_cwd):
 
 
 @pytest.mark.local
-def test_worker_bad_dynamic_import(tmpd_cwd):
+def test_worker_bad_dynamic_import(tmpd_cwd) -> None:
     req = {
         "task_id": 15,
         "context": {
