@@ -91,6 +91,15 @@ Manager Selectors
     parsl.executors.high_throughput.manager_selector.RandomManagerSelector
     parsl.executors.high_throughput.manager_selector.BlockIdManagerSelector
 
+High Throughput Executor worker calculations
+============================================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.executors.high_throughput.max_workers.compute_max_workers
+
 Launchers
 =========
 

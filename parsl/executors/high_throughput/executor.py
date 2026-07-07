@@ -1,5 +1,4 @@
 import logging
-import math
 import os
 import pickle
 import subprocess
@@ -28,6 +27,7 @@ from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
     RandomManagerSelector,
 )
+from parsl.executors.high_throughput.max_workers import compute_max_workers
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.monitoring.radios.base import RadioConfig
@@ -295,31 +295,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         else:
             self.all_addresses = get_all_addresses()
 
-        self.max_workers_per_node = max_workers_per_node or float("inf")
-
-        mem_slots = self.max_workers_per_node
-        cpu_slots = self.max_workers_per_node
-        if hasattr(self.provider, 'mem_per_node') and \
-                self.provider.mem_per_node is not None and \
-                mem_per_worker is not None and \
-                mem_per_worker > 0:
-            mem_slots = math.floor(self.provider.mem_per_node / mem_per_worker)
-        if hasattr(self.provider, 'cores_per_node') and \
-                self.provider.cores_per_node is not None:
-            cpu_slots = math.floor(self.provider.cores_per_node / cores_per_worker)
-
         # Set the list of available accelerators
         if isinstance(available_accelerators, int):
             # If the user provide an integer, create some names for them
             available_accelerators = list(map(str, range(available_accelerators)))
         self.available_accelerators = list(available_accelerators)
 
-        # Determine the number of workers per node
-        self._workers_per_node = min(self.max_workers_per_node, mem_slots, cpu_slots)
-        if len(self.available_accelerators) > 0:
-            self._workers_per_node = min(self._workers_per_node, len(available_accelerators))
-        if self._workers_per_node == float('inf'):
-            self._workers_per_node = 1  # our best guess-- we do not have any provider hints
+        self.max_workers_per_node = max_workers_per_node
 
         self._task_counter = 0
 
@@ -402,8 +384,23 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def initialize_scaling(self):
         """Compose the launch command and scale out the initial blocks.
         """
+
+        # Determine the number of workers per node for scaling
+        workers_per_node = compute_max_workers(mem_per_node=self.provider.mem_per_node if hasattr(self.provider, 'mem_per_node') else None,
+                                               mem_per_worker=self.mem_per_worker,
+                                               cores_per_node=self.provider.cores_per_node if hasattr(self.provider, 'cores_per_node') else None,
+                                               cores_per_worker=self.cores_per_worker,
+                                               configured_max_workers_per_node=self.max_workers_per_node,
+                                               accelerators=self.available_accelerators)
+
+        if workers_per_node is None:
+            logger.warning("Assuming 1 worker per node for scaling, which is likely incorrect")
+            self._workers_per_node = 1
+        else:
+            self._workers_per_node = workers_per_node
+
         debug_opts = "--debug" if self.worker_debug else ""
-        max_workers_per_node = "" if self.max_workers_per_node == float('inf') else "--max_workers_per_node={}".format(self.max_workers_per_node)
+        max_workers_per_node = "" if self.max_workers_per_node is None else "--max_workers_per_node={}".format(self.max_workers_per_node)
         enable_mpi_opts = "--enable_mpi_mode " if self.enable_mpi_mode else ""
 
         address_probe_timeout_string = ""
