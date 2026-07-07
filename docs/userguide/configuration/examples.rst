@@ -130,6 +130,15 @@ re-used in subsequent executions. The configuration uses the `parsl.providers.AW
 
 .. literalinclude:: ../../../parsl/configs/ec2.py
 
+Anvil (Purdue)
+--------------
+
+.. image:: https://www.rcac.purdue.edu/storage/resources/anvil/resource.jpg
+
+Anvil is hosted at Purdue University, and is a powerful new supercomputer that provides advanced computing capabilities to support a wide range of computational and data-intensive research spanning from traditional high-performance computing to modern artificial intelligence applications. 
+The configuration below provides access to a single GPU on a single node, and assumes that the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
+
+.. literalinclude::  ../../../parsl/configs/anvil.py
 
 ASPIRE 1 (NSCC)
 ---------------
@@ -205,6 +214,16 @@ For more information on using TaskVine, including configurations for remote exec
 TaskVine's predecessor, WorkQueue, may continue to be used with Parsl.
 For more information on using WorkQueue visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
 
+Delta (NCSA)
+--------------
+
+.. image:: https://docs.ncsa.illinois.edu/systems/delta/en/latest/_images/delta_front_1.png
+
+Delta is a dedicated, ACCESS-allocated resource designed by HPE and NCSA, delivering a highly capable GPU-focused compute environment for GPU and CPU workloads.
+The configuration below provides access to a single GPU on a single node, and assumes that the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
+
+.. literalinclude::  ../../../parsl/configs/delta.py
+
 Expanse (SDSC)
 --------------
 
@@ -249,6 +268,30 @@ and is the first deployment in the National Science Foundation's petascale compu
 running on a login node and uses the `parsl.providers.SlurmProvider` to interface with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../../parsl/configs/frontera.py
+
+Globus Compute (Multisite)
+--------------------------
+
+Globus Compute is a distributed Function as a Service (FaaS) platform that enables secure
+execution of functions on heterogeneous remote computers, from laptops to campus clusters, clouds, and supercomputers.
+Functions are executed on `Globus Compute Endpoints <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoints.html>`_
+that can be `configured <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoint_examples.html>`_
+for most clusters/HPC systems. The example configuration below allows task submission
+to Globus Compute's hosted tutorial endpoint.
+
+.. literalinclude:: ../../../parsl/configs/gc_tutorial.py
+
+.. note:: The Globus Compute tutorial endpoint runs Python 3.11. We recommend
+   using the same Python environment to avoid potential serialization errors
+   caused by environment mismatches. Globus Compute will raise a warning if any
+   environment version mismatches are detected although minor version differences
+   may not cause faults (eg, Python3.11.7 vs Python3.11.8)
+
+The configuration below specifies two remote endpoints, one at `SDSC's Expanse Supercomputer <https://www.sdsc.edu/services/hpc/expanse/>`_
+and the other at `NERSC's Perlmutter Supercomputer <https://docs.nersc.gov/systems/perlmutter/architecture/>`_.
+
+.. literalinclude:: ../../../parsl/configs/gc_multisite.py
+
 
 
 Kubernetes Clusters

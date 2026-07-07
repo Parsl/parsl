@@ -88,7 +88,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         raise pe.AppTimeout(f"App {func_name} exceeded walltime: {timeout} seconds")
 
     except Exception as e:
-        raise pe.AppException(f"App {func_name} caught exception with returncode: {returncode}", e)
+        raise pe.AppException(f"App {func_name} caught exception", e)
 
     if returncode != 0:
         raise pe.BashExitFailure(func_name, proc.returncode)

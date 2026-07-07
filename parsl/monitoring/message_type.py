@@ -17,3 +17,6 @@ class MessageType(Enum):
 
     # Reports of the block info
     BLOCK_INFO = 4
+
+    # Reports of a task starting or ending execution on a worker
+    WORKER_TASK_INFO = 5

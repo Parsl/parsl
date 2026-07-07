@@ -11,7 +11,6 @@ from types import TracebackType
 from typing import (
     IO,
     Any,
-    AnyStr,
     Callable,
     Dict,
     Generator,
@@ -107,18 +106,30 @@ def get_last_checkpoint(rundir: str = "runinfo") -> Sequence[str]:
     if not os.path.isdir(rundir):
         return []
 
-    dirs = sorted(os.listdir(rundir))
+    dirs = os.listdir(rundir)
 
-    if len(dirs) == 0:
-        return []
+    logger.debug("Rundir candidates: %s", dirs)
 
-    last_runid = dirs[-1]
-    last_checkpoint = os.path.abspath(f'{rundir}/{last_runid}/checkpoint')
+    # dirs_parseable is a list of number-like directory names,
+    # which is the rundir subdirectories, excluding non-numerical
+    # files such as the monitoring database.
+    dirs_parseable = [d for d in dirs if d.isdigit()]
+    logger.debug("Parseable candidates: %s", dirs_parseable)
 
-    if not os.path.isdir(last_checkpoint):
-        return []
+    # dirs_sorted will be a list containing the largest numbered directories
+    # first (parsed as an int, not lexically sorted, to accomodate different
+    # length run directory names that can happen after 1000 runs)
+    dirs_sorted = sorted(dirs_parseable, key=int, reverse=True)
 
-    return [last_checkpoint]
+    # use a generator so that the resulting co-routine will only do filesystem
+    # operations on paths until it finds the first one with a checkpoint - which
+    # is likely to be the first one.
+    last_path = next(([path] for d in dirs_sorted
+                      if os.path.isdir(path := os.path.abspath(f'{rundir}/{d}/checkpoint'))),
+                     [])
+
+    logger.debug("Selected path: %s", last_path)
+    return last_path
 
 
 @typeguard.typechecked
@@ -132,7 +143,13 @@ def get_std_fname_mode(
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
         if len(stdfspec) != 2:
-            msg = (f"std descriptor {fdname} has incorrect tuple length "
+            # this is annotated as unreachable because the type annotation says
+            # it cannot be reached. Earlier versions of typeguard did not enforce
+            # that type annotation at runtime, though, and the parameters to this
+            # function come from the user.
+            # When typeguard lower bound is raised to around version 4, this
+            # unreachable can be removed.
+            msg = (f"std descriptor {fdname} has incorrect tuple length "  # type: ignore[unreachable]
                    f"{len(stdfspec)}")
             raise pe.BadStdStreamFile(msg)
         fname, mode = stdfspec
@@ -157,7 +174,7 @@ def wait_for_file(path: str, seconds: int = 10) -> Generator[None, None, None]:
 
 
 @contextmanager
-def time_limited_open(path: str, mode: str, seconds: int = 1) -> Generator[IO[AnyStr], None, None]:
+def time_limited_open(path: str, mode: str, seconds: int = 1) -> Generator[IO, None, None]:
     with wait_for_file(path, seconds):
         logger.debug("wait_for_file yielded")
     f = open(path, mode)
@@ -250,6 +267,9 @@ class RepresentationMixin:
             args = [getattr(self, a, default) for a in argspec.args[1:]]
         kwargs = {key: getattr(self, key, default) for key in defaults}
 
+        kwonlyargs = {key: getattr(self, key, default) for key in argspec.kwonlyargs}
+        kwargs.update(kwonlyargs)
+
         def assemble_multiline(args: List[str], kwargs: Dict[str, object]) -> str:
             def indent(text: str) -> str:
                 lines = text.splitlines()
@@ -340,6 +360,8 @@ class Timer:
         self._thread.start()
 
     def _wake_up_timer(self) -> None:
+        self.make_callback()
+
         while not self._kill_event.wait(self.interval):
             self.make_callback()
 

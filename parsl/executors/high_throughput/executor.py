@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 import pickle
 import subprocess
 import threading
@@ -29,10 +30,13 @@ from parsl.executors.high_throughput.manager_selector import (
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
+from parsl.monitoring.radios.base import RadioConfig
+from parsl.monitoring.radios.htex import HTEXRadio
+from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_receiver
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
-from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize import deserialize, pack_apply_message
 from parsl.serialize.errors import DeserializationError, SerializationError
 from parsl.usage_tracking.api import UsageInformation
 from parsl.utils import RepresentationMixin
@@ -45,10 +49,10 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "-c {cores_per_worker} "
                       "-m {mem_per_worker} "
                       "--poll {poll_period} "
-                      "--task_port={task_port} "
-                      "--result_port={result_port} "
+                      "--port={worker_port} "
                       "--cert_dir {cert_dir} "
                       "--logdir={logdir} "
+                      "--logconf={logconf} "
                       "--block_id={{block_id}} "
                       "--hb_period={heartbeat_period} "
                       "{address_probe_timeout_string} "
@@ -77,7 +81,7 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
     launch_cmd : str
         Command line string to launch the process_worker_pool from the provider. The command line string
         will be formatted with appropriate values for the following values (debug, task_url, result_url,
-        cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For example:
+        cores_per_worker, nodes_per_block, heartbeat_period, heartbeat_threshold, logdir). For example:
         launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
 
     interchange_launch_cmd : Sequence[str]
@@ -99,8 +103,8 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         Supports IPv4 and IPv6 addresses
         default=127.0.0.1
 
-    worker_ports : (int, int)
-        Specify the ports to be used by workers to connect to Parsl. If this option is specified,
+    worker_port : int
+        Specify the port to be used by workers to connect to Parsl. If this option is specified,
         worker_port_range will not be honored.
 
     worker_port_range : (int, int)
@@ -149,13 +153,19 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         In case of a remote file system, specify the path to where logs will be kept.
 
     encrypted : bool
-        Flag to enable/disable encryption (CurveZMQ). Default is False.
+        Flag to enable/disable encryption (CurveZMQ). Default is True.
 
     manager_selector: ManagerSelector
         Determines what strategy the interchange uses to select managers during task distribution.
         See API reference under "Manager Selectors" regarding the various manager selectors.
         Default: 'RandomManagerSelector'
 """  # Documentation for params used by both HTEx and MPIEx
+
+
+class HTEXFuture(Future):
+    def __init__(self, task_id) -> None:
+        super().__init__()
+        self.parsl_executor_task_id = task_id
 
 
 class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageInformation):
@@ -235,12 +245,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     @typeguard.typechecked
     def __init__(self,
                  label: str = 'HighThroughputExecutor',
-                 provider: ExecutionProvider = LocalProvider(),
+                 provider: Optional[ExecutionProvider] = None,
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
                  loopback_address: str = "127.0.0.1",
-                 worker_ports: Optional[Tuple[int, int]] = None,
+                 worker_port: Optional[int] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
                  storage_access: Optional[List[Staging]] = None,
@@ -248,7 +258,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers_per_node: Optional[Union[int, float]] = None,
+                 max_workers_per_node: Optional[int] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
                  prefetch_capacity: int = 0,
@@ -260,11 +270,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = True,
+                 remote_monitoring_radio: Optional[RadioConfig] = None):
 
         logger.debug("Initializing HighThroughputExecutor")
 
-        BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
+        BlockProviderExecutor.__init__(self,
+                                       provider=provider if provider else LocalProvider(),
+                                       block_error_handler=block_error_handler)
         self.label = label
         self.worker_debug = worker_debug
         self.storage_access = storage_access
@@ -278,9 +291,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.loopback_address = loopback_address
 
         if self.address:
-            self.all_addresses = address
+            self.all_addresses = {self.address}
         else:
-            self.all_addresses = ','.join(get_all_addresses())
+            self.all_addresses = get_all_addresses()
 
         self.max_workers_per_node = max_workers_per_node or float("inf")
 
@@ -309,7 +322,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self._workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
-        self.worker_ports = worker_ports
+
+        if remote_monitoring_radio is not None:
+            self.remote_monitoring_radio = remote_monitoring_radio
+        else:
+            self.remote_monitoring_radio = HTEXRadio()
+
+        self.worker_port = worker_port
         self.worker_port_range = worker_port_range
         self.interchange_proc: Optional[subprocess.Popen] = None
         self.interchange_port_range = interchange_port_range
@@ -323,6 +342,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.encrypted = encrypted
         self.cert_dir = None
 
+        # This flag will enable/disable internal Python mismatch checks
+        # between the interchange and worker managers. This serves as a
+        # temporary workaround for Globus Compute to support different
+        # Python versions at the endpoint and worker layers. We can drop
+        # the flag once we implement modular internal message protocols.
+        self._check_python_mismatch: bool = True
+
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
@@ -334,7 +360,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._result_queue_thread_exit = threading.Event()
         self._result_queue_thread: Optional[threading.Thread] = None
 
-    radio_mode = "htex"
+        self.zmq_monitoring: Optional[ZMQRadioReceiver]
+        self.zmq_monitoring = None
+        self.hub_zmq_port = None
+
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
 
@@ -357,10 +386,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         return self.logdir
 
     def validate_resource_spec(self, resource_specification: dict):
-        """HTEX supports the following *Optional* resource specifications:
-        priority: lower value is higher priority"""
         if resource_specification:
-            acceptable_fields = {'priority'}
+            """HTEX supports the following *Optional* resource specifications:
+            priority: lower value is higher priority"""
+            acceptable_fields = {'priority'}  # add new resource spec field names here to make htex accept them
             keys = set(resource_specification.keys())
             invalid_keys = keys - acceptable_fields
             if invalid_keys:
@@ -384,9 +413,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
                                        address_probe_timeout_string=address_probe_timeout_string,
-                                       addresses=self.all_addresses,
-                                       task_port=self.worker_task_port,
-                                       result_port=self.worker_result_port,
+                                       addresses=",".join(self.all_addresses),
+                                       worker_port=self.worker_port,
                                        cores_per_worker=self.cores_per_worker,
                                        mem_per_worker=self.mem_per_worker,
                                        max_workers_per_node=max_workers_per_node,
@@ -397,6 +425,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                        poll_period=self.poll_period,
                                        cert_dir=self.cert_dir,
                                        logdir=self.worker_logdir,
+                                       logconf=self.logconf_path,
                                        cpu_affinity=self.cpu_affinity,
                                        enable_mpi_mode=enable_mpi_opts,
                                        mpi_launcher=self.mpi_launcher,
@@ -409,6 +438,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def start(self):
         """Create the Interchange process and connect to it.
         """
+        super().start()
         if self.encrypted and self.cert_dir is None:
             logger.debug("Creating CurveZMQ certificates")
             self.cert_dir = curvezmq.create_certificates(self.logdir)
@@ -418,6 +448,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 "encrypted attribute is set to False. You must either change cert_dir to "
                 "None or encrypted to True."
             )
+
+        if self.log_config:
+            log_config_dir = os.path.join(self.logdir, "log_config")
+            os.makedirs(log_config_dir, mode=0o700, exist_ok=True)
+
+            self.logconf_path = os.path.join(log_config_dir, "log_config.pkl")
+            with open(self.logconf_path, "wb") as f:
+                pickle.dump(self.log_config, f)
+        else:
+            self.logconf_path = None
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
             self.loopback_address, self.interchange_port_range, self.cert_dir
@@ -429,11 +469,18 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self.loopback_address, self.interchange_port_range, self.cert_dir
         )
 
+        if self.monitoring_messages is not None:
+            self.zmq_monitoring = start_zmq_receiver(monitoring_messages=self.monitoring_messages,
+                                                     loopback_address=self.loopback_address,
+                                                     port_range=self.interchange_port_range,
+                                                     logdir=self.logdir,
+                                                     worker_debug=self.worker_debug,
+                                                     )
+            self.hub_zmq_port = self.zmq_monitoring.port
+
         self._result_queue_thread = None
         self._start_result_queue_thread()
         self._start_local_interchange_process()
-
-        logger.debug("Created result queue thread: %s", self._result_queue_thread)
 
         self.initialize_scaling()
 
@@ -475,10 +522,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             else:
 
                 for serialized_msg in msgs:
-                    try:
-                        msg = pickle.loads(serialized_msg)
-                    except pickle.UnpicklingError:
-                        raise BadMessage("Message received could not be unpickled")
+                    msg = pickle.loads(serialized_msg)
 
                     if msg['type'] == 'result':
                         try:
@@ -531,14 +575,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         get the worker task and result ports that the interchange has bound to.
         """
 
+        assert self.interchange_proc is None, f"Already exists! {self.interchange_proc!r}"
+
         interchange_config = {"client_address": self.loopback_address,
                               "client_ports": (self.outgoing_q.port,
                                                self.incoming_q.port,
                                                self.command_client.port),
                               "interchange_address": self.address,
-                              "worker_ports": self.worker_ports,
+                              "worker_port": self.worker_port,
                               "worker_port_range": self.worker_port_range,
-                              "hub_address": self.hub_address,
+                              "hub_address": self.loopback_address,
                               "hub_zmq_port": self.hub_zmq_port,
                               "logdir": self.logdir,
                               "heartbeat_threshold": self.heartbeat_threshold,
@@ -547,6 +593,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "cert_dir": self.cert_dir,
                               "manager_selector": self.manager_selector,
                               "run_id": self.run_id,
+                              "log_config": self.log_config,
+                              "_check_python_mismatch": self._check_python_mismatch,
                               }
 
         config_pickle = pickle.dumps(interchange_config)
@@ -561,11 +609,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         stdin.close()
         logger.debug("Sent config object. Requesting worker ports")
         try:
-            (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
+            self.worker_port = self.command_client.run("WORKER_BINDS", timeout_s=120)
         except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
-        logger.debug("Got worker ports")
+        logger.debug(
+            "Interchange process started (%r).  Worker port: %d",
+            self.interchange_proc,
+            self.worker_port,
+        )
 
     def _start_result_queue_thread(self):
         """Method to start the result queue thread as a daemon.
@@ -573,38 +625,34 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Checks if a thread already exists, then starts it.
         Could be used later as a restart if the result queue thread dies.
         """
-        if self._result_queue_thread is None:
-            logger.debug("Starting result queue thread")
-            self._result_queue_thread = threading.Thread(target=self._result_queue_worker, name="HTEX-Result-Queue-Thread")
-            self._result_queue_thread.daemon = True
-            self._result_queue_thread.start()
-            logger.debug("Started result queue thread")
+        assert self._result_queue_thread is None, f"Already exists! {self._result_queue_thread!r}"
 
-        else:
-            logger.error("Result queue thread already exists, returning")
+        logger.debug("Starting result queue thread")
+        self._result_queue_thread = threading.Thread(target=self._result_queue_worker, name="HTEX-Result-Queue-Thread")
+        self._result_queue_thread.daemon = True
+        self._result_queue_thread.start()
+        logger.debug("Started result queue thread: %r", self._result_queue_thread)
 
-    def hold_worker(self, worker_id: str) -> None:
-        """Puts a worker on hold, preventing scheduling of additional tasks to it.
+    def _hold_manager(self, manager_id: str) -> None:
+        """Puts a manager on hold, preventing scheduling of additional tasks to it.
 
         This is called "hold" mostly because this only stops scheduling of tasks,
-        and does not actually kill the worker.
+        and does not actually kill the manager or workers.
 
         Parameters
         ----------
 
-        worker_id : str
-            Worker id to be put on hold
+        manager_id : str
+            Manager id to be put on hold
         """
-        self.command_client.run("HOLD_WORKER;{}".format(worker_id))
-        logger.debug("Sent hold request to manager: {}".format(worker_id))
+        self.command_client.run("HOLD_WORKER;{}".format(manager_id))
+        logger.debug("Sent hold request to manager: {}".format(manager_id))
 
-    @property
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
         return len(self.tasks)
 
-    @property
     def connected_workers(self) -> int:
         """Returns the count of workers across all connected managers"""
         return self.command_client.run("WORKERS")
@@ -615,6 +663,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         worker_count, tasks(int), idle_durations(float), active(bool)
         """
         return self.command_client.run("MANAGERS")
+
+    def connected_managers_packages(self) -> Dict[str, Dict[str, str]]:
+        """Returns a dict mapping each manager ID to a dict of installed
+        packages and their versions
+        """
+        return self.command_client.run("MANAGERS_PACKAGES")
 
     def connected_blocks(self) -> List[str]:
         """List of connected block ids"""
@@ -634,9 +688,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         for manager in managers:
             if manager['block_id'] == block_id:
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
-                self.hold_worker(manager['manager'])
+                self._hold_manager(manager['manager'])
 
-    def submit(self, func, resource_specification, *args, **kwargs):
+    def submit(self, func: Callable, resource_specification: dict, *args, **kwargs) -> HTEXFuture:
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
@@ -657,34 +711,83 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         self.validate_resource_spec(resource_specification)
 
+        # handle people sending blobs gracefully
+        if logger.getEffectiveLevel() <= logging.DEBUG:
+            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
+            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
+
+        try:
+            fn_buf = pack_apply_message(func, args, kwargs, buffer_threshold=1 << 20)
+        except TypeError:
+            raise SerializationError(func.__name__)
+
+        context = {}
+        if resource_specification:
+            context["resource_spec"] = resource_specification
+
+        return self.submit_payload(context, fn_buf)
+
+    def submit_payload(self, context: dict, buffer: bytes) -> HTEXFuture:
+        """
+        Submit specially crafted payloads.
+
+        For use-cases where the ``HighThroughputExecutor`` consumer needs the payload
+        handled by the worker in a special way.  For example, if the function is
+        serialized differently than Parsl's default approach, or if the task must
+        be setup more precisely than Parsl's default ``execute_task`` allows.
+
+        An example interaction:
+
+        .. code-block: python
+
+            >>> htex: HighThroughputExecutor  # setup prior to this example
+            >>> ctxt = {
+            ...   "task_executor": {
+            ...     "f": "full.import.path.of.custom_execute_task",
+            ...     "a": ("additional", "arguments"),
+            ...     "k": {"some": "keyword", "args": "here"}
+            ...   }
+            ... }
+            >>> fn_buf = custom_serialize(task_func, *task_args, **task_kwargs)
+            >>> fut = htex.submit_payload(ctxt, fn_buf)
+
+        The custom ``custom_execute_task`` would be dynamically imported, and
+        invoked as:
+
+        .. code-block: python
+
+            args = ("additional", "arguments")
+            kwargs = {"some": "keyword", "args": "here"}
+            result = custom_execute_task(fn_buf, *args, **kwargs)
+
+        Parameters
+        ----------
+        context:
+            A task-specific context associated with the function buffer.  Parsl
+            currently implements the keys ``task_executor`` and ``resource_spec``
+
+        buffer:
+            A serialized function, that will be deserialized and executed by
+            ``execute_task`` (or custom function, if ``task_executor`` is specified)
+
+        Returns
+        -------
+        An HTEXFuture (a normal Future, with the attribute ``.parsl_executor_task_id``
+        set).  The future will be set to done when the associated function buffer has
+        been invoked and completed.
+        """
         if self.bad_state_is_set:
             raise self.executor_exception
 
         self._task_counter += 1
         task_id = self._task_counter
 
-        # handle people sending blobs gracefully
-        if logger.getEffectiveLevel() <= logging.DEBUG:
-            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
-            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
-
-        fut = Future()
-        fut.parsl_executor_task_id = task_id
+        fut = HTEXFuture(task_id)
         self.tasks[task_id] = fut
 
-        try:
-            fn_buf = pack_res_spec_apply_message(func, args, kwargs,
-                                                 resource_specification=resource_specification,
-                                                 buffer_threshold=1024 * 1024)
-        except TypeError:
-            raise SerializationError(func.__name__)
-
-        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": fn_buf}
-
-        # Post task to the outgoing queue
+        msg = {"task_id": task_id, "context": context, "buffer": buffer}
         self.outgoing_q.put(msg)
 
-        # Return the future
         return fut
 
     @property
@@ -853,6 +956,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Waiting for result queue thread exit")
         if self._result_queue_thread:
             self._result_queue_thread.join()
+
+        if self.zmq_monitoring:
+            self.zmq_monitoring.close()
+
+        super().shutdown()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

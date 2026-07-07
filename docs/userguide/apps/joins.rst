@@ -43,11 +43,11 @@ returned by Globus Compute to complete.
 Usage
 -----
 
-A `join_app` looks quite like a `python_app`, but should return one or more
-``Future`` objects, rather than a value. Once the Python code has run, the
-app will wait for those Futures to complete without occuping a Parsl worker,
-and when those Futures complete, their contents will be the return value
-of the `join_app`.
+A `join_app` looks quite like a `python_app`, but should return a ``Future``,
+or a list of ``Future`` objects, rather than a value. Once the Python code has
+run, the app will wait for those Futures to complete without occupying a Parsl
+worker, and when those Futures complete, their contents will be the return
+value of the `join_app`.
 
 For example:
 

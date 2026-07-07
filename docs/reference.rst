@@ -13,7 +13,7 @@ Core
     parsl.app.app.join_app
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
-    parsl.monitoring.MonitoringHub
+    parsl.concurrent.ParslPoolExecutor
     parsl.dataflow.dependency_resolvers.DependencyResolver
     parsl.dataflow.dependency_resolvers.DEEP_DEPENDENCY_RESOLVER
     parsl.dataflow.dependency_resolvers.SHALLOW_DEPENDENCY_RESOLVER
@@ -79,6 +79,7 @@ Executors
     parsl.executors.taskvine.TaskVineExecutor
     parsl.executors.FluxExecutor
     parsl.executors.radical.RadicalPilotExecutor
+    parsl.executors.GlobusComputeExecutor
 
 Manager Selectors
 =================
@@ -142,6 +143,16 @@ Batch jobs
     parsl.jobs.error_handlers.simple_error_handler
     parsl.jobs.error_handlers.windowed_error_handler
 
+Checkpointing and Memoization
+=============================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.dataflow.memoization.Memoizer
+    parsl.dataflow.memoization.BasicMemoizer
+
 Exceptions
 ==========
 
@@ -172,9 +183,36 @@ Exceptions
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
     parsl.executors.high_throughput.errors.WorkerLost
-    parsl.executors.high_throughput.interchange.ManagerLost
+    parsl.executors.high_throughput.errors.ManagerLost
     parsl.serialize.errors.DeserializationError
     parsl.serialize.errors.SerializationError
+
+Logging
+=======
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.logconfigs.base.LogConfig
+    parsl.logconfigs.noop.NoopLogging
+
+Monitoring
+==========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.monitoring.MonitoringHub
+    parsl.monitoring.radios.base.MonitoringRadioReceiver
+    parsl.monitoring.radios.base.MonitoringRadioSender
+    parsl.monitoring.radios.base.RadioConfig
+    parsl.monitoring.radios.filesystem.FilesystemRadio
+    parsl.monitoring.radios.htex.HTEXRadio
+    parsl.monitoring.radios.udp.UDPRadio
+    parsl.monitoring.radios.multiprocessing.MultiprocessingQueueRadio
+
 
 Internal
 ========
@@ -188,7 +226,6 @@ Internal
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
     parsl.dataflow.memoization.id_for_memo
-    parsl.dataflow.memoization.Memoizer
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
     parsl.dataflow.taskrecord.TaskRecord

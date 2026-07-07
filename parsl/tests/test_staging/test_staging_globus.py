@@ -3,9 +3,9 @@ import pytest
 import parsl
 from parsl.app.app import python_app
 from parsl.data_provider.files import File
-from parsl.tests.configs.local_threads_globus import config, remote_writeable
+from parsl.tests.configs.local_threads_globus import fresh_config, remote_writeable
 
-local_config = config
+local_config = fresh_config
 
 
 @python_app

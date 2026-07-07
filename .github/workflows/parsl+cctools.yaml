@@ -1,0 +1,50 @@
+name: WorkQueue and TaskVine tests
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      max-parallel: 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.11'
+
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+        echo "CONDA BIN: $CONDA/bin"
+
+    - name: Install parsl and dependencies
+      run: |
+        conda install --channel=conda-forge ndcctools mpich mpi4py openssl
+        make deps
+        pip install .[workqueue,monitoring]
+        export PATH=/usr/share/miniconda/bin/:$PATH
+
+    - name: Sanity check
+      run: |
+        echo "PATH: $PATH"
+        echo "Python: "; which python3
+        python3 -c "import ndcctools; print(ndcctools.__file__)"
+        python3 -c "from ndcctools import work_queue; print(work_queue.__version__)"
+        python3 -c "import parsl; print(parsl.__version__)"
+        which parsl_coprocess.py
+        which python3
+        find /usr/share/miniconda | grep libssl
+
+    - name: Run pytest suite for WorkQueue and TaskVine
+      run: |
+        make wqex_local_test
+        make vineex_local_test

@@ -45,7 +45,7 @@ class DataManager:
             storage_access = default_staging
 
         for provider in storage_access:
-            logger.debug("stage_out checking Staging provider {}".format(provider))
+            logger.debug("stage_out checking Staging provider %r", provider)
             if provider.can_stage_out(file):
                 newfunc = provider.replace_task_stage_out(self, executor, file, func)
                 if newfunc:
@@ -86,7 +86,7 @@ class DataManager:
             storage_access = default_staging
 
         for provider in storage_access:
-            logger.debug("stage_in checking Staging provider {}".format(provider))
+            logger.debug("stage_in checking Staging provider %r", provider)
             if provider.can_stage_in(file):
                 newfunc = provider.replace_task(self, executor, file, func)
                 if newfunc:
@@ -127,7 +127,7 @@ class DataManager:
             storage_access = default_staging
 
         for provider in storage_access:
-            logger.debug("stage_in checking Staging provider {}".format(provider))
+            logger.debug("stage_in checking Staging provider %r", provider)
             if provider.can_stage_in(file):
                 staging_fut = provider.stage_in(self, executor, file, parent_fut=parent_fut)
                 if staging_fut:
@@ -159,7 +159,7 @@ class DataManager:
             storage_access = default_staging
 
         for provider in storage_access:
-            logger.debug("stage_out checking Staging provider {}".format(provider))
+            logger.debug("stage_out checking Staging provider %r", provider)
             if provider.can_stage_out(file):
                 return provider.stage_out(self, executor, file, app_fu)
 

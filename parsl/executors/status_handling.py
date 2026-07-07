@@ -6,6 +6,7 @@ import threading
 import time
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
+from functools import cached_property
 from itertools import compress
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -14,6 +15,7 @@ from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.error_handlers import noop_error_handler, simple_error_handler
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
 
@@ -45,6 +47,7 @@ class BlockProviderExecutor(ParslExecutor):
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
     """
+
     def __init__(self, *,
                  provider: Optional[ExecutionProvider],
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]]):
@@ -83,6 +86,18 @@ class BlockProviderExecutor(ParslExecutor):
         # of pending, active and recently terminated blocks
         self._status = {}  # type: Dict[str, JobStatus]
 
+        self.submit_monitoring_radio: Optional[MultiprocessingQueueRadioSender] = None
+
+    @cached_property
+    def _scale_prefix(self) -> str:
+        """Prefix used for logging messages about scaling"""
+        return f'[Scaling executor {self.label}]'
+
+    def start(self):
+        super().start()
+        if self.monitoring_messages:
+            self.submit_monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring_messages)
+
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
         returns a dictionary mapping each block id to the corresponding status
@@ -114,7 +129,7 @@ class BlockProviderExecutor(ParslExecutor):
         else:
             return self._provider.status_polling_interval
 
-    @abstractproperty
+    @abstractmethod
     def outstanding(self) -> int:
         """This should return the number of tasks that the executor has been given to run (waiting to run, and running now)"""
 
@@ -189,10 +204,10 @@ class BlockProviderExecutor(ParslExecutor):
             raise ScalingFailed(self, "No execution provider available")
         block_ids = []
         monitoring_status_changes = {}
-        logger.info(f"Scaling out by {n} blocks")
+        logger.info("%s Scaling out by %d blocks", self._scale_prefix, n)
         for _ in range(n):
             block_id = str(self._block_id_counter.get_id())
-            logger.info(f"Allocated block ID {block_id}")
+            logger.info("%s Allocated block ID %s", self._scale_prefix, block_id)
             try:
                 job_id = self._launch_block(block_id)
 
@@ -235,25 +250,24 @@ class BlockProviderExecutor(ParslExecutor):
 
         # Cancel the blocks provisioned
         if self.provider:
-            logger.info(f"Scaling in jobs: {job_ids_to_kill}")
+            logger.info("%s Scaling in jobs: %s", self._scale_prefix, str(job_ids_to_kill))
             r = self.provider.cancel(job_ids_to_kill)
             job_ids = self._filter_scale_in_ids(job_ids_to_kill, r)
             block_ids_killed = [self.job_ids_to_block[job_id] for job_id in job_ids]
             return block_ids_killed
         else:
-            logger.error("No execution provider available to scale in")
+            logger.error("%s No execution provider available to scale in", self._scale_prefix)
             return []
 
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
         job_name = f"parsl.{self.label}.block-{block_id}"
-        logger.debug("Submitting to provider with job_name %s", job_name)
+        logger.debug("%s Submitting to provider with job_name %s", self._scale_prefix, job_name)
         job_id = self.provider.submit(launch_cmd, 1, job_name)
         if job_id:
-            logger.debug(f"Launched block {block_id} on executor {self.label} with job ID {job_id}")
+            logger.debug("%s Launched block %s with job ID %s", self._scale_prefix, block_id, str(job_id))
         else:
-            raise ScalingFailed(self,
-                                "Attempt to provision nodes did not return a job ID")
+            raise ScalingFailed(self, "Attempt to provision nodes did not return a job ID")
         return job_id
 
     @abstractmethod
@@ -281,20 +295,20 @@ class BlockProviderExecutor(ParslExecutor):
             logger.debug("Sending block monitoring message: %r", msg)
             self.submit_monitoring_radio.send((MessageType.BLOCK_INFO, msg))
 
-    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
+    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[Dict[str, Any]]:
         """Create a monitoring message for each block based on the poll status.
         """
-        msg = []
-        for bid, s in status.items():
-            d: Dict[str, Any] = {}
-            d['run_id'] = self.run_id
-            d['status'] = s.status_name
-            d['timestamp'] = datetime.datetime.now()
-            d['executor_label'] = self.label
-            d['job_id'] = self.blocks_to_job_id.get(bid, None)
-            d['block_id'] = bid
-            msg.append(d)
-        return msg
+        return [
+            {
+                "run_id": self.run_id,
+                "status": s.status_name,
+                "timestamp": datetime.datetime.now(),
+                "executor_label": self.label,
+                "job_id": self.blocks_to_job_id.get(bid, None),
+                "block_id": bid
+            }
+            for bid, s in status.items()
+        ]
 
     def poll_facade(self) -> None:
         now = time.time()
@@ -305,7 +319,7 @@ class BlockProviderExecutor(ParslExecutor):
             delta_status = {}
             for block_id in self._status:
                 if block_id not in previous_status \
-                   or previous_status[block_id].state != self._status[block_id].state:
+                        or previous_status[block_id].state != self._status[block_id].state:
                     delta_status[block_id] = self._status[block_id]
 
             if delta_status:

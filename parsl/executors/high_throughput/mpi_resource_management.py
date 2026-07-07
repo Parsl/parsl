@@ -4,11 +4,11 @@ import os
 import pickle
 import queue
 import subprocess
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,14 @@ class MPINodesUnavailable(Exception):
         return f"MPINodesUnavailable(requested={self.requested} available={self.available})"
 
 
+@dataclass(order=True)
+class PrioritizedTask:
+    # Comparing dict will fail since they are unhashable
+    # This dataclass limits comparison to the priority field
+    priority: int
+    task: Dict = field(compare=False)
+
+
 class TaskScheduler:
     """Default TaskScheduler that does no taskscheduling
 
@@ -86,8 +94,8 @@ class TaskScheduler:
     def put_task(self, task) -> None:
         return self.pending_task_q.put(task)
 
-    def get_result(self, block: bool, timeout: float):
-        return self.pending_result_q.get(block, timeout=timeout)
+    def get_result(self, block: bool = True, timeout: Optional[float] = None):
+        return self.pending_result_q.get(block, timeout)
 
 
 class MPITaskScheduler(TaskScheduler):
@@ -111,7 +119,7 @@ class MPITaskScheduler(TaskScheduler):
         super().__init__(pending_task_q, pending_result_q)
         self.scheduler = identify_scheduler()
         # PriorityQueue is threadsafe
-        self._backlog_queue: queue.PriorityQueue = queue.PriorityQueue()
+        self._backlog_queue: queue.PriorityQueue[PrioritizedTask] = queue.PriorityQueue()
         self._map_tasks_to_nodes: Dict[str, List[str]] = {}
         self.available_nodes = get_nodes_in_batchjob(self.scheduler)
         self._free_node_counter = SpawnContext.Value("i", len(self.available_nodes))
@@ -137,11 +145,11 @@ class MPITaskScheduler(TaskScheduler):
         )
         acquired_nodes = []
         with self._free_node_counter.get_lock():
-            if num_nodes <= self._free_node_counter.value:  # type: ignore[attr-defined]
-                self._free_node_counter.value -= num_nodes  # type: ignore[attr-defined]
+            if num_nodes <= self._free_node_counter.value:
+                self._free_node_counter.value -= num_nodes
             else:
                 raise MPINodesUnavailable(
-                    requested=num_nodes, available=self._free_node_counter.value  # type: ignore[attr-defined]
+                    requested=num_nodes, available=self._free_node_counter.value
                 )
 
             for i in range(num_nodes):
@@ -154,45 +162,42 @@ class MPITaskScheduler(TaskScheduler):
         for node in nodes:
             self.nodes_q.put(node)
         with self._free_node_counter.get_lock():
-            self._free_node_counter.value += len(nodes)  # type: ignore[attr-defined]
+            self._free_node_counter.value += len(nodes)
 
     def put_task(self, task_package: dict):
         """Schedule task if resources are available otherwise backlog the task"""
-        user_ns = locals()
-        user_ns.update({"__builtins__": __builtins__})
-        _f, _args, _kwargs, resource_spec = unpack_res_spec_apply_message(task_package["buffer"])
+        resource_spec = task_package.get("context", {}).get("resource_spec", {})
 
-        nodes_needed = resource_spec.get("num_nodes")
-        if nodes_needed:
+        if nodes_needed := resource_spec.get("num_nodes"):
+            tid = task_package["task_id"]
             try:
                 allocated_nodes = self._get_nodes(nodes_needed)
             except MPINodesUnavailable:
-                logger.warning("Not enough resources, placing task into backlog")
-                self._backlog_queue.put((nodes_needed, task_package))
+                logger.info(f"Not enough resources, placing task {tid} into backlog")
+                self._backlog_queue.put(PrioritizedTask(nodes_needed, task_package))
                 return
             else:
                 resource_spec["MPI_NODELIST"] = ",".join(allocated_nodes)
-                self._map_tasks_to_nodes[task_package["task_id"]] = allocated_nodes
-                buffer = pack_res_spec_apply_message(_f, _args, _kwargs, resource_spec)
-                task_package["buffer"] = buffer
-                task_package["resource_spec"] = resource_spec
+                self._map_tasks_to_nodes[tid] = allocated_nodes
 
         self.pending_task_q.put(task_package)
 
     def _schedule_backlog_tasks(self):
         """Attempt to schedule backlogged tasks"""
         try:
-            _nodes_requested, task_package = self._backlog_queue.get(block=False)
-            self.put_task(task_package)
+            prioritized_task = self._backlog_queue.get(block=False)
+            self.put_task(prioritized_task.task)
         except queue.Empty:
             return
         else:
             # Keep attempting to schedule tasks till we are out of resources
             self._schedule_backlog_tasks()
 
-    def get_result(self, block: bool, timeout: float):
+    def get_result(self, block: bool = True, timeout: Optional[float] = None):
         """Return result and relinquish provisioned nodes"""
-        result_pkl = self.pending_result_q.get(block, timeout=timeout)
+        result_pkl = self.pending_result_q.get(block, timeout)
+        if result_pkl is None:
+            return None
         result_dict = pickle.loads(result_pkl)
         # TODO (wardlt): If the task did not request nodes, it won't be in `self._map_tasks_to_nodes`.
         #  Causes Parsl to hang. See Issue #3427

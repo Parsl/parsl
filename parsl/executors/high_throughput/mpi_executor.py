@@ -15,7 +15,7 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobStatus
 from parsl.launchers import SimpleLauncher
-from parsl.providers import LocalProvider
+from parsl.monitoring.radios.base import RadioConfig
 from parsl.providers.base import ExecutionProvider
 
 
@@ -46,12 +46,12 @@ class MPIExecutor(HighThroughputExecutor):
     @typeguard.typechecked
     def __init__(self,
                  label: str = 'MPIExecutor',
-                 provider: ExecutionProvider = LocalProvider(),
+                 provider: Optional[ExecutionProvider] = None,
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[str] = None,
                  address: Optional[str] = None,
                  loopback_address: str = "127.0.0.1",
-                 worker_ports: Optional[Tuple[int, int]] = None,
+                 worker_port: Optional[int] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
                  storage_access: Optional[List[Staging]] = None,
@@ -67,7 +67,8 @@ class MPIExecutor(HighThroughputExecutor):
                  worker_logdir_root: Optional[str] = None,
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 remote_monitoring_radio: Optional[RadioConfig] = None):
         super().__init__(
             # Hard-coded settings
             cores_per_worker=1e-9,  # Ensures there will be at least an absurd number of workers
@@ -80,7 +81,7 @@ class MPIExecutor(HighThroughputExecutor):
             interchange_launch_cmd=interchange_launch_cmd,
             address=address,
             loopback_address=loopback_address,
-            worker_ports=worker_ports,
+            worker_port=worker_port,
             worker_port_range=worker_port_range,
             interchange_port_range=interchange_port_range,
             storage_access=storage_access,
@@ -94,14 +95,18 @@ class MPIExecutor(HighThroughputExecutor):
             address_probe_timeout=address_probe_timeout,
             worker_logdir_root=worker_logdir_root,
             block_error_handler=block_error_handler,
-            encrypted=encrypted
+            encrypted=encrypted,
+            remote_monitoring_radio=remote_monitoring_radio
         )
         self.enable_mpi_mode = True
         self.mpi_launcher = mpi_launcher
 
         self.max_workers_per_block = max_workers_per_block
 
-        if not isinstance(self.provider.launcher, SimpleLauncher):
+        assert isinstance(self.provider, ExecutionProvider), \
+            "HTEX initialization should always make self.provider a provider"
+
+        if not hasattr(self.provider, 'launcher') or not isinstance(self.provider.launcher, SimpleLauncher):
             raise TypeError("mpi_mode requires the provider to be configured to use a SimpleLauncher")
 
         if mpi_launcher not in VALID_LAUNCHERS:
@@ -111,3 +116,10 @@ class MPIExecutor(HighThroughputExecutor):
 
     def validate_resource_spec(self, resource_specification: dict):
         return validate_resource_spec(resource_specification)
+
+    def monitor_resources(self):
+        """Resource monitoring does not make sense when using the
+        MPIExecutor, as the process tree launched for each task is spread
+        across multiple OS images/worker nodes.
+        """
+        return False

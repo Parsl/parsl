@@ -1,6 +1,7 @@
 name: Test Flux Scheduler
 on:
-  pull_request: []
+  pull_request:
+  merge_group:
 
 jobs:
   build:

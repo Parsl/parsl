@@ -1,0 +1,36 @@
+{
+  "projectName": "parsl",
+  "projectOwner": "Parsl",
+  "files": [
+    "CONTRIBUTORS.md"
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
+  "contributors": [
+    {
+      "login": "sophie-bui",
+      "name": "Sophie Bui",
+      "avatar_url": "https://avatars.githubusercontent.com/u/23347055?v=4",
+      "profile": "https://www.linkedin.com/in/buisophie/",
+      "contributions": [
+        "projectManagement",
+        "design",
+        "eventOrganizing",
+        "content",
+        "promotion",
+        "mentoring"
+      ]
+    },
+    {
+      "login": "danielskatz",
+      "name": "Daniel S. Katz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2913845?v=4",
+      "profile": "https://danielskatz.org",
+      "contributions": [
+        "code",
+        "content"
+      ]
+    }
+  ]
+}
