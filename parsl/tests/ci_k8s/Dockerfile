@@ -13,7 +13,7 @@ RUN python3 -m venv /venv
 
 ADD . /parsl
 WORKDIR /
-RUN git clone https://github.com/cooperative-computing-lab/cctools --depth 1 -b release/7.8.0
+RUN git clone https://github.com/cooperative-computing-lab/cctools --depth 1 -b release/7.17.1
 
 WORKDIR /cctools
 RUN . /venv/bin/activate && ./configure --prefix=/ && make && make install
