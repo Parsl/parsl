@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 source /venv/bin/activate
 
@@ -9,16 +9,26 @@ PYTHONPATH=/usr/lib/python3.11/site-packages/ pytest parsl/tests/ --config parsl
 # || true to keep running so I can add in debug hooks here
 # TODO: remove/fixup before merge
 
+
+echo find /tmp/
+ls -l /tmp
+ls -l /tmp/
+find /tmp/
+
 echo pwd
 pwd
-
-echo find /tmp
-find /tmp
-
 echo find .
 find .
 
 echo ps ax
 ps ax
+
+pushd ./pytest-parsl/*taskvine*
+
+for f in $(find . -type f); do
+  echo FILE $f
+  cat $f
+  echo END FILE $f
+done
 
 echo end
