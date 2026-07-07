@@ -16,6 +16,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl.tests.manual_tests.htex_local import config
 
 assert isinstance(config.executors[0], HighThroughputExecutor)
+assert config.executors[0].provider is not None, "htex always has a provider"
 config.executors[0].cores_per_worker = CORES_PER_WORKER
 config.executors[0].provider.init_blocks = 1
 

@@ -299,6 +299,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         mem_slots = self.max_workers_per_node
         cpu_slots = self.max_workers_per_node
+        assert self.provider is not None, "htex always has a provider"
         if hasattr(self.provider, 'mem_per_node') and \
                 self.provider.mem_per_node is not None and \
                 mem_per_worker is not None and \
@@ -878,6 +879,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks_to_job_id[bid] for bid in block_ids_to_kill if bid in self.blocks_to_job_id]
 
+        assert self.provider is not None, "htex always has a provider"
         r = self.provider.cancel(to_kill)
         job_ids = self._filter_scale_in_ids(to_kill, r)
 
