@@ -18,12 +18,8 @@ def test_max_workers_per_node():
     c = Config(executors=[h])
 
     with parsl.load(c):
-        # tests the parameter was wired all the way through
-        assert h.max_workers_per_node == w
-
-        # tests that the calculation chose the same number
-        # in the absence of other restrictions
-        assert h.workers_per_node == w
+        assert h.max_workers_per_node == w, "max_workers_per_node should be wired all the way through"
+        assert h.workers_per_node == w, "max_workers_per_node is chosen in the absence of other restrictions"
 
 
 @pytest.mark.local
@@ -39,11 +35,8 @@ def test_cores():
     c = Config(executors=[h])
 
     with parsl.load(c):
-        # tests the parameter was wired all the way through
-        assert h.cores_per_worker == 4
-
-        # 8 cores divided out at 4-per-worker
-        assert h.workers_per_node == 2
+        assert h.cores_per_worker == 4, "cores_per_worker should be wired all the way through"
+        assert h.workers_per_node == 2, "8 cores per node, 4 cores per worker => 2 workers"
 
 
 @pytest.mark.local
@@ -61,11 +54,8 @@ def test_mem():
     c = Config(executors=[h])
 
     with parsl.load(c):
-        # tests the parameter was wired all the way through
-        assert h.mem_per_worker == 16
-
-        # one worker gets all the memory
-        assert h.workers_per_node == 1
+        assert h.mem_per_worker == 16, "mem_per_worker should be wired all the way through"
+        assert h.workers_per_node == 1, "one worker gets all the memory"
 
 
 @pytest.mark.local
@@ -84,6 +74,4 @@ def test_accelerators():
     c = Config(executors=[h])
 
     with parsl.load(c):
-
-        # number of accelerators is worker constraining limit
-        assert h.workers_per_node == 3
+        assert h.workers_per_node == 3, "number of accelerators is worker constraining limit here"
