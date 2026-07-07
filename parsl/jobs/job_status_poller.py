@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
                  strategy_period: Union[float, int]) -> None:
+
+        # only executors which should be polled and which have a valid
+        # provider should be added to this list: so it is safe to assume
+        # that e.provider is not None for e in self._executors
         self._executors: List[BlockProviderExecutor] = []
+
         self._strategy = Strategy(strategy=strategy,
                                   max_idletime=max_idletime)
         super().__init__(self.poll, interval=strategy_period, name="JobStatusPoller")
@@ -27,6 +32,8 @@ class JobStatusPoller(Timer):
     def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:
             if executor.status_polling_interval > 0:
+                assert executor.provider is not None, \
+                    "BlockProviderExecutor.status_polling_interval implementation guarantee: None => status_polling_interval == 0"
                 logger.debug("Adding executor {}".format(executor.label))
                 self._executors.append(executor)
         self._strategy.add_executors(executors)
