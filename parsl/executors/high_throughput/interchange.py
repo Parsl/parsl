@@ -165,9 +165,11 @@ class Interchange:
                 max_port=worker_port_range[1],
                 max_tries=100,
             )
-        self.worker_port = worker_port
 
         logger.info(f"Bound to port {worker_port} for incoming worker connections")
+
+        self.worker_port = worker_port
+        self.report_worker_port()
 
         self._ready_managers: Dict[bytes, ManagerRecord] = {}
         self._logged_manager_count_token: object = None
@@ -186,6 +188,14 @@ class Interchange:
                                  'dir': os.getcwd()}
 
         logger.info("Platform info: {}".format(self.current_platform))
+
+    def report_worker_port(self) -> None:
+        result_package = {'type': 'observation',
+                          'key': 'worker_port',
+                          'value': self.worker_port}
+
+        pkl_package = pickle.dumps(result_package)
+        self.results_outgoing.send(pkl_package)
 
     def get_tasks(self, count: int) -> Sequence[dict]:
         """ Obtains a batch of tasks from the internal pending_task_queue
@@ -232,10 +242,7 @@ class Interchange:
 
             command_req = self.command_channel.recv_pyobj()
             logger.debug("Received command request: {}".format(command_req))
-            if command_req == "CONNECTED_BLOCKS":
-                reply = self.connected_block_history
-
-            elif command_req == "MANAGERS":
+            if command_req == "MANAGERS":
                 reply = []
                 now = time.time()
                 for manager_id, m in self._ready_managers.items():
@@ -271,9 +278,6 @@ class Interchange:
                     logger.warning("Worker to hold was not in ready managers list")
 
                 reply = None
-
-            elif command_req == "WORKER_BINDS":
-                reply = self.worker_port
 
             else:
                 logger.error(f"Received unknown command: {command_req}")
@@ -439,6 +443,19 @@ class Interchange:
                 # set up entry only if we accept the registration
                 self._ready_managers[manager_id] = new_rec
                 self.connected_block_history.append(new_rec['block_id'])
+                result_package = {'type': 'observation',
+                                  'key': 'connected_blocks',
+                                  'value': self.connected_block_history}
+
+                pkl_package = pickle.dumps(result_package)
+                self.results_outgoing.send(pkl_package)
+
+                # TODO: this should be a set, not a list... there's an issue for that.
+                # When this is a set, adding a new block might not update the
+                # connected block set, because it might not be the first manager
+                # in a block. Conversely, maybe the entire registration is being
+                # sent anyway and the connected block set can live on the
+                # submit side with explicit interchange-side state.
 
                 interesting_managers.add(manager_id)
 

@@ -4,12 +4,13 @@ import os
 import pickle
 import subprocess
 import threading
+import time
 import typing
 import warnings
 from collections import defaultdict
 from concurrent.futures import Future
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import typeguard
 
@@ -23,7 +24,6 @@ from parsl.executors.errors import (
     ScalingFailed,
 )
 from parsl.executors.high_throughput import zmq_pipes
-from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
     RandomManagerSelector,
@@ -289,6 +289,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.address_probe_timeout = address_probe_timeout
         self.manager_selector = manager_selector
         self.loopback_address = loopback_address
+
+        self.observations: Dict[str, Any] = {}
 
         if self.address:
             self.all_addresses = {self.address}
@@ -562,6 +564,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                     DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                         else:
                             raise BadMessage("Message received is neither result or exception")
+                    elif msg['type'] == 'observation':
+                        self.observations[msg['key']] = msg['value']
                     else:
                         raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
@@ -608,12 +612,20 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         stdin.write(config_pickle)
         stdin.flush()
         stdin.close()
-        logger.debug("Sent config object. Requesting worker ports")
-        try:
-            self.worker_port = self.command_client.run("WORKER_BINDS", timeout_s=120)
-        except CommandClientTimeoutError:
+        logger.debug("Sent config object. Waiting for worker ports")
+
+        # the results queue thread is running now... so it can process
+        # messages from the interchange when they arrive.
+        e = 0.01
+        while 'worker_port' not in self.observations:
+            # hard loop until this appears, probably should do exponential backoff
+            logger.debug("waiting for worker port, backoff = %s seconds", e)
+            e = e * 2
+            time.sleep(e)
+        if e > 30:
             logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
+        self.worker_port = self.observations['worker_port']
         logger.debug(
             "Interchange process started (%r).  Worker port: %d",
             self.interchange_proc,
@@ -669,7 +681,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
     def connected_blocks(self) -> List[str]:
         """List of connected block ids"""
-        return self.command_client.run("CONNECTED_BLOCKS")
+        return self.observations['connected_blocks'] if 'connected_blocks' in self.observations else []
 
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block

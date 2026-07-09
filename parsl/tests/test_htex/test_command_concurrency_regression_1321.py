@@ -46,7 +46,6 @@ def blast(cc, e):
     while time.monotonic() < target_end:
         cc.run("MANGERS_PACKAGES")
         cc.run("CONNECTED_BLOCKS")
-        cc.run("WORKER_BINDS")
 
     # If any of the preceeding cc.run calls raises an exception, the thread
     # will not set its successful completion event.

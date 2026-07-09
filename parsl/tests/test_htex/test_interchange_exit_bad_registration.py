@@ -18,6 +18,17 @@ from parsl.version import VERSION as PARSL_VERSION
 P_ms = 10
 
 
+def wait_for_worker_port(incoming_q) -> int:
+    while True:
+        result = incoming_q.get(timeout_ms=30000)
+        assert result is not None, "interchange didn't send a message fast enough"
+        assert len(result) == 1
+        msg = pickle.loads(result[0])
+        if 'type' in msg and msg['type'] == 'observation' and \
+           'key' in msg and msg['key'] == 'worker_port':
+            return msg['value']
+
+
 @pytest.mark.local
 def test_exit_with_bad_registration(tmpd_cwd, try_assert):
     """Test that the interchange exits when it receives a bad registration message.
@@ -68,8 +79,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
     # wait for interchange to be alive, by waiting for the command thread to become
     # responsive. if the interchange process didn't start enough to get the command
     # thread running, this will time out.
-
-    worker_port = command_client.run("WORKER_BINDS", timeout_s=120)
+    worker_port = wait_for_worker_port(incoming_q)
 
     # now we'll assume that if the interchange command thread is responding,
     # then the worker polling code is also running and that the interchange has
@@ -186,7 +196,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
     # responsive. if the interchange process didn't start enough to get the command
     # thread running, this will time out.
 
-    worker_port = command_client.run("WORKER_BINDS", timeout_s=120)
+    worker_port = wait_for_worker_port(incoming_q)
 
     # now we'll assume that if the interchange command thread is responding,
     # then the worker polling code is also running and that the interchange has

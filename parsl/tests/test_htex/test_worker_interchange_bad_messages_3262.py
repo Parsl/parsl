@@ -61,7 +61,7 @@ def test_bad_messages(try_assert, msg):
         # channel, and then check that the interchange is still alive enough
         # that we can scale out a block and run a task.
 
-        worker_port = htex.command_client.run("WORKER_BINDS")
+        worker_port = htex.worker_port
 
         context = zmq.Context()
         channel_timeout = 10000  # in milliseconds
