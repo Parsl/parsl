@@ -291,6 +291,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.loopback_address = loopback_address
 
         self.observations: Dict[str, Any] = {}
+        self.manager_observations: Dict[bytes, Dict[str, Any]] = {}
 
         if self.address:
             self.all_addresses = {self.address}
@@ -565,7 +566,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                         else:
                             raise BadMessage("Message received is neither result or exception")
                     elif msg['type'] == 'observation':
+                        logger.debug("Got observation %s", msg['key'])
                         self.observations[msg['key']] = msg['value']
+                    elif msg['type'] == 'manager-observation':
+                        manager_id = msg['manager']
+                        logger.debug("Got manager observation %s from manager %s", msg['key'], manager_id)
+                        if manager_id not in self.manager_observations:
+                            self.manager_observations[manager_id] = {}
+                        self.manager_observations[manager_id][msg['key']] = msg['value']
                     else:
                         raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
@@ -677,7 +685,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """Returns a dict mapping each manager ID to a dict of installed
         packages and their versions
         """
-        return self.command_client.run("MANAGERS_PACKAGES")
+        d = {}
+        for k, v in self.manager_observations.items():
+            d[k.decode()] = v['packages']
+        return d
 
     def connected_blocks(self) -> List[str]:
         """List of connected block ids"""

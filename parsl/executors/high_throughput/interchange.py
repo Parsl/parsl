@@ -260,12 +260,6 @@ class Interchange:
                     }
                     reply.append(resp)
 
-            elif command_req == "MANAGERS_PACKAGES":
-                reply = {}
-                for manager_id, m in self._ready_managers.items():
-                    manager_id_str = manager_id.decode('utf-8')
-                    reply[manager_id_str] = m["packages"]
-
             elif command_req.startswith("HOLD_WORKER"):
                 cmd, s_manager = command_req.split(';')
                 manager_id = s_manager.encode('utf-8')
@@ -456,6 +450,14 @@ class Interchange:
                 # in a block. Conversely, maybe the entire registration is being
                 # sent anyway and the connected block set can live on the
                 # submit side with explicit interchange-side state.
+
+                result_package = {'type': 'manager-observation',
+                                  'manager': manager_id,
+                                  'key': 'packages',
+                                  'value': new_rec['packages']}
+
+                pkl_package = pickle.dumps(result_package)
+                self.results_outgoing.send(pkl_package)
 
                 interesting_managers.add(manager_id)
 
