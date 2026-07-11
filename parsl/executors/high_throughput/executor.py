@@ -654,10 +654,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         and managers"""
         return len(self.tasks)
 
-    def connected_workers(self) -> int:
-        """Returns the count of workers across all connected managers"""
-        return self.command_client.run("WORKERS")
-
     def connected_managers(self) -> List[Dict[str, typing.Any]]:
         """Returns a list of dicts one for each connected managers.
         The dict contains info on manager(str:manager_id), block_id,

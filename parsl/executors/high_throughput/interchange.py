@@ -235,9 +235,6 @@ class Interchange:
             if command_req == "CONNECTED_BLOCKS":
                 reply = self.connected_block_history
 
-            elif command_req == "WORKERS":
-                reply = sum(m['worker_count'] for m in self._ready_managers.values())
-
             elif command_req == "MANAGERS":
                 reply = []
                 now = time.time()
