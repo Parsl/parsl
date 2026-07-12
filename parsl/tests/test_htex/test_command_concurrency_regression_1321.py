@@ -44,7 +44,7 @@ def blast(cc, e):
     target_end = time.monotonic() + DURATION_S
 
     while time.monotonic() < target_end:
-        cc.run("MANGERs_PACKAGES")
+        cc.run("MANGERS_PACKAGES")
         cc.run("CONNECTED_BLOCKS")
         cc.run("WORKER_BINDS")
 
