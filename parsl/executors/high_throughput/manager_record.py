@@ -5,6 +5,7 @@ from typing_extensions import TypedDict
 
 
 class ManagerRecord(TypedDict, total=False):
+    manager: bytes
     block_id: Optional[str]
     start_time: float
     tasks: List[Any]

@@ -8,7 +8,7 @@ import platform
 import sys
 import threading
 import time
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, cast
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple, cast
 
 import zmq
 from sortedcontainers import SortedList
@@ -242,31 +242,14 @@ class Interchange:
 
             command_req = self.command_channel.recv_pyobj()
             logger.debug("Received command request: {}".format(command_req))
-            if command_req == "MANAGERS":
-                reply = []
-                now = time.time()
-                for manager_id, m in self._ready_managers.items():
-                    idle_duration = now - (m['idle_since'] or now)
-                    resp = {
-                        'manager': manager_id,
-                        'block_id': m['block_id'],
-                        'worker_count': m['worker_count'],
-                        'tasks': len(m['tasks']),
-                        'idle_duration': idle_duration,
-                        'active': m['active'],
-                        'parsl_version': m['parsl_version'],
-                        'python_version': m['python_version'],
-                        'draining': m['draining']
-                    }
-                    reply.append(resp)
-
-            elif isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_WORKER":
+            if isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_WORKER":
                 manager_id = command_req[1]
                 logger.info("Received HOLD_WORKER for {!r}".format(manager_id))
                 if manager_id in self._ready_managers:
                     m = self._ready_managers[manager_id]
                     m['active'] = False
                     self._send_monitoring_info(monitoring_radio, m)
+                    self._send_manager_update(m)
                 else:
                     logger.warning("Worker to hold was not in ready managers list")
 
@@ -384,6 +367,7 @@ class Interchange:
             mgr_parsl_v = meta['parsl_v']
 
             new_rec = ManagerRecord(
+                manager=manager_id,
                 block_id=None,
                 start_time=meta['start_time'],
                 tasks=[],
@@ -457,6 +441,8 @@ class Interchange:
 
                 pkl_package = pickle.dumps(result_package)
                 self.results_outgoing.send(pkl_package)
+
+                self._send_manager_update(new_rec)
 
                 interesting_managers.add(manager_id)
 
@@ -549,6 +535,36 @@ class Interchange:
 
                 m['active'] = False
                 self._send_monitoring_info(monitoring_radio, m)
+                self._send_manager_update(m)
+
+    def _send_manager_update(self, m: ManagerRecord, key: Optional[str] = None) -> None:
+        now = time.time()
+        idle_duration = now - (m['idle_since'] or now)
+        resp = {
+            'manager': m['manager'],
+            'block_id': m['block_id'],
+            'worker_count': m['worker_count'],
+            'tasks': len(m['tasks']),
+            'idle_duration': idle_duration,
+            'active': m['active'],
+            'parsl_version': m['parsl_version'],
+            'python_version': m['python_version'],
+            'draining': m['draining']}
+
+        keys: Iterable
+        if key is None:
+            keys = resp.keys()
+        else:
+            keys = [key]
+
+        for k in keys:
+            result_package = {'type': 'manager-observation',
+                              'manager': m['manager'],
+                              'key': k,
+                              'value': resp[k]}
+
+            pkl_package = pickle.dumps(result_package)
+            self.results_outgoing.send(pkl_package)
 
     def log_manager_counts(self, interesting_managers: Set[bytes]) -> None:
         count_interesting = len(interesting_managers)
@@ -609,6 +625,7 @@ class Interchange:
             if m['active']:
                 m['active'] = False
                 self._send_monitoring_info(monitoring_radio, m)
+                self._send_manager_update(m)
 
             logger.warning(f"Cancelling htex tasks {m['tasks']} on removed manager")
             for tid in m['tasks']:

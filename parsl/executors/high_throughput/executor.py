@@ -679,7 +679,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         The dict contains info on manager(str:manager_id), block_id,
         worker_count, tasks(int), idle_durations(float), active(bool)
         """
-        return self.command_client.run("MANAGERS")
+        # return self.command_client.run("MANAGERS")
+        d = []
+        for k, v in self.manager_observations.items():
+            d.append(v)
+        return d
 
     def connected_managers_packages(self) -> Dict[str, Dict[str, str]]:
         """Returns a dict mapping each manager ID to a dict of installed
