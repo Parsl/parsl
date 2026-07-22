@@ -259,9 +259,8 @@ class Interchange:
                     manager_id_str = manager_id.decode('utf-8')
                     reply[manager_id_str] = m["packages"]
 
-            elif command_req.startswith("HOLD_MANAGER"):
-                cmd, s_manager = command_req.split(';')
-                manager_id = s_manager.encode('utf-8')
+            elif isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_MANAGER":
+                manager_id = command_req[1].encode('utf-8')
                 logger.info("Received HOLD_MANAGER for {!r}".format(manager_id))
                 if manager_id in self._ready_managers:
                     m = self._ready_managers[manager_id]
