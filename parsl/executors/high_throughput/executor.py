@@ -694,7 +694,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """List of connected block ids"""
         return self.observations['connected_blocks'] if 'connected_blocks' in self.observations else []
 
-    def _hold_block(self, block_id):
+    def _hold_block(self, block_id: str) -> None:
         """ Sends hold command to all managers which are in a specific block
 
         Parameters
@@ -708,6 +708,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         for manager in managers:
             if manager['block_id'] == block_id:
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
+                assert isinstance(manager['manager'], str)
                 self._hold_manager(manager['manager'])
 
     def submit(self, func: Callable, resource_specification: dict, *args, **kwargs) -> HTEXFuture:
