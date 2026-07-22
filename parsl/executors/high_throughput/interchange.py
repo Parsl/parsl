@@ -260,9 +260,8 @@ class Interchange:
                     }
                     reply.append(resp)
 
-            elif command_req.startswith("HOLD_WORKER"):
-                cmd, s_manager = command_req.split(';')
-                manager_id = s_manager.encode('utf-8')
+            elif isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_WORKER":
+                manager_id = command_req[1].encode('utf-8')
                 logger.info("Received HOLD_WORKER for {!r}".format(manager_id))
                 if manager_id in self._ready_managers:
                     m = self._ready_managers[manager_id]

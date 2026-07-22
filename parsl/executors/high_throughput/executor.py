@@ -666,7 +666,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         manager_id : str
             Manager id to be put on hold
         """
-        self.command_client.run("HOLD_WORKER;{}".format(manager_id))
+        self.command_client.run(["HOLD_WORKER", manager_id])
         logger.debug("Sent hold request to manager: {}".format(manager_id))
 
     def outstanding(self) -> int:
