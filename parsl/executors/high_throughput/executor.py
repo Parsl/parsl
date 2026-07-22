@@ -684,7 +684,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("Sending hold for manager: {}".format(manager['manager']))
+                logger.debug("Sending hold for manager: %s", manager['manager'])
                 self._hold_manager(manager['manager'])
 
     def submit(self, func: Callable, resource_specification: dict, *args, **kwargs) -> HTEXFuture:
