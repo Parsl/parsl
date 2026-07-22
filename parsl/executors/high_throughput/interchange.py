@@ -248,7 +248,7 @@ class Interchange:
                 for manager_id, m in self._ready_managers.items():
                     idle_duration = now - (m['idle_since'] or now)
                     resp = {
-                        'manager': manager_id.decode('utf-8'),
+                        'manager': manager_id,
                         'block_id': m['block_id'],
                         'worker_count': m['worker_count'],
                         'tasks': len(m['tasks']),
@@ -261,7 +261,7 @@ class Interchange:
                     reply.append(resp)
 
             elif isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_WORKER":
-                manager_id = command_req[1].encode('utf-8')
+                manager_id = command_req[1]
                 logger.info("Received HOLD_WORKER for {!r}".format(manager_id))
                 if manager_id in self._ready_managers:
                     m = self._ready_managers[manager_id]
