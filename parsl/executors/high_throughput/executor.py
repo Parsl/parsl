@@ -707,7 +707,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("Sending hold to manager: {}".format(manager['manager']))
+                logger.debug("Sending hold to manager: %s", manager['manager'])
                 assert isinstance(manager['manager'], str)
                 self._hold_manager(manager['manager'])
 
