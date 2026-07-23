@@ -3,8 +3,7 @@ from setuptools import find_packages, setup
 with open('parsl/version.py') as f:
     exec(f.read())
 
-with open('requirements.txt') as f:
-    install_requires = f.readlines()
+install_requires = []
 
 extras_require = {
     'monitoring' : [
@@ -34,7 +33,6 @@ extras_require = {
     'kubernetes' : ['kubernetes'],
     'docs' : [
         'ipython<=8.6.0',
-        'nbsphinx',
         'sphinx>=7.4,<8',
         'sphinx_rtd_theme'
     ],
