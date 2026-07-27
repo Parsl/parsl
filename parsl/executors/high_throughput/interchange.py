@@ -259,10 +259,10 @@ class Interchange:
                     manager_id_str = manager_id.decode('utf-8')
                     reply[manager_id_str] = m["packages"]
 
-            elif command_req.startswith("HOLD_WORKER"):
+            elif command_req.startswith("HOLD_MANAGER"):
                 cmd, s_manager = command_req.split(';')
                 manager_id = s_manager.encode('utf-8')
-                logger.info("Received HOLD_WORKER for {!r}".format(manager_id))
+                logger.info("Received HOLD_MANAGER for {!r}".format(manager_id))
                 if manager_id in self._ready_managers:
                     m = self._ready_managers[manager_id]
                     m['active'] = False
