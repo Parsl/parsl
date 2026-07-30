@@ -105,7 +105,6 @@ Table of Contents
    :maxdepth: 2
 
    quickstart
-   1-parsl-introduction.ipynb
    userguide/index
    userguide/glossary
    faq

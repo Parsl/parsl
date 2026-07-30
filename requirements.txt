@@ -8,7 +8,7 @@ typeguard>=2.10,!=3.*,<5
 
 
 typing-extensions>=4.6,<5
-dill
+git+https://github.com/uqfoundation/dill@37d2bf717ac7ac110f06be5210f989847959c2cd
 tblib
 requests
 sortedcontainers
