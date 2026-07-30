@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pytest
+spec:
+  activeDeadlineSeconds: 600
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: pytest
+        image: parsl:ci
+        command: ["bash", "/parsl/parsl/tests/ci_k8s/runme.sh"]
+
