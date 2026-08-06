@@ -8,11 +8,12 @@ import time
 from multiprocessing.context import SpawnProcess as SpawnProcessType
 from multiprocessing.queues import Queue as QueueType
 from multiprocessing.synchronize import Event as EventType
-from typing import Tuple
+from typing import Optional, Tuple
 
 import typeguard
 import zmq
 
+import parsl.curvezmq as curvezmq
 from parsl.addresses import tcp_url
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringRouterStartError
@@ -41,6 +42,7 @@ class MonitoringRouter:
                  logging_level: int = logging.INFO,
                  resource_msgs: mpq.Queue,
                  exit_event: EventType,
+                 cert_dir: Optional[str],
                  ):
         """ Initializes a monitoring configuration class.
 
@@ -69,7 +71,7 @@ class MonitoringRouter:
 
         self.loop_freq = 10.0  # milliseconds
 
-        self._context = zmq.Context()
+        self._context = curvezmq.ServerContext(cert_dir=cert_dir)
         self.zmq_receiver_channel = self._context.socket(zmq.DEALER)
         self.zmq_receiver_channel.setsockopt(zmq.LINGER, 0)
         self.zmq_receiver_channel.set_hwm(0)
@@ -124,7 +126,8 @@ def zmq_router_starter(*,
                        port_range: Tuple[int, int],
 
                        run_dir: str,
-                       logging_level: int) -> None:
+                       logging_level: int,
+                       cert_dir: Optional[str]) -> None:
     setproctitle("parsl: monitoring zmq router")
     try:
         router = MonitoringRouter(address=address,
@@ -132,7 +135,8 @@ def zmq_router_starter(*,
                                   run_dir=run_dir,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
-                                  exit_event=exit_event)
+                                  exit_event=exit_event,
+                                  cert_dir=cert_dir)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
@@ -157,7 +161,8 @@ def start_zmq_receiver(*,
                        loopback_address: str,
                        port_range: Tuple[int, int],
                        logdir: str,
-                       worker_debug: bool) -> ZMQRadioReceiver:
+                       worker_debug: bool,
+                       cert_dir: Optional[str]) -> ZMQRadioReceiver:
     comm_q = SpawnQueue(maxsize=10)
 
     router_exit_event = SpawnEvent()
@@ -170,6 +175,7 @@ def start_zmq_receiver(*,
                                        "port_range": port_range,
                                        "run_dir": logdir,
                                        "logging_level": logging.DEBUG if worker_debug else logging.INFO,
+                                       "cert_dir": cert_dir,
                                        },
                                name="Monitoring-ZMQ-Router-Process",
                                daemon=True,
