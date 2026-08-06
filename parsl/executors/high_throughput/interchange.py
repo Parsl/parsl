@@ -290,7 +290,7 @@ class Interchange:
 
         if self.hub_address is not None and self.hub_zmq_port is not None:
             logger.debug("Creating monitoring radio to %s:%s", self.hub_address, self.hub_zmq_port)
-            monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port)
+            monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port, self.cert_dir)
             logger.debug("Created monitoring radio")
         else:
             monitoring_radio = None
