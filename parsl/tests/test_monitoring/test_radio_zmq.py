@@ -1,7 +1,6 @@
 import pytest
 
 import parsl.curvezmq as curvezmq
-
 from parsl.monitoring.radios.zmq import ZMQRadioSender
 from parsl.monitoring.radios.zmq_router import start_zmq_receiver
 from parsl.multiprocessing import SpawnQueue
