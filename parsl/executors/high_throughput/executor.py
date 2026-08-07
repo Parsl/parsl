@@ -299,6 +299,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         mem_slots = self.max_workers_per_node
         cpu_slots = self.max_workers_per_node
+        assert self.provider is not None, "htex always has a provider"
         if hasattr(self.provider, 'mem_per_node') and \
                 self.provider.mem_per_node is not None and \
                 mem_per_worker is not None and \
@@ -475,6 +476,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                      port_range=self.interchange_port_range,
                                                      logdir=self.logdir,
                                                      worker_debug=self.worker_debug,
+                                                     cert_dir=self.cert_dir,
                                                      )
             self.hub_zmq_port = self.zmq_monitoring.port
 
@@ -645,17 +647,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         manager_id : str
             Manager id to be put on hold
         """
-        self.command_client.run("HOLD_WORKER;{}".format(manager_id))
+        self.command_client.run(["HOLD_MANAGER", manager_id])
         logger.debug("Sent hold request to manager: {}".format(manager_id))
 
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
         return len(self.tasks)
-
-    def connected_workers(self) -> int:
-        """Returns the count of workers across all connected managers"""
-        return self.command_client.run("WORKERS")
 
     def connected_managers(self) -> List[Dict[str, typing.Any]]:
         """Returns a list of dicts one for each connected managers.
@@ -687,7 +685,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("Sending hold to manager: {}".format(manager['manager']))
+                logger.debug("Sending hold for manager: %s", manager['manager'])
                 self._hold_manager(manager['manager'])
 
     def submit(self, func: Callable, resource_specification: dict, *args, **kwargs) -> HTEXFuture:
@@ -878,6 +876,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks_to_job_id[bid] for bid in block_ids_to_kill if bid in self.blocks_to_job_id]
 
+        assert self.provider is not None, "htex always has a provider"
         r = self.provider.cancel(to_kill)
         job_ids = self._filter_scale_in_ids(to_kill, r)
 

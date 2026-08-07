@@ -20,7 +20,7 @@ from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.log_utils import set_file_logger
-from parsl.logconfigs.base import LogConfig
+from parsl.logconfigs.base import LogConfig, oneshot_initialize_logging
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.base import MonitoringRadioSender
 from parsl.monitoring.radios.zmq import ZMQRadioSender
@@ -114,7 +114,7 @@ class Interchange:
         os.makedirs(self.logdir, exist_ok=True)
 
         if log_config:
-            log_config.initialize_logging(log_dir=pathlib.Path(self.logdir), log_name="interchange")
+            oneshot_initialize_logging(log_config=log_config, log_dir=pathlib.Path(self.logdir), log_name="interchange")
             # discard the returned callback because the interchange doesn't usually do
             # a normal shutdown
         else:
@@ -235,9 +235,6 @@ class Interchange:
             if command_req == "CONNECTED_BLOCKS":
                 reply = self.connected_block_history
 
-            elif command_req == "WORKERS":
-                reply = sum(m['worker_count'] for m in self._ready_managers.values())
-
             elif command_req == "MANAGERS":
                 reply = []
                 now = time.time()
@@ -262,10 +259,9 @@ class Interchange:
                     manager_id_str = manager_id.decode('utf-8')
                     reply[manager_id_str] = m["packages"]
 
-            elif command_req.startswith("HOLD_WORKER"):
-                cmd, s_manager = command_req.split(';')
-                manager_id = s_manager.encode('utf-8')
-                logger.info("Received HOLD_WORKER for {!r}".format(manager_id))
+            elif isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_MANAGER":
+                manager_id = command_req[1].encode('utf-8')
+                logger.info("Received HOLD_MANAGER for {!r}".format(manager_id))
                 if manager_id in self._ready_managers:
                     m = self._ready_managers[manager_id]
                     m['active'] = False
@@ -294,7 +290,7 @@ class Interchange:
 
         if self.hub_address is not None and self.hub_zmq_port is not None:
             logger.debug("Creating monitoring radio to %s:%s", self.hub_address, self.hub_zmq_port)
-            monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port)
+            monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port, self.cert_dir)
             logger.debug("Created monitoring radio")
         else:
             monitoring_radio = None

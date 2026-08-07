@@ -24,6 +24,8 @@ def htex(encrypted: bool, tmpd_cwd):
     htex = HighThroughputExecutor(encrypted=encrypted)
     htex.max_workers_per_node = 1
     htex.run_dir = tmpd_cwd
+
+    assert htex.provider is not None, "htex always has a provider"
     htex.provider.script_dir = tmpd_cwd
 
     yield htex

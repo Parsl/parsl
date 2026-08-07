@@ -153,6 +153,8 @@ class Strategy:
         """
         for executor in executors:
             if self.executors[executor.label]['first']:
+                assert executor.provider is not None, \
+                    "strategy must only be called with executors that have a provider."
                 logger.debug(f"strategy_init_only: scaling out {executor.provider.init_blocks} initial blocks for {executor.label}")
                 executor.scale_out_facade(executor.provider.init_blocks)
                 self.executors[executor.label]['first'] = False
@@ -184,6 +186,8 @@ class Strategy:
         logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(executors)} executors")
 
         for executor in executors:
+            assert executor.provider is not None, \
+                "strategy must only be called with executors that have a provider."
             label = executor.label
             prefix = f"[Scaling executor {label}]"
 

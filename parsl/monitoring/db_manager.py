@@ -14,7 +14,7 @@ import typeguard
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.log_utils import set_file_logger
-from parsl.logconfigs.base import LogConfig
+from parsl.logconfigs.base import LogConfig, oneshot_initialize_logging
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
@@ -296,7 +296,7 @@ class DatabaseManager:
         self.run_dir = run_dir
 
         if log_config:
-            log_config.initialize_logging(log_dir=pathlib.Path(self.run_dir), log_name="database_manager")
+            oneshot_initialize_logging(log_config=log_config, log_dir=pathlib.Path(self.run_dir), log_name="database_manager")
         else:
             os.makedirs(self.run_dir, exist_ok=True)
 
