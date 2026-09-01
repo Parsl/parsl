@@ -27,7 +27,10 @@ extras_require = {
         # https://pandas.pydata.org/docs/development/policies.html#version-policy
         'pandas<3,>=2.2',
 
-        'plotly',
+        # plotly doesn't explicitly use semantic versioning, but their
+        # breakage behaviour is as if they do
+        'plotly>=5.19,<7',
+
         'python-daemon'
     ],
     'aws' : ['boto3'],
