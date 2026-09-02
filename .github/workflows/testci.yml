@@ -1,0 +1,61 @@
+name: Upload Python Package
+
+on:
+  push:
+    branches:
+      - releases  # Run the job on pushes to the releases branch
+  schedule:
+    - cron: '* * * * MON' # Run every Monday at 22:42
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: 'Release Suffix to append to version info. For eg. devN, a0'
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check if this commit is already released
+      id: already_released
+      run: |
+        if git tag --contains HEAD | grep -e '^[0-9]\{4\}\.[0-9]\{2\}\.[0-9]\{2\}$' ; then exit 1 ; fi
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Set version info
+      id: version_setter
+      run: echo "VERSION=$(date +'%Y.%m.%d')$SUFFIX" >> $GITHUB_OUTPUT
+      env:
+        SUFFIX: ${{ inputs.suffix }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip wheel
+        pip install build
+
+    - name: Build package
+      run: |
+        ./tag_and_release.sh update_version
+        ./tag_and_release.sh package
+      env:
+        VERSION: ${{ steps.version_setter.outputs.VERSION }}
+
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Mint a tag
+      uses: rickstaa/action-create-tag@v1
+      with:
+        tag: ${{ steps.version_setter.outputs.VERSION }}
+        message: "Release version: ${{ steps.version_setter.outputs.VERSION }}"
