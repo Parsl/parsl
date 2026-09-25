@@ -1029,6 +1029,13 @@ class DataFlowKernel:
 
         depend_descs = []
         for d in depends:
+            if isinstance(d, AppFuture) and d.task_record['dfk'] == self:
+                logger.info("Task %s has dependency task %s", task_id, d.task_record['id'],
+                            extra={"parsl.task": task_id, "parsl.dependency_task": d.task_record['id']})
+            else:
+                logger.info("Task %s has dependency future %r", task_id, d,
+                            extra={"parsl.task": task_id, "parsl.dependency_object": repr(d)})
+
             depend_descs.append(self.render_future_description(d))
 
         if depend_descs != []:
