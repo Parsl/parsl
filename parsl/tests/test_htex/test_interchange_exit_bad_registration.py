@@ -209,7 +209,8 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
            'dir': os.getcwd(),
            'cpu_count': psutil.cpu_count(logical=False),
            'total_memory': psutil.virtual_memory().total,
-           }.update(worker_version_info)
+           **worker_version_info,
+           }
 
     # connect to worker port and send this message.
 
@@ -227,8 +228,11 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
 
     # Run a command against the interchange to confirm that the interchange has
     # not failed, this call will hang if the interchange exits early
-    command_client.run("MANAGERS", max_retries=0, timeout_s=1)
-    # check that the interchange exits within some reasonable time
+    try_assert(
+        lambda: len(command_client.run("MANAGERS", max_retries=0, timeout_s=1)) == 1,
+        "Interchange did not accept the version-mismatched registration",
+        timeout_ms=5000,
+    )
 
     interchange_proc.terminate()
     task_channel.close()
