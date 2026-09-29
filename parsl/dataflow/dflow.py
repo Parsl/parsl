@@ -723,13 +723,20 @@ class DataFlowKernel:
 
         self._update_task_state(task_record, States.launched)
 
+        extra = {"parsl.dfk": self.run_id,
+                 "parsl.task": task_id,
+                 "parsl.try": try_id,
+                 "parsl.executor": executor.label
+                 }
+
         if hasattr(exec_fu, "parsl_executor_task_id"):
+            extra['parsl.executor_task'] = exec_fu.parsl_executor_task_id
             logger.info(
                 f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
-                f"with executor id {exec_fu.parsl_executor_task_id}")
+                f"with executor id {exec_fu.parsl_executor_task_id}", extra=extra)
 
         else:
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
+            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}", extra=extra)
 
         self._log_std_streams(task_record)
 
