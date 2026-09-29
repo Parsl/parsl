@@ -772,7 +772,7 @@ def worker(
 
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
-        logger.info("Received executor task {}".format(tid))
+        logger.info("Received executor task {}".format(tid), extra={"parsl.htex.task": tid})
 
         with ready_worker_count.get_lock():
             ready_worker_count.value -= 1
@@ -806,7 +806,7 @@ def worker(
             del serialized_result
         del req
 
-        logger.info("Completed executor task {}".format(tid))
+        logger.info("Completed executor task {}".format(tid), extra={"parsl.htex.task": tid})
         try:
             pkl_package = pickle.dumps(result_package)
         except Exception:
@@ -818,7 +818,7 @@ def worker(
         result_queue.put(pkl_package)
         del pkl_package, result_package
         tasks_in_progress.pop(worker_id)
-        logger.info("All processing finished for executor task {}".format(tid))
+        logger.info("All processing finished for executor task {}".format(tid), extra={"parsl.htex.task": tid})
 
 
 def get_arg_parser() -> argparse.ArgumentParser:
