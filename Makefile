@@ -135,3 +135,8 @@ clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy cache
 flux_local_test: ## Test Parsl with Flux Executor
 	pip3 install .
 	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/flux_local.py --random-order --durations 10
+
+.PHONY: ensemble_local_test
+ensemble_local_test: ## Test Parsl with Ensemble Executor
+	pip3 install ".[ensemble]"
+	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_el.py --random-order --durations 10

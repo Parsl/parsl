@@ -367,12 +367,13 @@ def pytest_make_collect_report(collector):
     return rep
 
 
-def pytest_ignore_collect(path):
-    if 'integration' in path.strpath:
+def pytest_ignore_collect(collection_path):
+    path_str = str(collection_path)
+    if 'integration' in path_str:
         return True
-    elif 'manual_tests' in path.strpath:
+    elif 'manual_tests' in path_str:
         return True
-    elif 'scaling_tests/test_scale' in path.strpath:
+    elif 'scaling_tests/test_scale' in path_str:
         return True
     else:
         return False
