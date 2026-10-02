@@ -400,8 +400,7 @@ class Manager:
                         self.task_scheduler.put_task(task)
 
             elif socks.get(results_sock) == zmq.POLLIN:
-                meta_b = pickle.dumps({'type': 'result'})
-                ix_sock.send_multipart([meta_b, results_sock.recv()])
+                ix_sock.send(results_sock.recv())
                 logger.debug("Result sent to interchange")
 
             else:
