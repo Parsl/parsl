@@ -46,7 +46,7 @@ from parsl.serialize import serialize
 from parsl.version import VERSION as PARSL_VERSION
 
 HEARTBEAT_CODE = (2 ** 32) - 1
-DRAINED_CODE = (2 ** 32) - 2
+SHUTDOWN_CODE = (2 ** 32) - 2
 
 # this is specified explicitly because when this file is run as a script (the
 # expected use), __name__ which is the normal idiom here is set to __main__,
@@ -269,6 +269,7 @@ class Manager:
             'uid': self.uid,
             'block_id': self.block_id,
             'start_time': self.start_time,
+            'drain_time': self.drain_time,
             'prefetch_capacity': self.prefetch_capacity,
             'max_capacity': self.worker_count + self.prefetch_capacity,
             'os': platform.system(),
@@ -286,15 +287,6 @@ class Manager:
         b_msg = pickle.dumps({'type': 'heartbeat'})
         task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
-
-    @staticmethod
-    def drain_to_incoming(task_incoming: zmq.Socket) -> None:
-        """ Send heartbeat to the incoming task queue
-        """
-        msg = {'type': 'drain'}
-        b_msg = pickle.dumps(msg)
-        task_incoming.send(b_msg)
-        logger.debug("Sent drain")
 
     @wrap_with_logs
     def interchange_communicator(self, pair_setup: threading.Event) -> None:
@@ -346,7 +338,6 @@ class Manager:
             # time here are correctly copy-pasted from the relevant if
             # statements.
             next_interesting_event_time = min(last_beat + self.heartbeat_period,
-                                              self.drain_time,
                                               last_interchange_contact + self.heartbeat_threshold)
             try:
                 pending_task_count = self.pending_task_queue.qsize()
@@ -364,17 +355,6 @@ class Manager:
                 self.heartbeat_to_incoming(ix_sock)
                 last_beat = time.time()
 
-            if time.time() > self.drain_time:
-                logger.info("Requesting drain")
-                self.drain_to_incoming(ix_sock)
-                # This will start the pool draining...
-                # Drained exit behaviour does not happen here. It will be
-                # driven by the interchange sending a DRAINED_CODE message.
-
-                # now set drain time to the far future so we don't send a drain
-                # message every iteration.
-                self.drain_time = float('inf')
-
             poll_duration_s = max(0, next_interesting_event_time - time.time())
             socks = dict(poller.poll(timeout=math.floor(poll_duration_s * 1000)))
 
@@ -387,8 +367,8 @@ class Manager:
 
                 if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat response from interchange")
-                elif tasks == DRAINED_CODE:
-                    logger.info("Got fully drained message from interchange - setting kill flag")
+                elif tasks == SHUTDOWN_CODE:
+                    logger.info("Got shutdown message from interchange - setting kill flag")
                     self._stop_event.set()
                 else:
                     task_recv_counter += len(tasks)

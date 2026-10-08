@@ -12,6 +12,7 @@ class ManagerRecord(TypedDict, total=False):
     max_capacity: int
     active: bool
     draining: bool
+    drain_time: float
     hostname: str
     last_heartbeat: float
     idle_since: Optional[float]
