@@ -723,13 +723,20 @@ class DataFlowKernel:
 
         self._update_task_state(task_record, States.launched)
 
+        extra = {"parsl.dfk": self.run_id,
+                 "parsl.task": task_id,
+                 "parsl.try": try_id,
+                 "parsl.executor": executor.label
+                 }
+
         if hasattr(exec_fu, "parsl_executor_task_id"):
+            extra['parsl.executor_task'] = exec_fu.parsl_executor_task_id
             logger.info(
                 f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
-                f"with executor id {exec_fu.parsl_executor_task_id}")
+                f"with executor id {exec_fu.parsl_executor_task_id}", extra=extra)
 
         else:
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
+            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}", extra=extra)
 
         self._log_std_streams(task_record)
 
@@ -1029,6 +1036,13 @@ class DataFlowKernel:
 
         depend_descs = []
         for d in depends:
+            if isinstance(d, AppFuture) and d.task_record['dfk'] == self:
+                logger.info("Task %s has dependency task %s", task_id, d.task_record['id'],
+                            extra={"parsl.task": task_id, "parsl.dependency_task": d.task_record['id']})
+            else:
+                logger.info("Task %s has dependency future %r", task_id, d,
+                            extra={"parsl.task": task_id, "parsl.dependency_object": repr(d)})
+
             depend_descs.append(self.render_future_description(d))
 
         if depend_descs != []:
@@ -1036,7 +1050,8 @@ class DataFlowKernel:
         else:
             waiting_message = "not waiting on any dependency"
 
-        logger.info("Task %s submitted for App %s, %s", task_id, task_record['func_name'], waiting_message)
+        logger.info("Task %s submitted for App %s, %s", task_id, task_record['func_name'], waiting_message,
+                    extra={"parsl.task": task_id, "parsl.app_name": task_record['func_name']})
 
         logger.debug("Task %s has AppFuture: %r", task_id, task_record['app_fu'])
         self._update_task_state(task_record, States.pending)

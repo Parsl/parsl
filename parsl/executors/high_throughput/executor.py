@@ -476,6 +476,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                      port_range=self.interchange_port_range,
                                                      logdir=self.logdir,
                                                      worker_debug=self.worker_debug,
+                                                     cert_dir=self.cert_dir,
                                                      )
             self.hub_zmq_port = self.zmq_monitoring.port
 
@@ -508,8 +509,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         while not self.bad_state_is_set and not self._result_queue_thread_exit.is_set():
             try:
-                msgs = self.incoming_q.get(timeout_ms=self.poll_period)
-                if msgs is None:  # timeout
+                serialized_msg = self.incoming_q.get(timeout_ms=self.poll_period)
+                if serialized_msg is None:  # timeout
                     continue
 
             except IOError as e:
@@ -522,48 +523,47 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
             else:
 
-                for serialized_msg in msgs:
-                    msg = pickle.loads(serialized_msg)
+                msg = pickle.loads(serialized_msg)
 
-                    if msg['type'] == 'result':
+                if msg['type'] == 'result':
+                    try:
+                        tid = msg['task_id']
+                    except Exception:
+                        raise BadMessage("Message received does not contain 'task_id' field")
+
+                    if tid == -1 and 'exception' in msg:
+                        logger.warning("Executor shutting down due to exception from interchange")
+                        exception = deserialize(msg['exception'])
+                        self.set_bad_state_and_fail_all(exception)
+                        break
+
+                    task_fut = self.tasks.pop(tid)
+
+                    if 'result' in msg:
+                        result = deserialize(msg['result'])
+                        task_fut.set_result(result)
+
+                    elif 'exception' in msg:
                         try:
-                            tid = msg['task_id']
-                        except Exception:
-                            raise BadMessage("Message received does not contain 'task_id' field")
-
-                        if tid == -1 and 'exception' in msg:
-                            logger.warning("Executor shutting down due to exception from interchange")
-                            exception = deserialize(msg['exception'])
-                            self.set_bad_state_and_fail_all(exception)
-                            break
-
-                        task_fut = self.tasks.pop(tid)
-
-                        if 'result' in msg:
-                            result = deserialize(msg['result'])
-                            task_fut.set_result(result)
-
-                        elif 'exception' in msg:
-                            try:
-                                s = deserialize(msg['exception'])
-                                # s should be a RemoteExceptionWrapper... so we can reraise it
-                                if isinstance(s, RemoteExceptionWrapper):
-                                    try:
-                                        s.reraise()
-                                    except Exception as e:
-                                        task_fut.set_exception(e)
-                                elif isinstance(s, Exception):
-                                    task_fut.set_exception(s)
-                                else:
-                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                            except Exception as e:
-                                # TODO could be a proper wrapped exception?
-                                task_fut.set_exception(
-                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                        else:
-                            raise BadMessage("Message received is neither result or exception")
+                            s = deserialize(msg['exception'])
+                            # s should be a RemoteExceptionWrapper... so we can reraise it
+                            if isinstance(s, RemoteExceptionWrapper):
+                                try:
+                                    s.reraise()
+                                except Exception as e:
+                                    task_fut.set_exception(e)
+                            elif isinstance(s, Exception):
+                                task_fut.set_exception(s)
+                            else:
+                                raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                        except Exception as e:
+                            # TODO could be a proper wrapped exception?
+                            task_fut.set_exception(
+                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                     else:
-                        raise BadMessage("Message received with unknown type {}".format(msg['type']))
+                        raise BadMessage("Message received is neither result or exception")
+                else:
+                    raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
         logger.info("Closing result ZMQ pipe")
         self.incoming_q.close()
@@ -646,17 +646,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         manager_id : str
             Manager id to be put on hold
         """
-        self.command_client.run("HOLD_WORKER;{}".format(manager_id))
+        self.command_client.run(["HOLD_MANAGER", manager_id])
         logger.debug("Sent hold request to manager: {}".format(manager_id))
 
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
         return len(self.tasks)
-
-    def connected_workers(self) -> int:
-        """Returns the count of workers across all connected managers"""
-        return self.command_client.run("WORKERS")
 
     def connected_managers(self) -> List[Dict[str, typing.Any]]:
         """Returns a list of dicts one for each connected managers.
@@ -688,7 +684,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("Sending hold to manager: {}".format(manager['manager']))
+                logger.debug("Sending hold for manager: %s", manager['manager'])
                 self._hold_manager(manager['manager'])
 
     def submit(self, func: Callable, resource_specification: dict, *args, **kwargs) -> HTEXFuture:

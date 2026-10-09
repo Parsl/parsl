@@ -235,9 +235,6 @@ class Interchange:
             if command_req == "CONNECTED_BLOCKS":
                 reply = self.connected_block_history
 
-            elif command_req == "WORKERS":
-                reply = sum(m['worker_count'] for m in self._ready_managers.values())
-
             elif command_req == "MANAGERS":
                 reply = []
                 now = time.time()
@@ -262,10 +259,9 @@ class Interchange:
                     manager_id_str = manager_id.decode('utf-8')
                     reply[manager_id_str] = m["packages"]
 
-            elif command_req.startswith("HOLD_WORKER"):
-                cmd, s_manager = command_req.split(';')
-                manager_id = s_manager.encode('utf-8')
-                logger.info("Received HOLD_WORKER for {!r}".format(manager_id))
+            elif isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_MANAGER":
+                manager_id = command_req[1].encode('utf-8')
+                logger.info("Received HOLD_MANAGER for {!r}".format(manager_id))
                 if manager_id in self._ready_managers:
                     m = self._ready_managers[manager_id]
                     m['active'] = False
@@ -294,7 +290,7 @@ class Interchange:
 
         if self.hub_address is not None and self.hub_zmq_port is not None:
             logger.debug("Creating monitoring radio to %s:%s", self.hub_address, self.hub_zmq_port)
-            monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port)
+            monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port, self.cert_dir)
             logger.debug("Created monitoring radio")
         else:
             monitoring_radio = None
@@ -364,9 +360,9 @@ class Interchange:
         logger.debug('starting worker message section')
         msg_parts = self.manager_sock.recv_multipart()
         try:
-            manager_id, meta_b, *msgs = msg_parts
-            meta = pickle.loads(meta_b)
-            mtype = meta['type']
+            manager_id, msg_b = msg_parts
+            msg = pickle.loads(msg_b)
+            mtype = msg['type']
         except Exception as e:
             logger.warning(
                 'Failed to read manager message; ignoring message'
@@ -386,12 +382,12 @@ class Interchange:
         elif mtype == 'registration':
             ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
             ix_parsl_v = self.current_platform['parsl_v']
-            mgr_minor_py = meta['python_v'].rsplit('.', 1)[0]
-            mgr_parsl_v = meta['parsl_v']
+            mgr_minor_py = msg['python_v'].rsplit('.', 1)[0]
+            mgr_parsl_v = msg['parsl_v']
 
             new_rec = ManagerRecord(
                 block_id=None,
-                start_time=meta['start_time'],
+                start_time=msg['start_time'],
                 tasks=[],
                 worker_count=0,
                 max_capacity=0,
@@ -400,16 +396,16 @@ class Interchange:
                 last_heartbeat=time.time(),
                 idle_since=time.time(),
                 parsl_version=mgr_parsl_v,
-                python_version=meta['python_v'],
+                python_version=msg['python_v'],
             )
 
             # m is a ManagerRecord, but meta is a dict[Any,Any] and so can
             # contain arbitrary fields beyond those in ManagerRecord (and
             # indeed does - for example, python_v) which are then ignored
             # later.
-            new_rec.update(meta)
+            new_rec.update(msg)
 
-            logger.info(f'Registration info for manager {manager_id!r}: {meta}')
+            logger.info(f'Registration info for manager {manager_id!r}: {msg}')
             self._send_monitoring_info(monitoring_radio, new_rec)
 
             python_mismatch: bool = ix_minor_py != mgr_minor_py
@@ -458,55 +454,40 @@ class Interchange:
             return
 
         if mtype == 'result':
-            logger.debug("Number of results in batch: %d", len(msgs))
-            b_messages_to_send = []
-
-            for p_message in msgs:
-                r = pickle.loads(p_message)
-                r_type = r['type']
-                if r_type == 'result':
-                    # process this for task ID and forward to executor
-                    tid = r['task_id']
-                    logger.debug("Removing task %s from manager", tid)
-                    try:
-                        m['tasks'].remove(tid)
-                        b_messages_to_send.append(p_message)
-                    except Exception:
-                        logger.exception(
-                            'Ignoring exception removing task_id %s from manager'
-                            ' task list %s',
-                            tid,
-                            m['tasks']
-                        )
-                elif r_type == 'monitoring':
-                    # the monitoring code makes the assumption that no
-                    # monitoring messages will be received if monitoring
-                    # is not configured, and that monitoring_radio will only
-                    # be None when monitoring is not configurated.
-                    assert monitoring_radio is not None
-
-                    monitoring_radio.send(r['payload'])
-
-                else:
-                    logger.error(
-                        f'Discarding result message of unknown type: {r_type}'
-                    )
-
-            if b_messages_to_send:
-                logger.debug(
-                    'Sending messages (%d) on results_outgoing',
-                    len(b_messages_to_send),
+            # process this for task ID and forward to executor
+            tid = msg['task_id']
+            logger.debug("Removing task %s from manager", tid)
+            try:
+                m['tasks'].remove(tid)
+            except Exception:
+                logger.exception(
+                    'Ignoring exception removing task_id %s from manager'
+                    ' task list %s',
+                    tid,
+                    m['tasks']
                 )
-                self.results_outgoing.send_multipart(b_messages_to_send)
-                logger.debug('Sent messages on results_outgoing')
+                return
 
-                # At least one result received, so manager now has idle capacity
-                interesting_managers.add(manager_id)
+            logger.debug('Sending result on results_outgoing')
+            self.results_outgoing.send(msg_b)
+            logger.debug('Sent result on results_outgoing')
 
-                if len(m['tasks']) == 0 and m['idle_since'] is None:
-                    m['idle_since'] = time.time()
+            # Result received, so manager now has idle capacity
+            interesting_managers.add(manager_id)
 
-                self._send_monitoring_info(monitoring_radio, m)
+            if len(m['tasks']) == 0 and m['idle_since'] is None:
+                m['idle_since'] = time.time()
+
+            self._send_monitoring_info(monitoring_radio, m)
+
+        elif mtype == 'monitoring':
+            # the monitoring code makes the assumption that no
+            # monitoring messages will be received if monitoring
+            # is not configured, and that monitoring_radio will only
+            # be None when monitoring is not configurated.
+            assert monitoring_radio is not None
+
+            monitoring_radio.send(msg['payload'])
 
         elif mtype == 'heartbeat':
             m['last_heartbeat'] = time.time()
