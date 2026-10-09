@@ -325,9 +325,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             security_context=security_context)
 
         # Create a secret to enable pulling images from secure repositories
-        secret = None
+        secrets = None
         if self.secret:
-            secret = client.V1LocalObjectReference(name=self.secret)
+            secrets = [client.V1LocalObjectReference(name=self.secret)]
 
         # Create list of volumes from (pvc, mount) tuples
         volume_defs = []
@@ -340,7 +340,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                        labels={"parsl-job-id": job_id},
                                        annotations=annotations)
         spec = client.V1PodSpec(containers=[container],
-                                image_pull_secrets=[secret],
+                                image_pull_secrets=secrets,
                                 volumes=volume_defs,
                                 service_account_name=service_account_name)
 
