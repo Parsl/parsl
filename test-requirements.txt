@@ -1,6 +1,6 @@
 flake8==6.1.0
 pandas
-pytest>=7.4.0,<8
+pytest>=9,<10
 pytest-cov
 pytest-random-order
 nbsphinx

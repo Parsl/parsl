@@ -367,12 +367,16 @@ def pytest_make_collect_report(collector):
     return rep
 
 
-def pytest_ignore_collect(path):
-    if 'integration' in path.strpath:
+def pytest_ignore_collect(collection_path: pathlib.Path, config: pytest.Config) -> bool:
+    # pytest 9 removed the legacy ``path: py.path.local`` hook argument;
+    # ``collection_path: pathlib.Path`` has been available since pytest 7.
+    # See https://github.com/Parsl/parsl/issues/4051
+    path = str(collection_path)
+    if 'integration' in path:
         return True
-    elif 'manual_tests' in path.strpath:
+    elif 'manual_tests' in path:
         return True
-    elif 'scaling_tests/test_scale' in path.strpath:
+    elif 'scaling_tests/test_scale' in path:
         return True
     else:
         return False
