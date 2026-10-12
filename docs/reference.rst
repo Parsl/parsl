@@ -152,6 +152,7 @@ Checkpointing and Memoization
 
     parsl.dataflow.memoization.Memoizer
     parsl.dataflow.memoization.BasicMemoizer
+    parsl.dataflow.memoizers.sqlite.SQLiteMemoizer
 
 Exceptions
 ==========
