@@ -175,6 +175,14 @@ def pytest_configure(config):
         'markers',
         'taskvine: Marks local tests that require a working Task Vine installation'
     )
+    config.addinivalue_line(
+        'markers',
+        'globus_compute: tests that require the Globus Compute SDK'
+    )
+    config.addinivalue_line(
+        'markers',
+        'radical: tests that require the Radical framework'
+    )
 
 
 @pytest.fixture(autouse=True, scope='session')
