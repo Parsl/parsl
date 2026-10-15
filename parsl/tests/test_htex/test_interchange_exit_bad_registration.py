@@ -95,6 +95,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
            'dir': os.getcwd(),
            'cpu_count': psutil.cpu_count(logical=False),
            'total_memory': psutil.virtual_memory().total,
+           'packages': {},
            }
 
     # connect to worker port and send this message.
@@ -211,6 +212,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
            'dir': os.getcwd(),
            'cpu_count': psutil.cpu_count(logical=False),
            'total_memory': psutil.virtual_memory().total,
+           'packages': {},
            **worker_version_info,
            }
 
