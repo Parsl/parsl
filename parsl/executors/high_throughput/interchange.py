@@ -29,7 +29,7 @@ from parsl.serialize import serialize as serialize_object
 from parsl.version import VERSION as PARSL_VERSION
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
-PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
+PKL_SHUTDOWN_CODE = pickle.dumps((2 ** 32) - 2)
 
 logger = logging.getLogger("parsl.executors.high_throughput.interchange")
 
@@ -385,6 +385,9 @@ class Interchange:
             mgr_minor_py = msg['python_v'].rsplit('.', 1)[0]
             mgr_parsl_v = msg['parsl_v']
 
+            # legacy draining handling. remove in ~6 months (ca Apr 2027)
+            drain_time = msg.get('drain_time', float('inf'))
+
             new_rec = ManagerRecord(
                 block_id=None,
                 start_time=msg['start_time'],
@@ -393,6 +396,7 @@ class Interchange:
                 max_capacity=0,
                 active=True,
                 draining=False,
+                drain_time=drain_time,
                 last_heartbeat=time.time(),
                 idle_since=time.time(),
                 parsl_version=mgr_parsl_v,
@@ -493,6 +497,7 @@ class Interchange:
             m['last_heartbeat'] = time.time()
             self.manager_sock.send_multipart([manager_id, PKL_HEARTBEAT_CODE])
 
+        # legacy draining handling. remove in ~6 months (ca Apr 2027)
         elif mtype == 'drain':
             m['draining'] = True
 
@@ -502,15 +507,16 @@ class Interchange:
         logger.debug("leaving worker message section")
 
     def expire_drained_managers(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
+        now = time.time()
+        for manager_id, m in list(self._ready_managers.items()):
+            if not m['draining'] and now >= m['drain_time']:
+                logger.info(f"Manager {manager_id!r} has reached its drain time - draining")
+                m['draining'] = True
 
-        for manager_id in list(interesting_managers):
-            # is it always true that a draining manager will be in interesting managers?
-            # i think so because it will have outstanding capacity?
-            m = self._ready_managers[manager_id]
             if m['draining'] and len(m['tasks']) == 0:
-                logger.info(f"Manager {manager_id!r} is drained - sending drained message to manager")
-                self.manager_sock.send_multipart([manager_id, PKL_DRAINED_CODE])
-                interesting_managers.remove(manager_id)
+                logger.info(f"Manager {manager_id!r} is drained - telling manager to shutdown")
+                self.manager_sock.send_multipart([manager_id, PKL_SHUTDOWN_CODE])
+                interesting_managers.discard(manager_id)
                 self._ready_managers.pop(manager_id)
 
                 m['active'] = False
