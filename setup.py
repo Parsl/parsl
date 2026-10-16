@@ -46,6 +46,7 @@ extras_require = {
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
+    'ensemble': ['ensemble-launcher[hpc]'],
     'proxystore': ['proxystore'],
     'radical-pilot': ['radical.pilot==1.90', 'radical.utils==1.90'],
     'globus_compute': ['globus_compute_sdk>=2.34.0'],
