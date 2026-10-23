@@ -218,6 +218,7 @@ class Interchange:
             d['timestamp'] = datetime.datetime.now()
             d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
             d['run_id'] = self.run_id
+            d['python_v'] = manager['python_version']
 
             monitoring_radio.send((MessageType.NODE_INFO, d))
 
@@ -382,35 +383,9 @@ class Interchange:
         elif mtype == 'registration':
             ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
             ix_parsl_v = self.current_platform['parsl_v']
-            mgr_minor_py = msg['python_v'].rsplit('.', 1)[0]
+            mgr_python_v = msg['python_v']
+            mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
             mgr_parsl_v = msg['parsl_v']
-
-            # legacy draining handling. remove in ~6 months (ca Apr 2027)
-            drain_time = msg.get('drain_time', float('inf'))
-
-            new_rec = ManagerRecord(
-                block_id=None,
-                start_time=msg['start_time'],
-                tasks=[],
-                worker_count=0,
-                max_capacity=0,
-                active=True,
-                draining=False,
-                drain_time=drain_time,
-                last_heartbeat=time.time(),
-                idle_since=time.time(),
-                parsl_version=mgr_parsl_v,
-                python_version=msg['python_v'],
-            )
-
-            # m is a ManagerRecord, but meta is a dict[Any,Any] and so can
-            # contain arbitrary fields beyond those in ManagerRecord (and
-            # indeed does - for example, python_v) which are then ignored
-            # later.
-            new_rec.update(msg)
-
-            logger.info(f'Registration info for manager {manager_id!r}: {msg}')
-            self._send_monitoring_info(monitoring_radio, new_rec)
 
             python_mismatch: bool = ix_minor_py != mgr_minor_py
             parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
@@ -433,23 +408,44 @@ class Interchange:
                     f'\n  Interchange: {vm_exc.interchange_version}'
                     f'\n  Manager:     {vm_exc.manager_version}'
                 )
+                return
 
-            else:
-                # We really should update the associated data structure; but not
-                # at this time.  *kicks can down the road*
-                assert new_rec['block_id'] is not None, 'Verified externally'
+            # legacy draining handling. remove in ~6 months (ca Apr 2027)
+            drain_time = msg.get('drain_time', float('inf'))
 
-                # set up entry only if we accept the registration
-                self._ready_managers[manager_id] = new_rec
-                self.connected_block_history.append(new_rec['block_id'])
+            new_rec = ManagerRecord(
+                block_id=msg['block_id'],
+                start_time=msg['start_time'],
+                tasks=[],
+                worker_count=msg['worker_count'],
+                max_capacity=msg['max_capacity'],
+                active=True,
+                draining=False,
+                drain_time=drain_time,
+                last_heartbeat=time.time(),
+                idle_since=time.time(),
+                parsl_version=mgr_parsl_v,
+                python_version=mgr_python_v,
+                packages=msg['packages'],
+                hostname=msg['hostname'],
+                uid=msg['uid'],
+                cpu_count=msg['cpu_count'],
+                total_memory=msg['total_memory'],
+            )
 
-                interesting_managers.add(manager_id)
+            logger.info(f'Registration info for manager {manager_id!r}: {msg}')
+            self._send_monitoring_info(monitoring_radio, new_rec)
 
-                logger.info(
-                    f"Registered manager {manager_id!r} (py{mgr_minor_py},"
-                    f" {mgr_parsl_v}) and added to ready queue"
-                )
-                logger.debug("Manager %r -> %s", manager_id, new_rec)
+            self._ready_managers[manager_id] = new_rec
+            self.connected_block_history.append(new_rec['block_id'])
+
+            interesting_managers.add(manager_id)
+
+            logger.info(
+                f"Registered manager {manager_id!r} (py{mgr_minor_py},"
+                f" {mgr_parsl_v}) and added to ready queue"
+            )
+            logger.debug("Manager %r -> %s", manager_id, new_rec)
 
             return
 
