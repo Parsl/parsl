@@ -1,5 +1,4 @@
 import logging
-import os
 
 import pytest
 import typeguard
@@ -12,8 +11,6 @@ from parsl.app.app import bash_app
 def echo_to_streams(msg, stderr=None, stdout=None):
     return 'echo "{0}"; echo "{0}" >&2'.format(msg)
 
-
-whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 speclist = (
     ['t3.out', 'w'],
