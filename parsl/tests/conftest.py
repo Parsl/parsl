@@ -302,12 +302,8 @@ def pytest_collection_modifyitems(items: list[pytest.Item], config):
     yield
 
     show_filtered = config.getoption('--show-filtered-tests')
-
     parsl_test_config = config.getoption('config')[0]
-    conf_path = os.path.abspath(parsl_test_config)
 
-    whitelist_reason = f"config '{parsl_test_config}' not in whitelist"
-    blacklist_reason = f"config '{parsl_test_config}' is in blacklist"
     local_reason = "intended for local config"
     explicit_reason = "intended for explicit config"
 
@@ -316,21 +312,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item], config):
     while i > 0:
         i -= 1
         t_fn = items[i]
-        if (m := t_fn.get_closest_marker('whitelist')) is not None:
-            if conf_path not in chain.from_iterable(glob(x) for x in m.args):
-                reason = whitelist_reason
-                if 'reason' in m.kwargs:
-                    reason = m.kwargs['reason']
-                filtered_tests.append((i, reason))
-
-        elif (m := t_fn.get_closest_marker('blacklist')) is not None:
-            if conf_path in chain.from_iterable(glob(x) for x in m.args):
-                reason = blacklist_reason
-                if 'reason' in m.kwargs:
-                    reason = m.kwargs['reason']
-                filtered_tests.append((i, reason))
-
-        elif (m := t_fn.get_closest_marker('local')) is not None:
+        if (m := t_fn.get_closest_marker('local')) is not None:
             if parsl_test_config != 'local':
                 reason = local_reason
                 if len(m.args) > 0:
