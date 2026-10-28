@@ -61,6 +61,10 @@ def registration_msg(ix: Interchange, **kw) -> dict:
             'start_time': time.time(),
             'prefetch_capacity': 0,
             'max_capacity': 1,
+            'packages': {},
+            'hostname': 'testhost',
+            'cpu_count': 1,
+            'total_memory': 1,
             **kw}
 
 
