@@ -13,6 +13,9 @@ from parsl.app.app import python_app
 from parsl.executors.errors import InvalidResourceSpecification
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
 from parsl.executors.high_throughput.mpi_executor import MPIExecutor
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    validate_resource_spec,
+)
 from parsl.executors.high_throughput.mpi_resource_management import (
     get_nodes_in_batchjob,
     get_pbs_hosts_list,
@@ -117,6 +120,32 @@ def test_mpi_resource_spec(resource_spec: Dict, exception):
     else:
         result = mpi_ex.validate_resource_spec(resource_spec)
         assert result is None
+
+
+@pytest.mark.local
+@pytest.mark.parametrize(
+    "resource_spec, expected",
+    (
+        (
+            {"num_nodes": 2, "ranks_per_node": 3},
+            {"num_nodes": 2, "num_ranks": 6, "ranks_per_node": 3}
+        ),
+        (
+            {"num_nodes": 3, "num_ranks": 10},
+            {"num_nodes": 3, "num_ranks": 10, "ranks_per_node": 4}
+        ),
+        (
+            {"num_nodes": "2", "num_ranks": "4"},
+            {"num_nodes": "2", "num_ranks": "4", "ranks_per_node": 2}
+        ),
+    )
+)
+def test_mpi_resource_spec_derives_to_ints(resource_spec: Dict, expected: Dict):
+    validate_resource_spec(resource_spec)
+
+    for key, value in expected.items():
+        assert resource_spec[key] == value
+        assert type(resource_spec[key]) is type(value)
 
 
 @pytest.mark.local
