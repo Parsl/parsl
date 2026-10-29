@@ -343,10 +343,10 @@ class Interchange:
             priority = resource_spec.get('priority', float('inf'))
             queue_entry = (-priority, -task_id, msg)
 
-            logger.debug("Putting task %s onto pending_task_queue", task_id)
+            logger.debug("Putting task %s onto pending_task_queue", task_id, extra={"parsl.htex.task": task_id})
 
             self.pending_task_queue.add(queue_entry)
-            logger.debug("Put task %s onto pending_task_queue", task_id)
+            logger.debug("Put task %s onto pending_task_queue", task_id, extra={"parsl.htex.task": task_id})
 
     def process_manager_socket_message(
         self,
@@ -456,7 +456,7 @@ class Interchange:
         if mtype == 'result':
             # process this for task ID and forward to executor
             tid = msg['task_id']
-            logger.debug("Removing task %s from manager", tid)
+            logger.debug("Removing task %s from manager", tid, extra={"parsl.htex.task": tid})
             try:
                 m['tasks'].remove(tid)
             except Exception:
@@ -464,13 +464,14 @@ class Interchange:
                     'Ignoring exception removing task_id %s from manager'
                     ' task list %s',
                     tid,
-                    m['tasks']
+                    m['tasks'],
+                    extra={"parsl.htex.task": tid}
                 )
                 return
 
-            logger.debug('Sending result on results_outgoing')
+            logger.debug('Sending result on results_outgoing', extra={"parsl.htex.task": tid})
             self.results_outgoing.send(msg_b)
-            logger.debug('Sent result on results_outgoing')
+            logger.debug('Sent result on results_outgoing', extra={"parsl.htex.task": tid})
 
             # Result received, so manager now has idle capacity
             interesting_managers.add(manager_id)
@@ -554,7 +555,8 @@ class Interchange:
                         tids = [t['task_id'] for t in tasks]
                         m['tasks'].extend(tids)
                         m['idle_since'] = None
-                        logger.debug("Sent tasks: %s to manager %r", tids, manager_id)
+                        for tid in tids:
+                            logger.debug("Sending task %s to manager %r", tid, manager_id, extra={"parsl.htex.task": tid})
                         # recompute real_capacity after sending tasks
                         real_capacity -= task_count
                         if real_capacity > 0:
@@ -578,8 +580,9 @@ class Interchange:
                 m['active'] = False
                 self._send_monitoring_info(monitoring_radio, m)
 
-            logger.warning(f"Cancelling htex tasks {m['tasks']} on removed manager")
+            logger.warning("Cancelling htex tasks on removed manager")
             for tid in m['tasks']:
+                logger.warning(f"Cancelling htex task {tid} on removed manager", extra={"parsl.htex.task": tid})
                 try:
                     raise ManagerLost(manager_id, m['hostname'])
                 except Exception:
