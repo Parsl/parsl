@@ -62,7 +62,9 @@ def registration_msg(ix: Interchange, **kw) -> dict:
             'prefetch_capacity': 0,
             'max_capacity': 1,
             'packages': {},
+            'os': 'testos',
             'hostname': 'testhost',
+            'dir': '/test/dir',
             'cpu_count': 1,
             'total_memory': 1,
             **kw}
@@ -112,7 +114,7 @@ def test_draining_manager_shut_down_after_last_result(ix, manager_id):
     assert ix._ready_managers[manager_id]['draining']
     assert not shutdown_sent(ix, manager_id)
 
-    send_from_manager(ix, manager_id, {'type': 'result', 'task_id': 1})
+    send_from_manager(ix, manager_id, {'type': 'result', 'task_id': 1, 'result': b''})
     ix.expire_drained_managers(set(), None)
 
     assert shutdown_sent(ix, manager_id)
