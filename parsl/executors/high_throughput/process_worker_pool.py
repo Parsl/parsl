@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+import time
+
+_SCRIPT_LOAD_TIME = time.time()  # runs before imports
+
 import argparse
 import importlib
 import logging
@@ -13,7 +17,6 @@ import queue
 import subprocess
 import sys
 import threading
-import time
 import uuid
 from importlib.metadata import distributions
 from multiprocessing.context import SpawnProcess
@@ -46,7 +49,7 @@ from parsl.serialize import serialize
 from parsl.version import VERSION as PARSL_VERSION
 
 HEARTBEAT_CODE = (2 ** 32) - 1
-DRAINED_CODE = (2 ** 32) - 2
+SHUTDOWN_CODE = (2 ** 32) - 2
 
 # this is specified explicitly because when this file is run as a script (the
 # expected use), __name__ which is the normal idiom here is set to __main__,
@@ -162,7 +165,9 @@ class Manager:
 
         logger.info("Manager initializing")
 
-        self._start_time = time.time()
+        # record the time the script loaded, as opposed to the time this line runs, so
+        # that draining and manager selection better match what the scheduler sees
+        self.start_time = _SCRIPT_LOAD_TIME
 
         self.log_config = log_config
 
@@ -186,7 +191,6 @@ class Manager:
 
         self.uid = uid
         self.block_id = block_id
-        self.start_time = time.time()
 
         self.enable_mpi_mode = enable_mpi_mode
         self.mpi_launcher = mpi_launcher
@@ -239,7 +243,7 @@ class Manager:
 
         self.drain_time: float
         if drain_period:
-            self.drain_time = self._start_time + drain_period
+            self.drain_time = self.start_time + drain_period
             logger.info(f"Will request drain at {self.drain_time}")
         else:
             self.drain_time = float('inf')
@@ -269,6 +273,7 @@ class Manager:
             'uid': self.uid,
             'block_id': self.block_id,
             'start_time': self.start_time,
+            'drain_time': self.drain_time,
             'prefetch_capacity': self.prefetch_capacity,
             'max_capacity': self.worker_count + self.prefetch_capacity,
             'os': platform.system(),
@@ -286,15 +291,6 @@ class Manager:
         b_msg = pickle.dumps({'type': 'heartbeat'})
         task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
-
-    @staticmethod
-    def drain_to_incoming(task_incoming: zmq.Socket) -> None:
-        """ Send heartbeat to the incoming task queue
-        """
-        msg = {'type': 'drain'}
-        b_msg = pickle.dumps(msg)
-        task_incoming.send(b_msg)
-        logger.debug("Sent drain")
 
     @wrap_with_logs
     def interchange_communicator(self, pair_setup: threading.Event) -> None:
@@ -346,7 +342,7 @@ class Manager:
             # time here are correctly copy-pasted from the relevant if
             # statements.
             next_interesting_event_time = min(last_beat + self.heartbeat_period,
-                                              self.drain_time,
+                                              self.drain_time,  # legacy, remove ca Apr 2027
                                               last_interchange_contact + self.heartbeat_threshold)
             try:
                 pending_task_count = self.pending_task_queue.qsize()
@@ -364,12 +360,14 @@ class Manager:
                 self.heartbeat_to_incoming(ix_sock)
                 last_beat = time.time()
 
+            # legacy draining handling. remove in ~6 months (ca Apr 2027)
             if time.time() > self.drain_time:
+                # ask to start draining (old interchanges don't track that for us). this
+                # stops ours from sending more tasks; it will tell us to shut down when
+                # we finish all active work.
                 logger.info("Requesting drain")
-                self.drain_to_incoming(ix_sock)
-                # This will start the pool draining...
-                # Drained exit behaviour does not happen here. It will be
-                # driven by the interchange sending a DRAINED_CODE message.
+                ix_sock.send(pickle.dumps({'type': 'drain'}))
+                logger.debug("Sent drain")
 
                 # now set drain time to the far future so we don't send a drain
                 # message every iteration.
@@ -387,8 +385,8 @@ class Manager:
 
                 if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat response from interchange")
-                elif tasks == DRAINED_CODE:
-                    logger.info("Got fully drained message from interchange - setting kill flag")
+                elif tasks == SHUTDOWN_CODE:
+                    logger.info("Got shutdown message from interchange - setting kill flag")
                     self._stop_event.set()
                 else:
                     task_recv_counter += len(tasks)
@@ -400,8 +398,7 @@ class Manager:
                         self.task_scheduler.put_task(task)
 
             elif socks.get(results_sock) == zmq.POLLIN:
-                meta_b = pickle.dumps({'type': 'result'})
-                ix_sock.send_multipart([meta_b, results_sock.recv()])
+                ix_sock.send(results_sock.recv())
                 logger.debug("Result sent to interchange")
 
             else:
@@ -575,7 +572,7 @@ class Manager:
                 p.join()
             p.close()
 
-        delta = time.time() - self._start_time
+        delta = time.time() - self.start_time
         logger.info("process_worker_pool ran for {} seconds".format(delta))
 
     def _start_worker(self, worker_id: int) -> SpawnProcess:
@@ -775,7 +772,7 @@ def worker(
 
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
-        logger.info("Received executor task {}".format(tid))
+        logger.info("Received executor task {}".format(tid), extra={"parsl.htex.task": tid})
 
         with ready_worker_count.get_lock():
             ready_worker_count.value -= 1
@@ -809,7 +806,7 @@ def worker(
             del serialized_result
         del req
 
-        logger.info("Completed executor task {}".format(tid))
+        logger.info("Completed executor task {}".format(tid), extra={"parsl.htex.task": tid})
         try:
             pkl_package = pickle.dumps(result_package)
         except Exception:
@@ -821,7 +818,7 @@ def worker(
         result_queue.put(pkl_package)
         del pkl_package, result_package
         tasks_in_progress.pop(worker_id)
-        logger.info("All processing finished for executor task {}".format(tid))
+        logger.info("All processing finished for executor task {}".format(tid), extra={"parsl.htex.task": tid})
 
 
 def get_arg_parser() -> argparse.ArgumentParser:

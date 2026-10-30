@@ -85,8 +85,9 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
            'python_v': "1.1.1",  # this is the bad bit
            'worker_count': 1,
            'uid': 'testuid',
-           'block_id': 0,
+           'block_id': '0',
            'start_time': time.time(),
+           'drain_time': float('inf'),
            'prefetch_capacity': 0,
            'max_capacity': 1,
            'os': platform.system(),
@@ -94,6 +95,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
            'dir': os.getcwd(),
            'cpu_count': psutil.cpu_count(logical=False),
            'total_memory': psutil.virtual_memory().total,
+           'packages': {},
            }
 
     # connect to worker port and send this message.
@@ -200,8 +202,9 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
     msg = {'type': 'registration',
            'worker_count': 1,
            'uid': 'testuid',
-           'block_id': 0,
+           'block_id': '0',
            'start_time': time.time(),
+           'drain_time': float('inf'),
            'prefetch_capacity': 0,
            'max_capacity': 1,
            'os': platform.system(),
@@ -209,6 +212,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
            'dir': os.getcwd(),
            'cpu_count': psutil.cpu_count(logical=False),
            'total_memory': psutil.virtual_memory().total,
+           'packages': {},
            **worker_version_info,
            }
 

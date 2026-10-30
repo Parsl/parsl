@@ -111,6 +111,13 @@ def pytest_addoption(parser):
         help="run with parsl CONFIG; use 'local' to run locally-defined config"
     )
 
+    parser.addoption(
+        '--show-filtered-tests',
+        action='store_true',
+        default=False,
+        help="Report filtered tests as skipped instead of deselecting them"
+    )
+
 
 def pytest_configure(config):
     """Configure help for parsl-specific pytest decorators.
@@ -174,6 +181,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         'markers',
         'taskvine: Marks local tests that require a working Task Vine installation'
+    )
+    config.addinivalue_line(
+        'markers',
+        'globus_compute: tests that require the Globus Compute SDK'
+    )
+    config.addinivalue_line(
+        'markers',
+        'radical: tests that require the Radical framework'
     )
 
 
@@ -275,39 +290,44 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
         yield
 
 
-@pytest.fixture(autouse=True)
-def apply_masks(request, pytestconfig):
+@pytest.hookimpl(hookwrapper=True)
+def pytest_collection_modifyitems(items: list[pytest.Item], config):
     """Apply whitelist, blacklist, and local markers.
 
-    These ensure that if a whitelist decorator is applied to a test, configs which are
-    not in the whitelist are skipped. Similarly, configs in a blacklist are skipped,
+    Ensure that if a whitelist decorator is applied to a test, configs which are
+    not in the whitelist are skipped.  Similarly, configs in a blacklist are skipped,
     and configs which are not `local` are skipped if the `local` decorator is applied.
     """
-    config = pytestconfig.getoption('config')[0]
-    m = request.node.get_closest_marker('whitelist')
-    if m is not None:
-        if os.path.abspath(config) not in chain.from_iterable([glob(x) for x in m.args]):
-            if 'reason' not in m.kwargs:
-                pytest.skip("config '{}' not in whitelist".format(config))
-            else:
-                pytest.skip(m.kwargs['reason'])
-    m = request.node.get_closest_marker('blacklist')
-    if m is not None:
-        if os.path.abspath(config) in chain.from_iterable([glob(x) for x in m.args]):
-            if 'reason' not in m.kwargs:
-                pytest.skip("config '{}' is in blacklist".format(config))
-            else:
-                pytest.skip(m.kwargs['reason'])
-    m = request.node.get_closest_marker('local')
-    if m is not None:  # is marked as local
-        if config != 'local':
-            if len(m.args) == 0:
-                pytest.skip('intended for local config')
-            else:
-                pytest.skip(m.args[0])
-    else:  # is not marked as local
-        if config == 'local':
-            pytest.skip('intended for explicit config')
+
+    yield
+
+    show_filtered = config.getoption('--show-filtered-tests')
+    parsl_test_config = config.getoption('config')[0]
+
+    local_reason = "intended for local config"
+    explicit_reason = "intended for explicit config"
+
+    filtered_tests = []
+    i = len(items)
+    while i > 0:
+        i -= 1
+        t_fn = items[i]
+        if (m := t_fn.get_closest_marker('local')) is not None:
+            if parsl_test_config != 'local':
+                reason = local_reason
+                if len(m.args) > 0:
+                    reason = str(m.args[0])
+                filtered_tests.append((i, reason))
+
+        elif parsl_test_config == 'local':
+            filtered_tests.append((i, explicit_reason))
+
+    for t_idx, reason in filtered_tests:
+        if show_filtered:
+            t_fn = items[t_idx]
+            t_fn.add_marker(pytest.mark.skip(reason=reason))
+        else:
+            del items[t_idx]
 
 
 @pytest.fixture
