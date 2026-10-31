@@ -5,13 +5,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       packages: read
     strategy:
       fail-fast: false
       matrix:
-        container: ['fluxrm/flux-sched:jammy']
+        container: ['fluxrm/flux-sched:noble']
     timeout-minutes: 30
 
     container:
