@@ -1,7 +1,7 @@
 pyzmq>=17.1.2
 typeguard>=4,<5
 typing-extensions>=4.6,<5
-git+https://github.com/uqfoundation/dill@37d2bf717ac7ac110f06be5210f989847959c2cd
+dill
 tblib
 requests
 sortedcontainers
