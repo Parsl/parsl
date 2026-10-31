@@ -52,6 +52,7 @@ jobs:
         source .venv/bin/activate
         make deps
         make clean_coverage
+        pip install dill@git+https://github.com/uqfoundation/dill
 
     - name: make test
       run: |
