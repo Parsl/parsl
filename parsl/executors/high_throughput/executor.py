@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 import pickle
 import subprocess
 import threading
@@ -51,6 +52,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--port={worker_port} "
                       "--cert_dir {cert_dir} "
                       "--logdir={logdir} "
+                      "--logconf={logconf} "
                       "--block_id={{block_id}} "
                       "--hb_period={heartbeat_period} "
                       "{address_probe_timeout_string} "
@@ -256,7 +258,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers_per_node: Optional[Union[int, float]] = None,
+                 max_workers_per_node: Optional[int] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
                  prefetch_capacity: int = 0,
@@ -297,6 +299,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         mem_slots = self.max_workers_per_node
         cpu_slots = self.max_workers_per_node
+        assert self.provider is not None, "htex always has a provider"
         if hasattr(self.provider, 'mem_per_node') and \
                 self.provider.mem_per_node is not None and \
                 mem_per_worker is not None and \
@@ -423,6 +426,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                        poll_period=self.poll_period,
                                        cert_dir=self.cert_dir,
                                        logdir=self.worker_logdir,
+                                       logconf=self.logconf_path,
                                        cpu_affinity=self.cpu_affinity,
                                        enable_mpi_mode=enable_mpi_opts,
                                        mpi_launcher=self.mpi_launcher,
@@ -446,6 +450,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 "None or encrypted to True."
             )
 
+        if self.log_config:
+            log_config_dir = os.path.join(self.logdir, "log_config")
+            os.makedirs(log_config_dir, mode=0o700, exist_ok=True)
+
+            self.logconf_path = os.path.join(log_config_dir, "log_config.pkl")
+            with open(self.logconf_path, "wb") as f:
+                pickle.dump(self.log_config, f)
+        else:
+            self.logconf_path = None
+
         self.outgoing_q = zmq_pipes.TasksOutgoing(
             self.loopback_address, self.interchange_port_range, self.cert_dir
         )
@@ -462,6 +476,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                      port_range=self.interchange_port_range,
                                                      logdir=self.logdir,
                                                      worker_debug=self.worker_debug,
+                                                     cert_dir=self.cert_dir,
                                                      )
             self.hub_zmq_port = self.zmq_monitoring.port
 
@@ -494,8 +509,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         while not self.bad_state_is_set and not self._result_queue_thread_exit.is_set():
             try:
-                msgs = self.incoming_q.get(timeout_ms=self.poll_period)
-                if msgs is None:  # timeout
+                serialized_msg = self.incoming_q.get(timeout_ms=self.poll_period)
+                if serialized_msg is None:  # timeout
                     continue
 
             except IOError as e:
@@ -508,48 +523,47 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
             else:
 
-                for serialized_msg in msgs:
-                    msg = pickle.loads(serialized_msg)
+                msg = pickle.loads(serialized_msg)
 
-                    if msg['type'] == 'result':
+                if msg['type'] == 'result':
+                    try:
+                        tid = msg['task_id']
+                    except Exception:
+                        raise BadMessage("Message received does not contain 'task_id' field")
+
+                    if tid == -1 and 'exception' in msg:
+                        logger.warning("Executor shutting down due to exception from interchange")
+                        exception = deserialize(msg['exception'])
+                        self.set_bad_state_and_fail_all(exception)
+                        break
+
+                    task_fut = self.tasks.pop(tid)
+
+                    if 'result' in msg:
+                        result = deserialize(msg['result'])
+                        task_fut.set_result(result)
+
+                    elif 'exception' in msg:
                         try:
-                            tid = msg['task_id']
-                        except Exception:
-                            raise BadMessage("Message received does not contain 'task_id' field")
-
-                        if tid == -1 and 'exception' in msg:
-                            logger.warning("Executor shutting down due to exception from interchange")
-                            exception = deserialize(msg['exception'])
-                            self.set_bad_state_and_fail_all(exception)
-                            break
-
-                        task_fut = self.tasks.pop(tid)
-
-                        if 'result' in msg:
-                            result = deserialize(msg['result'])
-                            task_fut.set_result(result)
-
-                        elif 'exception' in msg:
-                            try:
-                                s = deserialize(msg['exception'])
-                                # s should be a RemoteExceptionWrapper... so we can reraise it
-                                if isinstance(s, RemoteExceptionWrapper):
-                                    try:
-                                        s.reraise()
-                                    except Exception as e:
-                                        task_fut.set_exception(e)
-                                elif isinstance(s, Exception):
-                                    task_fut.set_exception(s)
-                                else:
-                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                            except Exception as e:
-                                # TODO could be a proper wrapped exception?
-                                task_fut.set_exception(
-                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                        else:
-                            raise BadMessage("Message received is neither result or exception")
+                            s = deserialize(msg['exception'])
+                            # s should be a RemoteExceptionWrapper... so we can reraise it
+                            if isinstance(s, RemoteExceptionWrapper):
+                                try:
+                                    s.reraise()
+                                except Exception as e:
+                                    task_fut.set_exception(e)
+                            elif isinstance(s, Exception):
+                                task_fut.set_exception(s)
+                            else:
+                                raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                        except Exception as e:
+                            # TODO could be a proper wrapped exception?
+                            task_fut.set_exception(
+                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                     else:
-                        raise BadMessage("Message received with unknown type {}".format(msg['type']))
+                        raise BadMessage("Message received is neither result or exception")
+                else:
+                    raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
         logger.info("Closing result ZMQ pipe")
         self.incoming_q.close()
@@ -632,17 +646,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         manager_id : str
             Manager id to be put on hold
         """
-        self.command_client.run("HOLD_WORKER;{}".format(manager_id))
+        self.command_client.run(["HOLD_MANAGER", manager_id])
         logger.debug("Sent hold request to manager: {}".format(manager_id))
 
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
         return len(self.tasks)
-
-    def connected_workers(self) -> int:
-        """Returns the count of workers across all connected managers"""
-        return self.command_client.run("WORKERS")
 
     def connected_managers(self) -> List[Dict[str, typing.Any]]:
         """Returns a list of dicts one for each connected managers.
@@ -674,7 +684,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("Sending hold to manager: {}".format(manager['manager']))
+                logger.debug("Sending hold for manager: %s", manager['manager'])
                 self._hold_manager(manager['manager'])
 
     def submit(self, func: Callable, resource_specification: dict, *args, **kwargs) -> HTEXFuture:
@@ -865,6 +875,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks_to_job_id[bid] for bid in block_ids_to_kill if bid in self.blocks_to_job_id]
 
+        assert self.provider is not None, "htex always has a provider"
         r = self.provider.cancel(to_kill)
         job_ids = self._filter_scale_in_ids(to_kill, r)
 

@@ -186,8 +186,8 @@ class ResultsIncoming:
         without a message. timeout is measured in milliseconds.
         """
         if zmq.POLLIN == self.results_receiver.poll(timeout_ms, zmq.POLLIN):
-            logger.debug("Receiving ResultsIncoming multipart message")
-            return self.results_receiver.recv_multipart()
+            logger.debug("Receiving ResultsIncoming message")
+            return self.results_receiver.recv()
         return None
 
     def close(self):

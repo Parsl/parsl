@@ -1,0 +1,56 @@
+name: Test HTCondor Scheduler
+on:
+  pull_request:
+  merge_group:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: read
+    strategy:
+      fail-fast: true
+      matrix:
+        container: ["htcondor/mini:el9"]
+    timeout-minutes: 30
+
+    container:
+      image: ${{ matrix.container }}
+      options: "--platform=linux/amd64 --rm -h node01"
+
+    name: ${{ matrix.container }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies and Parsl
+        run: |
+          dnf install -y python3.12 python3-virtualenv
+          # the container cannot run condor jobs as its default user,
+          # but supplies a `submituser` user to do so. All the parsl
+          # testing should run as that user.
+
+          # Copy the checkout from the default location to the submit
+          # user, ready for installation by that user.
+          su - submituser -c bash -c "cp -av ${GITHUB_WORKSPACE}/* ./"
+
+          # Build a virtual environment with a recent Python version.
+          # The htcondor/mini container uses Enterprise Linux 9 which
+          # uses Python 3.9 by default, which is unsupported by Python.
+          # It does supply more recent Python versions, though.
+          su - submituser -c bash -c "virtualenv ./venv --python=3.12"
+          su - submituser -c bash -c ". ./venv/bin/activate ; pip install . -r test-requirements.txt"
+
+      - name: Verify Parsl Installation
+        run: |
+          su - submituser -c bash -c '. venv/bin/activate ; pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/local_threads.py --random-order --durations 10'
+
+      - name: Test Parsl with HTCondor Config
+        # start.sh is supplied by the container image, to start up
+        # HTCondor enough that jobs can be submitted to it.
+        # The test configuration does not provide shared filesystem
+        # access in the way that the Parsl tests expect, so those
+        # are disabled in the following test by `not shared_fs` and
+        # `not staging_required`.
+        run: |
+          (/start.sh &) && su - submituser -c bash -c '. venv/bin/activate ; sleep 20s && pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required and not staging_required and not shared_fs" --config parsl/tests/configs/htcondor_ci.py --random-order --durations 10'

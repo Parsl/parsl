@@ -195,6 +195,7 @@ Logging
     :nosignatures:
 
     parsl.logconfigs.base.LogConfig
+    parsl.logconfigs.noop.NoopLogging
 
 Monitoring
 ==========

@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
 
+import time
+
+_SCRIPT_LOAD_TIME = time.time()  # runs before imports
+
 import argparse
 import importlib
 import logging
 import math
 import multiprocessing
 import os
+import pathlib
 import pickle
 import platform
 import queue
 import subprocess
 import sys
 import threading
-import time
 import uuid
 from importlib.metadata import distributions
 from multiprocessing.context import SpawnProcess
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
-from typing import Callable, Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import psutil
 import zmq
@@ -38,13 +42,14 @@ from parsl.executors.high_throughput.mpi_resource_management import (
 )
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.log_utils import set_file_logger
+from parsl.logconfigs.base import LogConfig, oneshot_initialize_logging
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
 from parsl.version import VERSION as PARSL_VERSION
 
 HEARTBEAT_CODE = (2 ** 32) - 1
-DRAINED_CODE = (2 ** 32) - 2
+SHUTDOWN_CODE = (2 ** 32) - 2
 
 # this is specified explicitly because when this file is run as a script (the
 # expected use), __name__ which is the normal idiom here is set to __main__,
@@ -70,24 +75,25 @@ class Manager:
 
     """
     def __init__(self, *,
-                 addresses,
-                 address_probe_timeout,
-                 port,
+                 addresses: str,
+                 address_probe_timeout: int,
+                 port: int,
                  cores_per_worker,
-                 mem_per_worker,
+                 mem_per_worker: Optional[float],
                  max_workers_per_node,
-                 prefetch_capacity,
-                 uid,
-                 block_id,
-                 heartbeat_threshold,
-                 heartbeat_period,
-                 poll_period,
-                 cpu_affinity,
+                 prefetch_capacity: int,
+                 uid: str,
+                 block_id: str,
+                 heartbeat_threshold: int,
+                 heartbeat_period: int,
+                 poll_period: int,
+                 cpu_affinity: str,
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
                  available_accelerators: Sequence[str],
                  cert_dir: Optional[str],
-                 drain_period: Optional[int]):
+                 drain_period: Optional[int],
+                 log_config: Optional[LogConfig]) -> None:
         """
         Parameters
         ----------
@@ -108,7 +114,7 @@ class Manager:
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0.
 
-        mem_per_worker : float
+        mem_per_worker : optional float
              GB of memory required per worker. If this option is specified, the node manager
              will check the available memory at startup and limit the number of workers such that
              the there's sufficient memory for each worker. If set to None, memory on node is not
@@ -159,16 +165,20 @@ class Manager:
 
         logger.info("Manager initializing")
 
-        self._start_time = time.time()
+        # record the time the script loaded, as opposed to the time this line runs, so
+        # that draining and manager selection better match what the scheduler sees
+        self.start_time = _SCRIPT_LOAD_TIME
+
+        self.log_config = log_config
 
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
 
-        addresses = {tcp_url(a, port) for a in addresses.split(',')}
+        address_set = {tcp_url(a, port) for a in addresses.split(',')}
         try:
             self._ix_url = probe_addresses(
                 self.zmq_context,
-                addresses,
+                address_set,
                 timeout_ms=1_000 * address_probe_timeout,
                 identity=uid.encode('utf-8'),
             )
@@ -181,7 +191,6 @@ class Manager:
 
         self.uid = uid
         self.block_id = block_id
-        self.start_time = time.time()
 
         self.enable_mpi_mode = enable_mpi_mode
         self.mpi_launcher = mpi_launcher
@@ -228,17 +237,13 @@ class Manager:
             )
         self.ready_worker_count = SpawnContext.Value("i", 0)
 
-        self.max_queue_size = self.prefetch_capacity + self.worker_count
-
-        self.tasks_per_round = 1
-
         self.heartbeat_period = heartbeat_period
         self.heartbeat_threshold = heartbeat_threshold
         self.poll_period = poll_period
 
         self.drain_time: float
         if drain_period:
-            self.drain_time = self._start_time + drain_period
+            self.drain_time = self.start_time + drain_period
             logger.info(f"Will request drain at {self.drain_time}")
         else:
             self.drain_time = float('inf')
@@ -268,6 +273,7 @@ class Manager:
             'uid': self.uid,
             'block_id': self.block_id,
             'start_time': self.start_time,
+            'drain_time': self.drain_time,
             'prefetch_capacity': self.prefetch_capacity,
             'max_capacity': self.worker_count + self.prefetch_capacity,
             'os': platform.system(),
@@ -286,17 +292,8 @@ class Manager:
         task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
 
-    @staticmethod
-    def drain_to_incoming(task_incoming: zmq.Socket) -> None:
-        """ Send heartbeat to the incoming task queue
-        """
-        msg = {'type': 'drain'}
-        b_msg = pickle.dumps(msg)
-        task_incoming.send(b_msg)
-        logger.debug("Sent drain")
-
     @wrap_with_logs
-    def interchange_communicator(self, pair_setup: threading.Event):
+    def interchange_communicator(self, pair_setup: threading.Event) -> None:
         """ Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
         """
@@ -345,7 +342,7 @@ class Manager:
             # time here are correctly copy-pasted from the relevant if
             # statements.
             next_interesting_event_time = min(last_beat + self.heartbeat_period,
-                                              self.drain_time,
+                                              self.drain_time,  # legacy, remove ca Apr 2027
                                               last_interchange_contact + self.heartbeat_threshold)
             try:
                 pending_task_count = self.pending_task_queue.qsize()
@@ -363,19 +360,21 @@ class Manager:
                 self.heartbeat_to_incoming(ix_sock)
                 last_beat = time.time()
 
+            # legacy draining handling. remove in ~6 months (ca Apr 2027)
             if time.time() > self.drain_time:
+                # ask to start draining (old interchanges don't track that for us). this
+                # stops ours from sending more tasks; it will tell us to shut down when
+                # we finish all active work.
                 logger.info("Requesting drain")
-                self.drain_to_incoming(ix_sock)
-                # This will start the pool draining...
-                # Drained exit behaviour does not happen here. It will be
-                # driven by the interchange sending a DRAINED_CODE message.
+                ix_sock.send(pickle.dumps({'type': 'drain'}))
+                logger.debug("Sent drain")
 
                 # now set drain time to the far future so we don't send a drain
                 # message every iteration.
                 self.drain_time = float('inf')
 
             poll_duration_s = max(0, next_interesting_event_time - time.time())
-            socks = dict(poller.poll(timeout=poll_duration_s * 1000))
+            socks = dict(poller.poll(timeout=math.floor(poll_duration_s * 1000)))
 
             if socks.get(ix_sock) == zmq.POLLIN:
                 pkl_msg = ix_sock.recv()
@@ -386,8 +385,8 @@ class Manager:
 
                 if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat response from interchange")
-                elif tasks == DRAINED_CODE:
-                    logger.info("Got fully drained message from interchange - setting kill flag")
+                elif tasks == SHUTDOWN_CODE:
+                    logger.info("Got shutdown message from interchange - setting kill flag")
                     self._stop_event.set()
                 else:
                     task_recv_counter += len(tasks)
@@ -399,8 +398,7 @@ class Manager:
                         self.task_scheduler.put_task(task)
 
             elif socks.get(results_sock) == zmq.POLLIN:
-                meta_b = pickle.dumps({'type': 'result'})
-                ix_sock.send_multipart([meta_b, results_sock.recv()])
+                ix_sock.send(results_sock.recv())
                 logger.debug("Result sent to interchange")
 
             else:
@@ -417,7 +415,7 @@ class Manager:
         logger.info("Exiting")
 
     @wrap_with_logs
-    def ferry_result(self, may_connect: threading.Event):
+    def ferry_result(self, may_connect: threading.Event) -> None:
         """ Listens on the pending_result_queue and ferries results to the interchange
          connected thread
         """
@@ -443,7 +441,7 @@ class Manager:
         notify_sock.close()
         logger.debug("Exiting")
 
-    def worker_watchdog(self, procs: dict[int, SpawnProcess]):
+    def worker_watchdog(self, procs: dict[int, SpawnProcess]) -> None:
         """Keeps workers alive."""
         logger.debug("Starting worker watchdog")
 
@@ -473,7 +471,7 @@ class Manager:
         logger.debug("Exiting")
 
     @wrap_with_logs
-    def handle_monitoring_messages(self):
+    def handle_monitoring_messages(self) -> None:
         """Transfer messages from the managed monitoring queue to the result queue.
 
         We separate the queues so that the result queue does not rely on a manager
@@ -499,7 +497,7 @@ class Manager:
 
         logger.debug("Exiting")
 
-    def start(self):
+    def start(self) -> None:
         """ Start the worker processes.
         """
         procs: dict[int, SpawnProcess] = {}
@@ -574,7 +572,7 @@ class Manager:
                 p.join()
             p.close()
 
-        delta = time.time() - self._start_time
+        delta = time.time() - self.start_time
         logger.info("process_worker_pool ran for {} seconds".format(delta))
 
     def _start_worker(self, worker_id: int) -> SpawnProcess:
@@ -595,6 +593,7 @@ class Manager:
                 self.heartbeat_period,
                 os.getpid(),
                 args.logdir,
+                self.log_config,
                 args.debug,
                 self.mpi_launcher,
             ),
@@ -610,7 +609,7 @@ def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: Dict, node_i
         os.environ[key] = prefix_table[key]
 
 
-def _init_mpi_env(mpi_launcher: str, resource_spec: Dict):
+def _init_mpi_env(mpi_launcher: str, resource_spec: Dict) -> None:
     for varname in resource_spec:
         envname = "PARSL_" + str(varname).upper()
         os.environ[envname] = str(resource_spec[varname])
@@ -639,11 +638,17 @@ def worker(
     task_queue_timeout: int,
     manager_pid: int,
     logdir: str,
+    log_config: LogConfig,
     debug: bool,
     mpi_launcher: str,
-):
-    set_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
-                    level=logging.DEBUG if debug else logging.INFO)
+) -> None:
+
+    if log_config:
+        path = pathlib.Path(logdir) / f"block-{block_id}" / pool_id
+        oneshot_initialize_logging(log_config=log_config, log_dir=path, log_name=f"worker_{worker_id}")
+    else:
+        set_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
+                        level=logging.DEBUG if debug else logging.INFO)
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -741,7 +746,7 @@ def worker(
 
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
-    def manager_is_alive():
+    def manager_is_alive() -> bool:
         try:
             # This does not kill the process, but instead raises
             # an exception if the process doesn't exist
@@ -767,7 +772,7 @@ def worker(
 
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
-        logger.info("Received executor task {}".format(tid))
+        logger.info("Received executor task {}".format(tid), extra={"parsl.htex.task": tid})
 
         with ready_worker_count.get_lock():
             ready_worker_count.value -= 1
@@ -801,7 +806,7 @@ def worker(
             del serialized_result
         del req
 
-        logger.info("Completed executor task {}".format(tid))
+        logger.info("Completed executor task {}".format(tid), extra={"parsl.htex.task": tid})
         try:
             pkl_package = pickle.dumps(result_package)
         except Exception:
@@ -813,12 +818,12 @@ def worker(
         result_queue.put(pkl_package)
         del pkl_package, result_package
         tasks_in_progress.pop(worker_id)
-        logger.info("All processing finished for executor task {}".format(tid))
+        logger.info("All processing finished for executor task {}".format(tid), extra={"parsl.htex.task": tid})
 
 
 def get_arg_parser() -> argparse.ArgumentParser:
 
-    def strategyorlist(s: str):
+    def strategyorlist(s: str) -> Union[str, list]:
         s = s.lower()
         allowed_strategies = ("none", "block", "alternating", "block-reverse")
         if s in allowed_strategies:
@@ -848,6 +853,12 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Process worker pool log directory",
     )
     parser.add_argument(
+        "-L",
+        "--logconf",
+        default=None,
+        help="Path to pickled log configuration object, default=None",
+    )
+    parser.add_argument(
         "-u",
         "--uid",
         default=str(uuid.uuid4()).split('-')[-1],
@@ -865,8 +876,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-m",
         "--mem_per_worker",
-        default=0,
-        help="GB of memory assigned to each worker process. Default=0, no assignment",
+        help="GB of memory assigned to each worker process. 'None' means no assignment.",
     )
     parser.add_argument(
         "-P",
@@ -938,17 +948,29 @@ if __name__ == "__main__":
     parser = get_arg_parser()
     args = parser.parse_args()
 
-    os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
+    if args.logconf is None or args.logconf == "None":
+        os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
-    set_file_logger(
-        f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
-        level=logging.DEBUG if args.debug is True else logging.INFO
-    )
+        set_file_logger(
+            f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
+            level=logging.DEBUG if args.debug is True else logging.INFO
+        )
+        logconf = None
+    else:
+        with open(args.logconf, "rb") as f:
+            # This deliberately does not make the path directory. Creating directories
+            # can be extremely expensive on shared filesystems, and avoiding this for
+            # logging is a specific use case for this log configurability.
+            path = os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid)
+            logconf = pickle.load(f)
+            oneshot_initialize_logging(log_config=logconf, log_dir=pathlib.Path(path), log_name="manager")
+
     logger.info(
         f"\n  Python version: {sys.version}"
         f"\n  Debug logging: {args.debug}"
         f"\n  Certificates dir: {args.cert_dir}"
         f"\n  Log dir: {args.logdir}"
+        f"\n  Log config path: {args.logconf}"
         f"\n  Manager ID: {args.uid}"
         f"\n  Block ID: {args.block_id}"
         f"\n  cores_per_worker: {args.cores_per_worker}"
@@ -988,7 +1010,8 @@ if __name__ == "__main__":
                           enable_mpi_mode=args.enable_mpi_mode,
                           mpi_launcher=args.mpi_launcher,
                           available_accelerators=args.available_accelerators,
-                          cert_dir=None if args.cert_dir == "None" else args.cert_dir)
+                          cert_dir=None if args.cert_dir == "None" else args.cert_dir,
+                          log_config=logconf)
         manager.start()
 
     except Exception:

@@ -43,7 +43,11 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
-from parsl.logconfigs.base import LogConfig
+from parsl.logconfigs.base import (
+    LogConfig,
+    oneshot_initialize_logging,
+    oneshot_uninitialize_logging,
+)
 from parsl.logconfigs.file import FileLogging
 from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
@@ -108,8 +112,13 @@ class DataFlowKernel:
             self.log_config = None
             self._logging_unregister_callback = None
         else:
+            c = config.initialize_logging
+            assert c is not None, "type of initialize_logging was not properly narrowed to LogConfig"
             self.log_config = config.initialize_logging
-            self._logging_unregister_callback = self.log_config.initialize_logging(log_dir=pathlib.Path(self.run_dir), log_name="parsl")
+            oneshot_initialize_logging(log_config=c,
+                                       log_dir=pathlib.Path(self.run_dir),
+                                       log_name="parsl")
+            self._logging_unregister_callback = lambda: oneshot_uninitialize_logging(log_config=c)
 
         logger.info("Starting DataFlowKernel with config\n%r", config)
 
@@ -133,8 +142,7 @@ class DataFlowKernel:
             self.monitoring.start(self.run_dir, self.config.run_dir, self.log_config)
             self.monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring.resource_msgs)
 
-        self.time_began = datetime.datetime.now()
-        self.time_completed: Optional[datetime.datetime] = None
+        time_began = datetime.datetime.now()
 
         logger.info("Run id is: " + self.run_id)
 
@@ -155,7 +163,7 @@ class DataFlowKernel:
                 logger.debug("Could not choose a name automatically")
                 self.workflow_name = "unnamed"
 
-        self.workflow_version = str(self.time_began.replace(microsecond=0))
+        self.workflow_version = str(time_began.replace(microsecond=0))
         if self.monitoring is not None and self.monitoring.workflow_version is not None:
             self.workflow_version = self.monitoring.workflow_version
 
@@ -164,8 +172,7 @@ class DataFlowKernel:
                                                     sys.version_info.minor,
                                                     sys.version_info.micro),
                 'parsl_version': get_version(),
-                "time_began": self.time_began,
-                'time_completed': None,
+                "time_began": time_began,
                 'run_id': self.run_id,
                 'workflow_name': self.workflow_name,
                 'workflow_version': self.workflow_version,
@@ -176,6 +183,8 @@ class DataFlowKernel:
                 'host': gethostname(),
         }
 
+        loggable_workflow_info = {"parsl.workflow_info." + k: v for k, v in workflow_info.items()}
+        logger.info("Workflow startup information: %r", workflow_info, extra={"parsl.dfk": self.run_id} | loggable_workflow_info)
         if self.monitoring_radio:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
@@ -547,11 +556,15 @@ class DataFlowKernel:
         """
 
         with self.task_state_counts_lock:
+            extra = {"parsl.dfk": self.run_id,
+                     "parsl.task": task_record['id'],
+                     "parsl.task_state": new_state.name
+                     }
             if 'status' in task_record:
                 self.task_state_counts[task_record['status']] -= 1
-                logger.info(f"Task {task_record['id']} changing state from {task_record['status'].name} to {new_state.name}")
+                logger.info(f"Task {task_record['id']} changing state from {task_record['status'].name} to {new_state.name}", extra=extra)
             else:
-                logger.info(f"Task {task_record['id']} initializing state to {new_state.name}")
+                logger.info(f"Task {task_record['id']} initializing state to {new_state.name}", extra=extra)
 
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
@@ -710,13 +723,20 @@ class DataFlowKernel:
 
         self._update_task_state(task_record, States.launched)
 
+        extra = {"parsl.dfk": self.run_id,
+                 "parsl.task": task_id,
+                 "parsl.try": try_id,
+                 "parsl.executor": executor.label
+                 }
+
         if hasattr(exec_fu, "parsl_executor_task_id"):
+            extra['parsl.executor_task'] = exec_fu.parsl_executor_task_id
             logger.info(
                 f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
-                f"with executor id {exec_fu.parsl_executor_task_id}")
+                f"with executor id {exec_fu.parsl_executor_task_id}", extra=extra)
 
         else:
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
+            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}", extra=extra)
 
         self._log_std_streams(task_record)
 
@@ -1016,6 +1036,13 @@ class DataFlowKernel:
 
         depend_descs = []
         for d in depends:
+            if isinstance(d, AppFuture) and d.task_record['dfk'] == self:
+                logger.info("Task %s has dependency task %s", task_id, d.task_record['id'],
+                            extra={"parsl.task": task_id, "parsl.dependency_task": d.task_record['id']})
+            else:
+                logger.info("Task %s has dependency future %r", task_id, d,
+                            extra={"parsl.task": task_id, "parsl.dependency_object": repr(d)})
+
             depend_descs.append(self.render_future_description(d))
 
         if depend_descs != []:
@@ -1023,7 +1050,8 @@ class DataFlowKernel:
         else:
             waiting_message = "not waiting on any dependency"
 
-        logger.info("Task %s submitted for App %s, %s", task_id, task_record['func_name'], waiting_message)
+        logger.info("Task %s submitted for App %s, %s", task_id, task_record['func_name'], waiting_message,
+                    extra={"parsl.task": task_id, "parsl.app_name": task_record['func_name']})
 
         logger.debug("Task %s has AppFuture: %r", task_id, task_record['app_fu'])
         self._update_task_state(task_record, States.pending)
@@ -1075,6 +1103,10 @@ class DataFlowKernel:
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
+            logger.info("Adding executor %s of type %s.%s", executor.label, type(executor).__module__, type(executor).__name__,
+                        extra={"parsl.executor.label": executor.label,
+                               "parsl.executor.type": type(executor).__module__ + "." + type(executor).__name__
+                               })
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.log_config = self.log_config
@@ -1160,16 +1192,18 @@ class DataFlowKernel:
             logger.info(f"Shut down executor {executor.label}")
 
         logger.info("Terminated executors")
-        self.time_completed = datetime.datetime.now()
+        time_completed = datetime.datetime.now()
 
+        workflow_info = {'tasks_failed_count': self.task_state_counts[States.failed],
+                         'tasks_completed_count': self.task_state_counts[States.exec_done],
+                         'time_completed': time_completed,
+                         'run_id': self.run_id, 'rundir': self.run_dir}
+
+        loggable_workflow_info = {"parsl.workflow_info." + k: v for k, v in workflow_info.items()}
+        logger.info("Workflow shutdown information: %r", workflow_info, extra={"parsl.dfk": self.run_id} | loggable_workflow_info)
         if self.monitoring_radio:
             logger.info("Sending final monitoring message")
-            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
-                                       {'tasks_failed_count': self.task_state_counts[States.failed],
-                                        'tasks_completed_count': self.task_state_counts[States.exec_done],
-                                        "time_began": self.time_began,
-                                        'time_completed': self.time_completed,
-                                        'run_id': self.run_id, 'rundir': self.run_dir}))
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO, workflow_info))
 
         if self.monitoring:
             logger.info("Terminating monitoring")

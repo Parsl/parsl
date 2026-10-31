@@ -118,6 +118,10 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
         (c, ) = result.first()
         assert c == 0
 
+        result = connection.execute(text("SELECT COUNT(*) FROM workflow WHERE time_began IS NOT NULL AND time_completed IS NOT NULL"))
+        (c, ) = result.first()
+        assert c == 1, "start/end times should be populated"
+
         if isinstance(config.executors[0], HighThroughputExecutor):
             # The node table is specific to the HighThroughputExecutor
             # Two entries: one showing manager active, one inactive

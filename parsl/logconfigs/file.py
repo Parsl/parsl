@@ -16,7 +16,7 @@ class FileLogging(LogConfig):
 
     def initialize_logging(self, *, log_dir: pathlib.Path, log_name: str) -> Callable[[], None]:
 
-        log_dir.mkdir(exist_ok=True)
+        log_dir.mkdir(exist_ok=True, parents=True)
         filename = log_dir.joinpath(log_name + ".log")
 
         handler = logging.FileHandler(filename)

@@ -252,16 +252,20 @@ def test_client_context_term(client_ctx: curvezmq.ClientContext):
 @pytest.mark.parametrize("encrypted", (True, False), indirect=True)
 def test_server_context_term(server_ctx: curvezmq.ServerContext, encrypted: bool):
     assert not server_ctx.closed
+    auth_thread = None
     if encrypted:
-        assert server_ctx.auth_thread
-        assert server_ctx.auth_thread.pipe
+        auth_thread = server_ctx.auth_thread
+        assert auth_thread
+        assert auth_thread.pipe
 
     server_ctx.term()
 
     assert server_ctx.closed
     if encrypted:
-        assert server_ctx.auth_thread
-        assert not server_ctx.auth_thread.pipe
+        assert server_ctx.auth_thread is None
+        assert auth_thread is not None, "Pulled from ctx before term()"
+        assert not auth_thread.is_alive()
+        assert not auth_thread.pipe
 
 
 @pytest.mark.local
@@ -283,17 +287,21 @@ def test_server_context_destroy(server_ctx: curvezmq.ServerContext, encrypted: b
     sock = server_ctx.socket(zmq.REP)
 
     assert not server_ctx.closed
+    auth_thread = None
     if encrypted:
-        assert server_ctx.auth_thread
-        assert server_ctx.auth_thread.pipe
+        auth_thread = server_ctx.auth_thread
+        assert auth_thread
+        assert auth_thread.pipe
 
     server_ctx.destroy()
 
     assert sock.closed
     assert server_ctx.closed
     if encrypted:
-        assert server_ctx.auth_thread
-        assert not server_ctx.auth_thread.pipe
+        assert server_ctx.auth_thread is None
+        assert auth_thread is not None, "Pulled from ctx before destroy()"
+        assert not auth_thread.is_alive()
+        assert not auth_thread.pipe
 
 
 @pytest.mark.local

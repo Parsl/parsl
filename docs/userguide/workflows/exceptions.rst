@@ -54,6 +54,7 @@ of a failed task. For example:
       except Exception as e:
            print('Oops! Something really bad happened.')
 
+.. _label-retry:
 
 Retries
 -------

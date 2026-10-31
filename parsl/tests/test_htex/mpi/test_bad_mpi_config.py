@@ -45,4 +45,6 @@ def test_correct_launcher_with_mpi_mode(mpi_launcher: str):
         provider=SlurmProvider(launcher=SimpleLauncher()),
     )
 
+    assert executor.provider is not None, "htex always has a provider"
+    assert hasattr(executor.provider, 'launcher'), "supplied provider has a launcher attribute"
     assert isinstance(executor.provider.launcher, SimpleLauncher)

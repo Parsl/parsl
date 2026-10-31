@@ -1,6 +1,6 @@
 import logging
 from abc import ABCMeta, abstractmethod, abstractproperty
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, Sequence
 
 from parsl.jobs.states import JobStatus
 
@@ -94,7 +94,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def status(self, job_ids: List[object]) -> List[JobStatus]:
+    def status(self, job_ids: Sequence[object]) -> Sequence[JobStatus]:
         ''' Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
@@ -112,7 +112,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def cancel(self, job_ids: List[object]) -> List[bool]:
+    def cancel(self, job_ids: Sequence[object]) -> Sequence[bool]:
         ''' Cancels the resources identified by the job_ids provided by the user.
 
         Args:

@@ -19,5 +19,5 @@ sortedcontainers-stubs
 Sphinx==4.5.0
 twine
 wheel
-isort
+isort==9.0.2
 

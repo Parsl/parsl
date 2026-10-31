@@ -7,6 +7,7 @@ import pytest
 import parsl
 from parsl.logconfigs.file import FileLogging
 from parsl.logconfigs.json import JSONLogging
+from parsl.logconfigs.noop import NoopLogging
 
 
 @pytest.mark.local
@@ -21,6 +22,13 @@ def test_parsl_log_not_exists(tmpd_cwd):
     with parsl.load(parsl.Config(run_dir=str(tmpd_cwd), initialize_logging=False)):
         assert not (pathlib.Path(parsl.dfk().run_dir) / "parsl.log").exists(), \
             "With initialize_logging=False, parsl.log should not exist in rundir after startup"
+
+
+@pytest.mark.local
+def test_parsl_log_Noop_not_exists(tmpd_cwd):
+    with parsl.load(parsl.Config(run_dir=str(tmpd_cwd), initialize_logging=NoopLogging())):
+        assert not (pathlib.Path(parsl.dfk().run_dir) / "parsl.log").exists(), \
+            "With NoopLogging, parsl.log should not exist in rundir after startup"
 
 
 @pytest.mark.local
