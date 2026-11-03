@@ -22,3 +22,6 @@ per-file-ignores = parsl/monitoring/visualization/*:E741,
   # but then do not use it directly, because tests/conftests.py
   # looks for it instead.
   parsl/tests/**:F401
+  # re-exports the HTEX protocol messages with a star import, so new
+  # messages don't need listing there
+  parsl/executors/high_throughput/protocol/__init__.py:F401,F403
