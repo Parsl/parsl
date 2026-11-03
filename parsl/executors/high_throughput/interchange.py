@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 import zmq
 from sortedcontainers import SortedList
+from typing_extensions import assert_never
 
 from parsl import curvezmq
 from parsl.addresses import tcp_url
@@ -28,9 +29,6 @@ from parsl.monitoring.radios.zmq import ZMQRadioSender
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.version import VERSION as PARSL_VERSION
-
-PKL_HEARTBEAT_CODE = protocol.HeartbeatReply().to_wire()
-PKL_SHUTDOWN_CODE = protocol.Shutdown().to_wire()
 
 logger = logging.getLogger("parsl.executors.high_throughput.interchange")
 
@@ -376,122 +374,128 @@ class Interchange:
             'Processing message type %r from manager %r', msg.type, manager_id
         )
 
-        if isinstance(msg, protocol.ConnectionProbe):
-            self.manager_sock.send_multipart([manager_id, protocol.ConnectionProbeReply().to_wire()])
-            return
-
-        elif isinstance(msg, protocol.Registration):
-            ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
-            ix_parsl_v = self.current_platform['parsl_v']
-            mgr_python_v = msg.python_v
-            mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
-            mgr_parsl_v = msg.parsl_v
-
-            python_mismatch: bool = ix_minor_py != mgr_minor_py
-            parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
-            if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
-                kill_event.set()
-                vm_exc = VersionMismatch(
-                    f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
-                    f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
-                )
-                result_package = protocol.Result(task_id=-1, exception=serialize_object(vm_exc))
-                self.results_outgoing.send(result_package.to_wire())
-                logger.error(
-                    'Manager has incompatible version info with the interchange;'
-                    ' sending failure reports and shutting down:'
-                    f'\n  Interchange: {vm_exc.interchange_version}'
-                    f'\n  Manager:     {vm_exc.manager_version}'
+        match msg:
+            case protocol.ConnectionProbe():
+                self.manager_sock.send_multipart(
+                    [manager_id, protocol.ConnectionProbeReply().to_wire()]
                 )
                 return
 
-            # legacy draining handling. remove in ~6 months (ca Apr 2027)
-            drain_time = float('inf') if msg.drain_time is None else msg.drain_time
+            case protocol.Registration():
+                ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
+                ix_parsl_v = self.current_platform['parsl_v']
+                mgr_python_v = msg.python_v
+                mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
+                mgr_parsl_v = msg.parsl_v
 
-            new_rec = ManagerRecord(
-                block_id=msg.block_id,
-                start_time=msg.start_time,
-                tasks=[],
-                worker_count=msg.worker_count,
-                max_capacity=msg.max_capacity,
-                active=True,
-                draining=False,
-                drain_time=drain_time,
-                last_heartbeat=time.time(),
-                idle_since=time.time(),
-                parsl_version=mgr_parsl_v,
-                python_version=mgr_python_v,
-                packages=msg.packages,
-                hostname=msg.hostname,
-                uid=msg.uid,
-                cpu_count=msg.cpu_count,
-                total_memory=msg.total_memory,
-            )
+                python_mismatch: bool = ix_minor_py != mgr_minor_py
+                parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
+                if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
+                    kill_event.set()
+                    vm_exc = VersionMismatch(
+                        f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
+                        f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
+                    )
+                    result_package = protocol.Result(task_id=-1, exception=serialize_object(vm_exc))
+                    self.results_outgoing.send(result_package.to_wire())
+                    logger.error(
+                        'Manager has incompatible version info with the interchange;'
+                        ' sending failure reports and shutting down:'
+                        f'\n  Interchange: {vm_exc.interchange_version}'
+                        f'\n  Manager:     {vm_exc.manager_version}'
+                    )
+                    return
 
-            logger.info(f'Registration info for manager {manager_id!r}: {msg}')
-            self._send_monitoring_info(monitoring_radio, new_rec)
+                # legacy draining handling. remove in ~6 months (ca Apr 2027)
+                drain_time = float('inf') if msg.drain_time is None else msg.drain_time
 
-            self._ready_managers[manager_id] = new_rec
-            self.connected_block_history.append(new_rec['block_id'])
+                new_rec = ManagerRecord(
+                    block_id=msg.block_id,
+                    start_time=msg.start_time,
+                    tasks=[],
+                    worker_count=msg.worker_count,
+                    max_capacity=msg.max_capacity,
+                    active=True,
+                    draining=False,
+                    drain_time=drain_time,
+                    last_heartbeat=time.time(),
+                    idle_since=time.time(),
+                    parsl_version=mgr_parsl_v,
+                    python_version=mgr_python_v,
+                    packages=msg.packages,
+                    hostname=msg.hostname,
+                    uid=msg.uid,
+                    cpu_count=msg.cpu_count,
+                    total_memory=msg.total_memory,
+                )
 
-            interesting_managers.add(manager_id)
+                logger.info(f'Registration info for manager {manager_id!r}: {msg}')
+                self._send_monitoring_info(monitoring_radio, new_rec)
 
-            logger.info(
-                f"Registered manager {manager_id!r} (py{mgr_minor_py},"
-                f" {mgr_parsl_v}) and added to ready queue"
-            )
-            logger.debug("Manager %r -> %s", manager_id, new_rec)
+                self._ready_managers[manager_id] = new_rec
+                self.connected_block_history.append(new_rec['block_id'])
 
-            return
+                interesting_managers.add(manager_id)
+
+                logger.info(
+                    f"Registered manager {manager_id!r} (py{mgr_minor_py},"
+                    f" {mgr_parsl_v}) and added to ready queue"
+                )
+                logger.debug("Manager %r -> %s", manager_id, new_rec)
+
+                return
 
         if not (m := self._ready_managers.get(manager_id)):
             logger.warning(f"Ignoring message from unknown manager: {manager_id!r}")
             return
 
-        if isinstance(msg, protocol.Result):
-            # process this for task ID and forward to executor
-            tid = msg.task_id
-            logger.debug("Removing task %s from manager", tid, extra={"parsl.htex.task": tid})
-            try:
-                m['tasks'].remove(tid)
-            except Exception:
-                logger.exception(
-                    'Ignoring exception removing task_id %s from manager'
-                    ' task list %s',
-                    tid,
-                    m['tasks'],
-                    extra={"parsl.htex.task": tid}
-                )
-                return
+        match msg:
+            case protocol.Result(task_id=tid):
+                # process this for task ID and forward to executor
+                logger.debug("Removing task %s from manager", tid, extra={"parsl.htex.task": tid})
+                try:
+                    m['tasks'].remove(tid)
+                except Exception:
+                    logger.exception(
+                        'Ignoring exception removing task_id %s from manager'
+                        ' task list %s',
+                        tid,
+                        m['tasks'],
+                        extra={"parsl.htex.task": tid}
+                    )
+                    return
 
-            logger.debug('Sending result on results_outgoing', extra={"parsl.htex.task": tid})
-            self.results_outgoing.send(msg_b)
-            logger.debug('Sent result on results_outgoing', extra={"parsl.htex.task": tid})
+                logger.debug('Sending result on results_outgoing', extra={"parsl.htex.task": tid})
+                self.results_outgoing.send(msg_b)
+                logger.debug('Sent result on results_outgoing', extra={"parsl.htex.task": tid})
 
-            # Result received, so manager now has idle capacity
-            interesting_managers.add(manager_id)
+                # Result received, so manager now has idle capacity
+                interesting_managers.add(manager_id)
 
-            if len(m['tasks']) == 0 and m['idle_since'] is None:
-                m['idle_since'] = time.time()
+                if len(m['tasks']) == 0 and m['idle_since'] is None:
+                    m['idle_since'] = time.time()
 
-            self._send_monitoring_info(monitoring_radio, m)
+                self._send_monitoring_info(monitoring_radio, m)
 
-        elif isinstance(msg, protocol.Monitoring):
-            # the monitoring code makes the assumption that no
-            # monitoring messages will be received if monitoring
-            # is not configured, and that monitoring_radio will only
-            # be None when monitoring is not configurated.
-            assert monitoring_radio is not None
+            case protocol.Monitoring(payload=payload):
+                # the monitoring code makes the assumption that no
+                # monitoring messages will be received if monitoring
+                # is not configured, and that monitoring_radio will only
+                # be None when monitoring is not configurated.
+                assert monitoring_radio is not None
 
-            monitoring_radio.send(pickle.loads(msg.payload))
+                monitoring_radio.send(pickle.loads(payload))
 
-        elif isinstance(msg, protocol.Heartbeat):
-            m['last_heartbeat'] = time.time()
-            self.manager_sock.send_multipart([manager_id, PKL_HEARTBEAT_CODE])
+            case protocol.Heartbeat():
+                m['last_heartbeat'] = time.time()
+                self.manager_sock.send_multipart([manager_id, protocol.HeartbeatReply().to_wire()])
 
-        # legacy draining handling. remove in ~6 months (ca Apr 2027)
-        elif isinstance(msg, protocol.Drain):
-            m['draining'] = True
+            # legacy draining handling. remove in ~6 months (ca Apr 2027)
+            case protocol.Drain():
+                m['draining'] = True
+
+            case _:
+                assert_never(msg)
 
         logger.debug("leaving worker message section")
 
@@ -504,7 +508,7 @@ class Interchange:
 
             if m['draining'] and len(m['tasks']) == 0:
                 logger.info(f"Manager {manager_id!r} is drained - telling manager to shutdown")
-                self.manager_sock.send_multipart([manager_id, PKL_SHUTDOWN_CODE])
+                self.manager_sock.send_multipart([manager_id, protocol.Shutdown().to_wire()])
                 interesting_managers.discard(manager_id)
                 self._ready_managers.pop(manager_id)
 

@@ -11,10 +11,7 @@ import zmq
 
 from parsl import curvezmq
 from parsl.executors.high_throughput import protocol
-from parsl.executors.high_throughput.interchange import (
-    PKL_SHUTDOWN_CODE,
-    Interchange,
-)
+from parsl.executors.high_throughput.interchange import Interchange
 from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 from parsl.version import VERSION as PARSL_VERSION
 
@@ -73,7 +70,8 @@ def registration_msg(ix: Interchange) -> protocol.Registration:
 
 def shutdown_sent(ix: Interchange, manager_id: bytes) -> bool:
     mock_sock = cast(mock.MagicMock, ix.manager_sock)
-    return mock.call([manager_id, PKL_SHUTDOWN_CODE]) in mock_sock.send_multipart.call_args_list
+    call_args = [manager_id, protocol.Shutdown().to_wire()]
+    return mock.call(call_args) in mock_sock.send_multipart.call_args_list
 
 
 @pytest.mark.local

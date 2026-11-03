@@ -26,6 +26,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import psutil
 import zmq
+from typing_extensions import assert_never
 
 from parsl import curvezmq
 from parsl.addresses import tcp_url
@@ -380,23 +381,25 @@ class Manager:
 
                 last_interchange_contact = time.time()
 
-                if isinstance(msg, protocol.HeartbeatReply):
-                    logger.debug("Got heartbeat response from interchange")
-                elif isinstance(msg, protocol.Shutdown):
-                    logger.info("Got shutdown message from interchange - setting kill flag")
-                    self._stop_event.set()
-                elif isinstance(msg, protocol.Tasks):
-                    tasks = msg.tasks
-                    task_recv_counter += len(tasks)
-                    logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format(
-                        [t.task_id for t in tasks], task_recv_counter
-                    ))
+                match msg:
+                    case protocol.HeartbeatReply():
+                        logger.debug("Got heartbeat response from interchange")
+                    case protocol.Shutdown():
+                        logger.info("Got shutdown message from interchange - setting kill flag")
+                        self._stop_event.set()
+                    case protocol.Tasks(tasks=tasks):
+                        task_recv_counter += len(tasks)
+                        logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format(
+                            [t.task_id for t in tasks], task_recv_counter
+                        ))
 
-                    for task in tasks:
-                        self.task_scheduler.put_task(task)
-                elif isinstance(msg, protocol.ConnectionProbeReply):
-                    # the reply to our probe was read before this loop
-                    logger.debug("Ignoring unexpected connection probe reply")
+                        for task in tasks:
+                            self.task_scheduler.put_task(task)
+                    case protocol.ConnectionProbeReply():
+                        # the reply to our probe was read before this loop
+                        logger.debug("Ignoring unexpected connection probe reply")
+                    case _:
+                        assert_never(msg)
 
             elif socks.get(results_sock) == zmq.POLLIN:
                 ix_sock.send(results_sock.recv())

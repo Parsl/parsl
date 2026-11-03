@@ -523,44 +523,40 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
             else:
 
-                msg = protocol.from_wire(serialized_msg)
+                msg = protocol.from_wire(serialized_msg, protocol.Result)
+                tid = msg.task_id
 
-                if isinstance(msg, protocol.Result):
-                    tid = msg.task_id
+                if tid == -1 and msg.exception is not None:
+                    logger.warning("Executor shutting down due to exception from interchange")
+                    exception = deserialize(msg.exception)
+                    self.set_bad_state_and_fail_all(exception)
+                    break
 
-                    if tid == -1 and msg.exception is not None:
-                        logger.warning("Executor shutting down due to exception from interchange")
-                        exception = deserialize(msg.exception)
-                        self.set_bad_state_and_fail_all(exception)
-                        break
+                task_fut = self.tasks.pop(tid)
 
-                    task_fut = self.tasks.pop(tid)
+                if msg.result is not None:
+                    result = deserialize(msg.result)
+                    task_fut.set_result(result)
 
-                    if msg.result is not None:
-                        result = deserialize(msg.result)
-                        task_fut.set_result(result)
-
-                    elif msg.exception is not None:
-                        try:
-                            s = deserialize(msg.exception)
-                            # s should be a RemoteExceptionWrapper... so we can reraise it
-                            if isinstance(s, RemoteExceptionWrapper):
-                                try:
-                                    s.reraise()
-                                except Exception as e:
-                                    task_fut.set_exception(e)
-                            elif isinstance(s, Exception):
-                                task_fut.set_exception(s)
-                            else:
-                                raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                        except Exception as e:
-                            # TODO could be a proper wrapped exception?
-                            task_fut.set_exception(
-                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                    else:
-                        raise BadMessage("Message received is neither result or exception")
+                elif msg.exception is not None:
+                    try:
+                        s = deserialize(msg.exception)
+                        # s should be a RemoteExceptionWrapper... so we can reraise it
+                        if isinstance(s, RemoteExceptionWrapper):
+                            try:
+                                s.reraise()
+                            except Exception as e:
+                                task_fut.set_exception(e)
+                        elif isinstance(s, Exception):
+                            task_fut.set_exception(s)
+                        else:
+                            raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                    except Exception as e:
+                        # TODO could be a proper wrapped exception?
+                        task_fut.set_exception(
+                            DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                 else:
-                    raise BadMessage("Message received with unknown type {}".format(msg.type))
+                    raise BadMessage("Message received is neither result or exception")
 
         logger.info("Closing result ZMQ pipe")
         self.incoming_q.close()
