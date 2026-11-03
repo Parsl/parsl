@@ -5,6 +5,7 @@ import pytest
 import zmq
 
 from parsl import curvezmq
+from parsl.executors.high_throughput import protocol
 from parsl.executors.high_throughput.errors import (
     CommandClientBadError,
     CommandClientTimeoutError,
@@ -30,7 +31,7 @@ def test_command_not_sent() -> None:
     # timeout.
 
     with pytest.raises(CommandClientTimeoutError):
-        cc.run("SOMECOMMAND", timeout_s=T)
+        cc.run(protocol.Managers(), timeout_s=T)
 
     cc.close()
 
@@ -53,14 +54,14 @@ def test_command_ignored() -> None:
     ic_channel.connect(f"tcp://127.0.0.1:{cc.port}")
 
     with pytest.raises(CommandClientTimeoutError):
-        cc.run("SLOW_COMMAND", timeout_s=T)
+        cc.run(protocol.ManagersPackages(), timeout_s=T)
 
-    req = ic_channel.recv_pyobj()
-    assert req == "SLOW_COMMAND", "Should have received command on interchange side"
+    req = protocol.from_wire(ic_channel.recv(), protocol.COMMANDS)
+    assert req == protocol.ManagersPackages(), "Should have received command on interchange side"
     assert not cc.ok, "CommandClient should have set itself to bad"
 
     with pytest.raises(CommandClientBadError):
-        cc.run("ANOTHER_COMMAND")
+        cc.run(protocol.ConnectedBlocks())
 
     cc.close()
     ic_channel.close()

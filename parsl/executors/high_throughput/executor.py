@@ -603,7 +603,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         stdin.close()
         logger.debug("Sent config object. Requesting worker ports")
         try:
-            self.worker_port = self.command_client.run("WORKER_BINDS", timeout_s=120)
+            self.worker_port = self.command_client.run(protocol.WorkerBinds(), timeout_s=120).port
         except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
@@ -639,7 +639,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         manager_id : str
             Manager id to be put on hold
         """
-        self.command_client.run(["HOLD_MANAGER", manager_id])
+        self.command_client.run(protocol.HoldManager(manager_id=manager_id))
         logger.debug("Sent hold request to manager: {}".format(manager_id))
 
     def outstanding(self) -> int:
@@ -652,17 +652,17 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         The dict contains info on manager(str:manager_id), block_id,
         worker_count, tasks(int), idle_durations(float), active(bool)
         """
-        return self.command_client.run("MANAGERS")
+        return self.command_client.run(protocol.Managers()).managers
 
     def connected_managers_packages(self) -> Dict[str, Dict[str, str]]:
         """Returns a dict mapping each manager ID to a dict of installed
         packages and their versions
         """
-        return self.command_client.run("MANAGERS_PACKAGES")
+        return self.command_client.run(protocol.ManagersPackages()).packages
 
     def connected_blocks(self) -> List[str]:
         """List of connected block ids"""
-        return self.command_client.run("CONNECTED_BLOCKS")
+        return self.command_client.run(protocol.ConnectedBlocks()).block_ids
 
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block

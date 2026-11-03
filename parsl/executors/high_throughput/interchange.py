@@ -225,61 +225,61 @@ class Interchange:
         """ Command server to run async command to the interchange
         """
 
-        reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
-
         if self.socks.get(self.command_channel) == zmq.POLLIN:
             logger.debug("entering command_server section")
 
-            command_req = self.command_channel.recv_pyobj()
-            logger.debug("Received command request: {}".format(command_req))
-            if command_req == "CONNECTED_BLOCKS":
-                reply = self.connected_block_history
+            command = protocol.from_wire(self.command_channel.recv(), protocol.COMMANDS)
+            logger.debug("Received command request: {}".format(command))
 
-            elif command_req == "MANAGERS":
-                reply = []
-                now = time.time()
-                for manager_id, m in self._ready_managers.items():
-                    idle_duration = now - (m['idle_since'] or now)
-                    resp = {
-                        'manager': manager_id.decode('utf-8'),
-                        'block_id': m['block_id'],
-                        'worker_count': m['worker_count'],
-                        'tasks': len(m['tasks']),
-                        'idle_duration': idle_duration,
-                        'active': m['active'],
-                        'parsl_version': m['parsl_version'],
-                        'python_version': m['python_version'],
-                        'draining': m['draining']
-                    }
-                    reply.append(resp)
+            reply: protocol.Message
+            match command:
+                case protocol.ConnectedBlocks():
+                    reply = protocol.ConnectedBlocksReply(block_ids=self.connected_block_history)
 
-            elif command_req == "MANAGERS_PACKAGES":
-                reply = {}
-                for manager_id, m in self._ready_managers.items():
-                    manager_id_str = manager_id.decode('utf-8')
-                    reply[manager_id_str] = m["packages"]
+                case protocol.Managers():
+                    managers = []
+                    now = time.time()
+                    for manager_id, m in self._ready_managers.items():
+                        idle_duration = now - (m['idle_since'] or now)
+                        managers.append(protocol.ManagerInfo(
+                            manager=manager_id.decode('utf-8'),
+                            block_id=m['block_id'],
+                            worker_count=m['worker_count'],
+                            tasks=len(m['tasks']),
+                            idle_duration=idle_duration,
+                            active=m['active'],
+                            parsl_version=m['parsl_version'],
+                            python_version=m['python_version'],
+                            draining=m['draining'],
+                        ))
+                    reply = protocol.ManagersReply(managers=managers)
 
-            elif isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_MANAGER":
-                manager_id = command_req[1].encode('utf-8')
-                logger.info("Received HOLD_MANAGER for {!r}".format(manager_id))
-                if manager_id in self._ready_managers:
-                    m = self._ready_managers[manager_id]
-                    m['active'] = False
-                    self._send_monitoring_info(monitoring_radio, m)
-                else:
-                    logger.warning("Worker to hold was not in ready managers list")
+                case protocol.ManagersPackages():
+                    reply = protocol.ManagersPackagesReply(packages={
+                        manager_id.decode('utf-8'): m["packages"]
+                        for manager_id, m in self._ready_managers.items()
+                    })
 
-                reply = None
+                case protocol.HoldManager(manager_id=manager_id_str):
+                    manager_id = manager_id_str.encode('utf-8')
+                    logger.info("Received HOLD_MANAGER for {!r}".format(manager_id))
+                    if manager_id in self._ready_managers:
+                        m = self._ready_managers[manager_id]
+                        m['active'] = False
+                        self._send_monitoring_info(monitoring_radio, m)
+                    else:
+                        logger.warning("Worker to hold was not in ready managers list")
 
-            elif command_req == "WORKER_BINDS":
-                reply = self.worker_port
+                    reply = protocol.HoldManagerReply()
 
-            else:
-                logger.error(f"Received unknown command: {command_req}")
-                reply = None
+                case protocol.WorkerBinds():
+                    reply = protocol.WorkerBindsReply(port=self.worker_port)
+
+                case _:
+                    assert_never(command)
 
             logger.debug("Reply: {}".format(reply))
-            self.command_channel.send_pyobj(reply)
+            self.command_channel.send(reply.to_wire())
 
     @wrap_with_logs
     def start(self) -> None:
