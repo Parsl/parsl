@@ -40,21 +40,16 @@ class HTEXRadioSender(MonitoringRadioSender):
         """
 
         import parsl.executors.high_throughput.monitoring_info
+        from parsl.executors.high_throughput import protocol
 
         result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
 
         # this message needs to go in the result queue tagged so that it is treated
         # as a monitoring message by the interchange.
-
-        # for the interchange, the outer wrapper, this needs to be a dict:
-
-        interchange_msg = {
-            'type': 'monitoring',
-            'payload': message
-        }
+        interchange_msg = protocol.Monitoring(payload=pickle.dumps(message))
 
         if result_queue:
-            result_queue.put(pickle.dumps(interchange_msg))
+            result_queue.put(interchange_msg.to_wire())
         else:
             logger.error("result_queue is uninitialized - cannot put monitoring message")
 

@@ -22,7 +22,7 @@ from parsl.executors.errors import (
     InvalidResourceSpecification,
     ScalingFailed,
 )
-from parsl.executors.high_throughput import zmq_pipes
+from parsl.executors.high_throughput import protocol, zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
@@ -523,29 +523,26 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
             else:
 
-                msg = pickle.loads(serialized_msg)
+                msg = protocol.from_wire(serialized_msg)
 
-                if msg['type'] == 'result':
-                    try:
-                        tid = msg['task_id']
-                    except Exception:
-                        raise BadMessage("Message received does not contain 'task_id' field")
+                if isinstance(msg, protocol.Result):
+                    tid = msg.task_id
 
-                    if tid == -1 and 'exception' in msg:
+                    if tid == -1 and msg.exception is not None:
                         logger.warning("Executor shutting down due to exception from interchange")
-                        exception = deserialize(msg['exception'])
+                        exception = deserialize(msg.exception)
                         self.set_bad_state_and_fail_all(exception)
                         break
 
                     task_fut = self.tasks.pop(tid)
 
-                    if 'result' in msg:
-                        result = deserialize(msg['result'])
+                    if msg.result is not None:
+                        result = deserialize(msg.result)
                         task_fut.set_result(result)
 
-                    elif 'exception' in msg:
+                    elif msg.exception is not None:
                         try:
-                            s = deserialize(msg['exception'])
+                            s = deserialize(msg.exception)
                             # s should be a RemoteExceptionWrapper... so we can reraise it
                             if isinstance(s, RemoteExceptionWrapper):
                                 try:
@@ -563,7 +560,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     else:
                         raise BadMessage("Message received is neither result or exception")
                 else:
-                    raise BadMessage("Message received with unknown type {}".format(msg['type']))
+                    raise BadMessage("Message received with unknown type {}".format(msg.type))
 
         logger.info("Closing result ZMQ pipe")
         self.incoming_q.close()
@@ -718,13 +715,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         except TypeError:
             raise SerializationError(func.__name__)
 
-        context = {}
+        context: protocol.TaskContext = {}
         if resource_specification:
-            context["resource_spec"] = resource_specification
+            # checked by validate_resource_spec, above
+            context["resource_spec"] = typing.cast(protocol.ResourceSpec, resource_specification)
 
         return self.submit_payload(context, fn_buf)
 
-    def submit_payload(self, context: dict, buffer: bytes) -> HTEXFuture:
+    def submit_payload(self, context: protocol.TaskContext, buffer: bytes) -> HTEXFuture:
         """
         Submit specially crafted payloads.
 
@@ -782,7 +780,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         fut = HTEXFuture(task_id)
         self.tasks[task_id] = fut
 
-        msg = {"task_id": task_id, "context": context, "buffer": buffer}
+        msg = protocol.Task(task_id=task_id, context=context, buffer=buffer)
         self.outgoing_q.put(msg)
 
         return fut

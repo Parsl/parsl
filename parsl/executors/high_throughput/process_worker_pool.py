@@ -22,7 +22,7 @@ from importlib.metadata import distributions
 from multiprocessing.context import SpawnProcess
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
-from typing import Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import psutil
 import zmq
@@ -31,6 +31,7 @@ from parsl import curvezmq
 from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.execute_task import execute_task
+from parsl.executors.high_throughput import protocol
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
@@ -47,9 +48,6 @@ from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
 from parsl.version import VERSION as PARSL_VERSION
-
-HEARTBEAT_CODE = (2 ** 32) - 1
-SHUTDOWN_CODE = (2 ** 32) - 2
 
 # this is specified explicitly because when this file is run as a script (the
 # expected use), __name__ which is the normal idiom here is set to __main__,
@@ -257,38 +255,37 @@ class Manager:
             self.worker_count = min(len(self.available_accelerators), self.worker_count)
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
-    def create_reg_message(self) -> dict:
+    def create_reg_message(self) -> protocol.Registration:
         """ Creates a registration message to identify the worker to the interchange
         """
-        return {
-            'type': 'registration',
-            'parsl_v': PARSL_VERSION,
-            'python_v': "{}.{}.{}".format(
+        return protocol.Registration(
+            parsl_v=PARSL_VERSION,
+            python_v="{}.{}.{}".format(
                 sys.version_info.major,
                 sys.version_info.minor,
                 sys.version_info.micro
             ),
-            'packages': {d.metadata['Name']: d.version for d in distributions()},
-            'worker_count': self.worker_count,
-            'uid': self.uid,
-            'block_id': self.block_id,
-            'start_time': self.start_time,
-            'drain_time': self.drain_time,
-            'prefetch_capacity': self.prefetch_capacity,
-            'max_capacity': self.worker_count + self.prefetch_capacity,
-            'os': platform.system(),
-            'hostname': platform.node(),
-            'dir': os.getcwd(),
-            'cpu_count': psutil.cpu_count(logical=False),
-            'total_memory': psutil.virtual_memory().total,
-        }
+            packages={d.metadata['Name']: d.version for d in distributions()},
+            worker_count=self.worker_count,
+            uid=self.uid,
+            block_id=self.block_id,
+            start_time=self.start_time,
+            drain_time=self.drain_time,
+            prefetch_capacity=self.prefetch_capacity,
+            max_capacity=self.worker_count + self.prefetch_capacity,
+            os=platform.system(),
+            hostname=platform.node(),
+            dir=os.getcwd(),
+            cpu_count=psutil.cpu_count(logical=False),
+            total_memory=psutil.virtual_memory().total,
+        )
 
     @staticmethod
     def heartbeat_to_incoming(task_incoming: zmq.Socket) -> None:
         """ Send heartbeat to the incoming task queue
         """
         # don't need to dumps and encode this every time - could do as a global on import?
-        b_msg = pickle.dumps({'type': 'heartbeat'})
+        b_msg = protocol.Heartbeat().to_wire()
         task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
 
@@ -316,7 +313,7 @@ class Manager:
         poller.register(results_sock, zmq.POLLIN)
         poller.register(ix_sock, zmq.POLLIN)
 
-        ix_sock.send(pickle.dumps({"type": "connection_probe"}))
+        ix_sock.send(protocol.ConnectionProbe().to_wire())
         evts = dict(poller.poll(timeout=self.heartbeat_period))
         if evts.get(ix_sock) is None:
             logger.error(f"Failed to connect to interchange ({self._ix_url}")
@@ -325,9 +322,9 @@ class Manager:
         logger.info(f"Successfully connected to interchange via URL: {self._ix_url}")
 
         # Send a registration message
-        msg = self.create_reg_message()
-        logger.debug("Sending registration message: %s", msg)
-        ix_sock.send(pickle.dumps(msg))
+        reg_msg = self.create_reg_message()
+        logger.debug("Sending registration message: %s", reg_msg)
+        ix_sock.send(reg_msg.to_wire())
         last_beat = time.time()
         last_interchange_contact = time.time()
         task_recv_counter = 0
@@ -366,7 +363,7 @@ class Manager:
                 # stops ours from sending more tasks; it will tell us to shut down when
                 # we finish all active work.
                 logger.info("Requesting drain")
-                ix_sock.send(pickle.dumps({'type': 'drain'}))
+                ix_sock.send(protocol.Drain().to_wire())
                 logger.debug("Sent drain")
 
                 # now set drain time to the far future so we don't send a drain
@@ -378,24 +375,28 @@ class Manager:
 
             if socks.get(ix_sock) == zmq.POLLIN:
                 pkl_msg = ix_sock.recv()
-                tasks = pickle.loads(pkl_msg)
+                msg = protocol.from_wire(pkl_msg, protocol.INTERCHANGE_TO_MANAGER)
                 del pkl_msg
 
                 last_interchange_contact = time.time()
 
-                if tasks == HEARTBEAT_CODE:
+                if isinstance(msg, protocol.HeartbeatReply):
                     logger.debug("Got heartbeat response from interchange")
-                elif tasks == SHUTDOWN_CODE:
+                elif isinstance(msg, protocol.Shutdown):
                     logger.info("Got shutdown message from interchange - setting kill flag")
                     self._stop_event.set()
-                else:
+                elif isinstance(msg, protocol.Tasks):
+                    tasks = msg.tasks
                     task_recv_counter += len(tasks)
                     logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format(
-                        [t['task_id'] for t in tasks], task_recv_counter
+                        [t.task_id for t in tasks], task_recv_counter
                     ))
 
                     for task in tasks:
                         self.task_scheduler.put_task(task)
+                elif isinstance(msg, protocol.ConnectionProbeReply):
+                    # the reply to our probe was read before this loop
+                    logger.debug("Ignoring unexpected connection probe reply")
 
             elif socks.get(results_sock) == zmq.POLLIN:
                 ix_sock.send(results_sock.recv())
@@ -455,11 +456,12 @@ class Manager:
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            logger.info("Putting exception for executor task {} in the pending result queue".format(task['task_id']))
-                            result_package = {'type': 'result',
-                                              'task_id': task['task_id'],
-                                              'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
-                            pkl_package = pickle.dumps(result_package)
+                            logger.info("Putting exception for executor task {} in the pending result queue".format(task.task_id))
+                            result_package = protocol.Result(
+                                task_id=task.task_id,
+                                exception=serialize(RemoteExceptionWrapper(*sys.exc_info())),
+                            )
+                            pkl_package = result_package.to_wire()
                             self.pending_result_queue.put(pkl_package)
                             del pkl_package
                     except KeyError:
@@ -603,16 +605,16 @@ class Manager:
         return p
 
 
-def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: Dict, node_info: List[str]) -> None:
-    prefix_table = compose_all(mpi_launcher, resource_spec=resource_spec, node_hostnames=node_info)
+def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: protocol.ResourceSpec, node_info: List[str]) -> None:
+    prefix_table = compose_all(mpi_launcher, resource_spec=dict(resource_spec), node_hostnames=node_info)
     for key in prefix_table:
         os.environ[key] = prefix_table[key]
 
 
-def _init_mpi_env(mpi_launcher: str, resource_spec: Dict) -> None:
-    for varname in resource_spec:
-        envname = "PARSL_" + str(varname).upper()
-        os.environ[envname] = str(resource_spec[varname])
+def _init_mpi_env(mpi_launcher: str, resource_spec: protocol.ResourceSpec) -> None:
+    for varname, value in resource_spec.items():
+        envname = "PARSL_" + varname.upper()
+        os.environ[envname] = str(value)
 
     node_list = resource_spec.get("MPI_NODELIST")
     if node_list is None:
@@ -765,27 +767,26 @@ def worker(
             worker_enqueued = True
 
         try:
-            req = task_queue.get(timeout=task_queue_timeout)
-            # req is {'task_id':<tid>, 'buffer':<buf>, 'resource_spec':<dict>}
+            req: protocol.Task = task_queue.get(timeout=task_queue_timeout)
         except queue.Empty:
             continue
 
         tasks_in_progress[worker_id] = req
-        tid = req['task_id']
+        tid = req.task_id
         logger.info("Received executor task {}".format(tid), extra={"parsl.htex.task": tid})
 
         with ready_worker_count.get_lock():
             ready_worker_count.value -= 1
         worker_enqueued = False
 
-        ctxt = req["context"]
+        ctxt = req.context
         res_spec = ctxt.get("resource_spec", {})
 
         _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=res_spec)
 
         exec_func: Callable = execute_task
-        exec_args = ()
-        exec_kwargs = {}
+        exec_args: Sequence[Any] = ()
+        exec_kwargs: Dict[str, Any] = {}
 
         try:
             if task_executor := ctxt.get("task_executor", None):
@@ -796,24 +797,26 @@ def worker(
                 exec_args = task_executor.get("a", ())
                 exec_kwargs = task_executor.get("k", {})
 
-            result = exec_func(req['buffer'], *exec_args, **exec_kwargs)
+            result = exec_func(req.buffer, *exec_args, **exec_kwargs)
             serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
-            result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
+            result_package = protocol.Result(
+                task_id=tid, exception=serialize(RemoteExceptionWrapper(*sys.exc_info()))
+            )
         else:
-            result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
+            result_package = protocol.Result(task_id=tid, result=serialized_result)
             del serialized_result
         del req
 
         logger.info("Completed executor task {}".format(tid), extra={"parsl.htex.task": tid})
         try:
-            pkl_package = pickle.dumps(result_package)
+            pkl_package = result_package.to_wire()
         except Exception:
-            logger.exception("Caught exception while trying to pickle the result package")
-            pkl_package = pickle.dumps({'type': 'result', 'task_id': tid,
-                                        'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))
-                                        })
+            logger.exception("Caught exception while trying to pack the result package")
+            pkl_package = protocol.Result(
+                task_id=tid, exception=serialize(RemoteExceptionWrapper(*sys.exc_info()))
+            ).to_wire()
 
         result_queue.put(pkl_package)
         del pkl_package, result_package

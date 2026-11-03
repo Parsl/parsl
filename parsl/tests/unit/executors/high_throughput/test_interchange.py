@@ -1,5 +1,5 @@
+import dataclasses
 import logging
-import pickle
 import threading
 import time
 import uuid
@@ -10,6 +10,7 @@ import pytest
 import zmq
 
 from parsl import curvezmq
+from parsl.executors.high_throughput import protocol
 from parsl.executors.high_throughput.interchange import (
     PKL_SHUTDOWN_CODE,
     Interchange,
@@ -44,30 +45,30 @@ def manager_id() -> bytes:
     return f"manager-{uuid.uuid4()}".encode()
 
 
-def send_from_manager(ix: Interchange, manager_id: bytes, msg: dict) -> None:
+def send_from_manager(ix: Interchange, manager_id: bytes, msg: protocol.Message) -> None:
     ix.socks = {ix.manager_sock: zmq.POLLIN}
     mock_sock = cast(mock.MagicMock, ix.manager_sock)
-    mock_sock.recv_multipart.return_value = [manager_id, pickle.dumps(msg)]
+    mock_sock.recv_multipart.return_value = [manager_id, msg.to_wire()]
     ix.process_manager_socket_message(set(), None, threading.Event())
 
 
-def registration_msg(ix: Interchange, **kw) -> dict:
-    return {'type': 'registration',
-            'parsl_v': PARSL_VERSION,
-            'python_v': ix.current_platform['python_v'],
-            'worker_count': 1,
-            'uid': 'testuid',
-            'block_id': '0',
-            'start_time': time.time(),
-            'prefetch_capacity': 0,
-            'max_capacity': 1,
-            'packages': {},
-            'os': 'testos',
-            'hostname': 'testhost',
-            'dir': '/test/dir',
-            'cpu_count': 1,
-            'total_memory': 1,
-            **kw}
+def registration_msg(ix: Interchange) -> protocol.Registration:
+    return protocol.Registration(
+        parsl_v=PARSL_VERSION,
+        python_v=ix.current_platform['python_v'],
+        worker_count=1,
+        uid='testuid',
+        block_id='0',
+        start_time=time.time(),
+        prefetch_capacity=0,
+        max_capacity=1,
+        packages={},
+        os='testos',
+        hostname='testhost',
+        dir='/test/dir',
+        cpu_count=1,
+        total_memory=1,
+    )
 
 
 def shutdown_sent(ix: Interchange, manager_id: bytes) -> bool:
@@ -77,7 +78,8 @@ def shutdown_sent(ix: Interchange, manager_id: bytes) -> bool:
 
 @pytest.mark.local
 def test_no_drain_before_drain_time(ix, manager_id):
-    reg_msg = registration_msg(ix, drain_time=time.time() + 3600)
+    reg_msg = registration_msg(ix)
+    reg_msg = dataclasses.replace(reg_msg, drain_time=time.time() + 3600)
     send_from_manager(ix, manager_id, reg_msg)
     assert manager_id in ix._ready_managers, "manager should have been registered"
 
@@ -90,7 +92,8 @@ def test_no_drain_before_drain_time(ix, manager_id):
 @pytest.mark.local
 @pytest.mark.parametrize("is_interesting", (True, False))
 def test_idle_manager_shut_down_at_drain_time(ix, manager_id, is_interesting):
-    reg_msg = registration_msg(ix, drain_time=time.time())
+    reg_msg = registration_msg(ix)
+    reg_msg = dataclasses.replace(reg_msg, drain_time=time.time())
     send_from_manager(ix, manager_id, reg_msg)
     assert manager_id in ix._ready_managers, "manager should have been registered"
 
@@ -104,7 +107,8 @@ def test_idle_manager_shut_down_at_drain_time(ix, manager_id, is_interesting):
 
 @pytest.mark.local
 def test_draining_manager_shut_down_after_last_result(ix, manager_id):
-    reg_msg = registration_msg(ix, drain_time=time.time())
+    reg_msg = registration_msg(ix)
+    reg_msg = dataclasses.replace(reg_msg, drain_time=time.time())
     send_from_manager(ix, manager_id, reg_msg)
     assert manager_id in ix._ready_managers, "manager should have been registered"
 
@@ -114,7 +118,7 @@ def test_draining_manager_shut_down_after_last_result(ix, manager_id):
     assert ix._ready_managers[manager_id]['draining']
     assert not shutdown_sent(ix, manager_id)
 
-    send_from_manager(ix, manager_id, {'type': 'result', 'task_id': 1, 'result': b''})
+    send_from_manager(ix, manager_id, protocol.Result(task_id=1, result=b''))
     ix.expire_drained_managers(set(), None)
 
     assert shutdown_sent(ix, manager_id)
@@ -125,14 +129,14 @@ def test_draining_manager_shut_down_after_last_result(ix, manager_id):
 def test_legacy_manager_without_drain_time(ix, manager_id):
     # ensure new/post-drain_time interchanges work with old/pre-drain_time managers
     reg_msg = registration_msg(ix)
-    assert 'drain_time' not in reg_msg, "test prerequisite"
+    assert reg_msg.drain_time is None, "test prerequisite"
     send_from_manager(ix, manager_id, reg_msg)
     assert manager_id in ix._ready_managers, "manager should have been registered"
 
     ix.expire_drained_managers(set(), None)
     assert not shutdown_sent(ix, manager_id), "ix should wait for legacy manager to request shutdown"
 
-    send_from_manager(ix, manager_id, {'type': 'drain'})
+    send_from_manager(ix, manager_id, protocol.Drain())
     ix.expire_drained_managers(set(), None)
 
     assert shutdown_sent(ix, manager_id)

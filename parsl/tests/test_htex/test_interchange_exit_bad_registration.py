@@ -11,6 +11,7 @@ import pytest
 import zmq
 
 import parsl.executors.high_throughput.zmq_pipes as zmq_pipes
+from parsl.executors.high_throughput import protocol
 from parsl.executors.high_throughput.executor import DEFAULT_INTERCHANGE_LAUNCH_CMD
 from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 from parsl.version import VERSION as PARSL_VERSION
@@ -80,23 +81,23 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
     # unlike some other bad interchange messages, should cause the interchange
     # to shut down.
 
-    msg = {'type': 'registration',
-           'parsl_v': PARSL_VERSION,
-           'python_v': "1.1.1",  # this is the bad bit
-           'worker_count': 1,
-           'uid': 'testuid',
-           'block_id': '0',
-           'start_time': time.time(),
-           'drain_time': float('inf'),
-           'prefetch_capacity': 0,
-           'max_capacity': 1,
-           'os': platform.system(),
-           'hostname': platform.node(),
-           'dir': os.getcwd(),
-           'cpu_count': psutil.cpu_count(logical=False),
-           'total_memory': psutil.virtual_memory().total,
-           'packages': {},
-           }
+    msg = protocol.Registration(
+        parsl_v=PARSL_VERSION,
+        python_v="1.1.1",  # this is the bad bit
+        worker_count=1,
+        uid='testuid',
+        block_id='0',
+        start_time=time.time(),
+        drain_time=float('inf'),
+        prefetch_capacity=0,
+        max_capacity=1,
+        os=platform.system(),
+        hostname=platform.node(),
+        dir=os.getcwd(),
+        cpu_count=psutil.cpu_count(logical=False),
+        total_memory=psutil.virtual_memory().total,
+        packages={},
+    )
 
     # connect to worker port and send this message.
 
@@ -110,7 +111,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
     task_channel.setsockopt(zmq.SNDTIMEO, channel_timeout)
     task_channel.connect(f"tcp://127.0.0.1:{worker_port}")
 
-    task_channel.send(pickle.dumps(msg))
+    task_channel.send(msg.to_wire())
 
     # check that the interchange exits within some reasonable time
     try_assert(lambda: interchange_proc.poll() is not None, "Interchange did not exit after killing watched client process", timeout_ms=5000)
@@ -199,22 +200,22 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
     # unlike some other bad interchange messages, should cause the interchange
     # to shut down.
 
-    msg = {'type': 'registration',
-           'worker_count': 1,
-           'uid': 'testuid',
-           'block_id': '0',
-           'start_time': time.time(),
-           'drain_time': float('inf'),
-           'prefetch_capacity': 0,
-           'max_capacity': 1,
-           'os': platform.system(),
-           'hostname': platform.node(),
-           'dir': os.getcwd(),
-           'cpu_count': psutil.cpu_count(logical=False),
-           'total_memory': psutil.virtual_memory().total,
-           'packages': {},
-           **worker_version_info,
-           }
+    msg = protocol.Registration(
+        worker_count=1,
+        uid='testuid',
+        block_id='0',
+        start_time=time.time(),
+        drain_time=float('inf'),
+        prefetch_capacity=0,
+        max_capacity=1,
+        os=platform.system(),
+        hostname=platform.node(),
+        dir=os.getcwd(),
+        cpu_count=psutil.cpu_count(logical=False),
+        total_memory=psutil.virtual_memory().total,
+        packages={},
+        **worker_version_info,
+    )
 
     # connect to worker port and send this message.
 
@@ -228,7 +229,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
     task_channel.setsockopt(zmq.SNDTIMEO, channel_timeout)
     task_channel.connect(f"tcp://127.0.0.1:{worker_port}")
 
-    task_channel.send(pickle.dumps(msg))
+    task_channel.send(msg.to_wire())
 
     # Run a command against the interchange to confirm that the interchange has
     # not failed, this call will hang if the interchange exits early

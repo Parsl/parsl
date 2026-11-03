@@ -10,6 +10,7 @@ import zmq
 from parsl import curvezmq
 from parsl.addresses import tcp_url
 from parsl.errors import InternalConsistencyError
+from parsl.executors.high_throughput import protocol
 from parsl.executors.high_throughput.errors import (
     CommandClientBadError,
     CommandClientTimeoutError,
@@ -137,7 +138,7 @@ class TasksOutgoing:
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
 
-    def put(self, message):
+    def put(self, message: protocol.Task) -> None:
         """ This function needs to be fast at the same time aware of the possibility of
         ZMQ pipes overflowing.
 
@@ -146,7 +147,7 @@ class TasksOutgoing:
         This issue can be magnified if each the serialized buffer itself is larger.
         """
         logger.debug("Sending TasksOutgoing message")
-        self.zmq_socket.send_pyobj(message)
+        self.zmq_socket.send(message.to_wire())
         logger.debug("Sent TasksOutgoing message")
 
     def close(self):

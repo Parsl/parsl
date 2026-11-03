@@ -4,7 +4,7 @@ from typing_extensions import TypedDict
 
 
 class ManagerRecord(TypedDict):
-    block_id: str
+    block_id: Optional[str]
     start_time: float
     tasks: List[Any]
     worker_count: int
@@ -17,7 +17,7 @@ class ManagerRecord(TypedDict):
     idle_since: Optional[float]
     parsl_version: str
     python_version: str
-    packages: Dict[str, str]
+    packages: Dict[str, Optional[str]]
 
     # Only used by monitoring
     uid: str

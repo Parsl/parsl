@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 
 from parsl import HighThroughputExecutor, curvezmq
+from parsl.executors.high_throughput import protocol
 from parsl.serialize.facade import pack_apply_message, unpack_apply_message
 
 _MOCK_BASE = "parsl.executors.high_throughput.executor"
@@ -173,7 +174,7 @@ def test_worker_dynamic_import(htex: HighThroughputExecutor):
     num_array = tuple(range(10))
 
     fn_buf = pack_apply_message(_dot_prod, num_array, {})
-    ctxt = {
+    ctxt: protocol.TaskContext = {
         "task_executor": {
             "f": f"{dyn_exec.__module__}.{dyn_exec.__name__}",
             "a": num_array,  # prove "custom" dyn_exec

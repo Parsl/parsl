@@ -1,5 +1,4 @@
 import os
-import pickle
 import sys
 from argparse import ArgumentError
 from typing import Any, Dict
@@ -8,7 +7,7 @@ from unittest import mock
 import pytest
 
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.executors.high_throughput import process_worker_pool
+from parsl.executors.high_throughput import process_worker_pool, protocol
 from parsl.executors.high_throughput.process_worker_pool import worker
 from parsl.multiprocessing import SpawnContext
 from parsl.serialize.facade import deserialize
@@ -89,19 +88,19 @@ def _always_raise(*a, **k):
 @pytest.mark.local
 def test_worker_dynamic_import_happy_path(tmpd_cwd) -> None:
     import_str = f"{_always_raise.__module__}.{_always_raise.__name__}"
-    task_exec: Dict[str, Any] = {
+    task_exec: protocol.TaskExecutor = {
         "f": import_str,
         "a": (1, 2),
         "k": {"a": "b"},
     }
-    req = {
-        "task_id": 15,
-        "context": {"task_executor": task_exec},
-        "buffer": b"some serialized value"
-    }
+    req = protocol.Task(
+        task_id=15,
+        context={"task_executor": task_exec},
+        buffer=b"some serialized value",
+    )
 
     try:
-        task_args = [req["buffer"]]
+        task_args = [req.buffer]
         task_args.extend(task_exec["a"])
         _always_raise(*task_args, **task_exec["k"])
     except Exception as e:
@@ -137,9 +136,9 @@ def test_worker_dynamic_import_happy_path(tmpd_cwd) -> None:
             mpi_launcher="",
         )
     (result_pkl,), _ = q.put.call_args
-    r = pickle.loads(result_pkl)
-    assert "exception" in r
-    wrapped_exc: RemoteExceptionWrapper = deserialize(r["exception"])
+    r = protocol.from_wire(result_pkl, protocol.Result)
+    assert r.exception is not None
+    wrapped_exc: RemoteExceptionWrapper = deserialize(r.exception)
     exc = wrapped_exc.get_exception()
     assert isinstance(exc, type(exp_exc)), "Approximate equality"
     assert str(exp_exc) == str(exc), "Approximate equality; all args, kwargs conveyed"
@@ -147,17 +146,17 @@ def test_worker_dynamic_import_happy_path(tmpd_cwd) -> None:
 
 @pytest.mark.local
 def test_worker_bad_dynamic_import(tmpd_cwd) -> None:
-    req = {
-        "task_id": 15,
-        "context": {
+    req = protocol.Task(
+        task_id=15,
+        context={
             "task_executor": {
                 "f": "parsl.some.not_existing.module.__nope",
                 "a": (1, 2),
                 "k": {"a": "b"},
             },
         },
-        "buffer": b"some serialized value"
-    }
+        buffer=b"some serialized value",
+    )
 
     q = mock.Mock(side_effect=(req, MemoryError("intentional test error")))
     q.get = q
@@ -187,9 +186,9 @@ def test_worker_bad_dynamic_import(tmpd_cwd) -> None:
             mpi_launcher="",
         )
     (result_pkl,), _ = q.put.call_args
-    r = pickle.loads(result_pkl)
-    assert "exception" in r
-    wrapped_exc: RemoteExceptionWrapper = deserialize(r["exception"])
+    r = protocol.from_wire(result_pkl, protocol.Result)
+    assert r.exception is not None
+    wrapped_exc: RemoteExceptionWrapper = deserialize(r.exception)
     exc = wrapped_exc.get_exception()
     assert isinstance(exc, ModuleNotFoundError)
     assert "No module named" in str(exc)

@@ -19,6 +19,6 @@ def test_submit_payload():
 
         assert htex.tasks[fut.parsl_executor_task_id] is fut
         assert fut.parsl_executor_task_id == task_num, "Expect monotonic increase"
-        assert msg["task_id"] == fut.parsl_executor_task_id
-        assert msg["context"] == ctxt, "Expect no modification"
-        assert msg["buffer"] == buf, "Expect no modification"
+        assert msg.task_id == fut.parsl_executor_task_id
+        assert msg.context == ctxt, "Expect no modification"
+        assert msg.buffer == buf, "Expect no modification"
