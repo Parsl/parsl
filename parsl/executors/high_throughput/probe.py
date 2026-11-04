@@ -1,11 +1,11 @@
 import logging
-import pickle
 from contextlib import ExitStack
 from typing import Optional
 
 import zmq
 
 from parsl import curvezmq
+from parsl.executors.high_throughput import protocol
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ def probe_addresses(
             poller.register(s, zmq.POLLIN)
             sock_map[s] = url
 
-            s.send(pickle.dumps({'type': 'connection_probe'}))
+            s.send(protocol.ConnectionProbe().to_wire())
 
         for sock, evt in poller.poll(timeout=timeout_ms):
             sock.recv()  # clear the buffer for good netizenry
