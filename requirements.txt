@@ -1,4 +1,5 @@
 pyzmq>=17.1.2
+msgspec>=0.19
 typeguard>=4,<5
 typing-extensions>=4.6,<5
 dill
