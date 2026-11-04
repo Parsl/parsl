@@ -22,3 +22,4 @@ per-file-ignores = parsl/monitoring/visualization/*:E741,
   # but then do not use it directly, because tests/conftests.py
   # looks for it instead.
   parsl/tests/**:F401
+  parsl/executors/high_throughput/protocol/__init__.py:F401,F403
