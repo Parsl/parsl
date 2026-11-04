@@ -1,13 +1,13 @@
 import logging
 import multiprocessing
 import os
-import pickle
 import queue
 import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
+from parsl.executors.high_throughput import protocol as proto
 from parsl.multiprocessing import SpawnContext
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ class PrioritizedTask:
     # Comparing dict will fail since they are unhashable
     # This dataclass limits comparison to the priority field
     priority: int
-    task: Dict = field(compare=False)
+    task: proto.Task = field(compare=False)
 
 
 class TaskScheduler:
@@ -91,7 +91,7 @@ class TaskScheduler:
         self.pending_task_q = pending_task_q
         self.pending_result_q = pending_result_q
 
-    def put_task(self, task) -> None:
+    def put_task(self, task: proto.Task) -> None:
         return self.pending_task_q.put(task)
 
     def get_result(self, block: bool = True, timeout: Optional[float] = None):
@@ -120,7 +120,7 @@ class MPITaskScheduler(TaskScheduler):
         self.scheduler = identify_scheduler()
         # PriorityQueue is threadsafe
         self._backlog_queue: queue.PriorityQueue[PrioritizedTask] = queue.PriorityQueue()
-        self._map_tasks_to_nodes: Dict[str, List[str]] = {}
+        self._map_tasks_to_nodes: Dict[int, List[str]] = {}
         self.available_nodes = get_nodes_in_batchjob(self.scheduler)
         self._free_node_counter = SpawnContext.Value("i", len(self.available_nodes))
         # mp.Value has issues with mypy
@@ -164,9 +164,9 @@ class MPITaskScheduler(TaskScheduler):
         with self._free_node_counter.get_lock():
             self._free_node_counter.value += len(nodes)
 
-    def put_task(self, task_package: dict):
+    def put_task(self, task_package: proto.Task) -> None:
         """Schedule task if resources are available otherwise backlog the task"""
-        resource_spec = task_package.get("context", {}).get("resource_spec", {})
+        resource_spec = task_package["context"].get("resource_spec", {})
 
         if nodes_needed := resource_spec.get("num_nodes"):
             tid = task_package["task_id"]
@@ -198,14 +198,13 @@ class MPITaskScheduler(TaskScheduler):
         result_pkl = self.pending_result_q.get(block, timeout)
         if result_pkl is None:
             return None
-        result_dict = pickle.loads(result_pkl)
         # TODO (wardlt): If the task did not request nodes, it won't be in `self._map_tasks_to_nodes`.
         #  Causes Parsl to hang. See Issue #3427
-        if result_dict["type"] == "result":
-            task_id = result_dict["task_id"]
-            assert task_id in self._map_tasks_to_nodes, "You are about to experience issue #3427"
-            nodes_to_reallocate = self._map_tasks_to_nodes[task_id]
-            self._return_nodes(nodes_to_reallocate)
-            self._schedule_backlog_tasks()
+        match proto.decode(result_pkl, proto.MANAGER_TO_INTERCHANGE):
+            case proto.Result(task_id=task_id):
+                assert task_id in self._map_tasks_to_nodes, "You are about to experience issue #3427"
+                nodes_to_reallocate = self._map_tasks_to_nodes[task_id]
+                self._return_nodes(nodes_to_reallocate)
+                self._schedule_backlog_tasks()
 
         return result_pkl
