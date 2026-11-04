@@ -10,6 +10,7 @@ import zmq
 from parsl import curvezmq
 from parsl.addresses import tcp_url
 from parsl.errors import InternalConsistencyError
+from parsl.executors.high_throughput import protocol as proto
 from parsl.executors.high_throughput.errors import (
     CommandClientBadError,
     CommandClientTimeoutError,
@@ -137,7 +138,7 @@ class TasksOutgoing:
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
 
-    def put(self, message):
+    def put(self, message: proto.Task) -> None:
         """ This function needs to be fast at the same time aware of the possibility of
         ZMQ pipes overflowing.
 
