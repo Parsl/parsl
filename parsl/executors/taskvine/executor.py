@@ -20,7 +20,7 @@ import threading
 import uuid
 from concurrent.futures import Future
 from datetime import datetime
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 # Import other libraries
 import typeguard
@@ -84,8 +84,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             pre-warmed forked python process.
             Default is 'regular'.
 
+        use_tmp_dir_for_staging: bool
+            Whether to use tmp dir for staging functions, arguments, and results.
+            Default is False.
+
         manager_config: TaskVineManagerConfig
-            Configuration for the TaskVine manager. Default
+            Configuration for the TaskVine manager.
 
         factory_config: TaskVineFactoryConfig
             Configuration for the TaskVine factory.
@@ -105,6 +109,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  label: str = "TaskVineExecutor",
                  worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']] = 'factory',
                  function_exec_mode: Union[Literal['regular'], Literal['serverless']] = 'regular',
+                 use_tmp_dir_for_staging: bool = False,
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = None,
@@ -135,6 +140,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.label = label
         self.worker_launch_method = worker_launch_method
         self.function_exec_mode = function_exec_mode
+        self.use_tmp_dir_for_staging = use_tmp_dir_for_staging
         self.manager_config = manager_config
         self.factory_config = factory_config
         self.storage_access = storage_access
@@ -183,6 +189,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Path to directory that holds all tasks' data and results.
         self._function_data_dir = ""
 
+        # Mapping of function names to function details.
+        # Currently the values include function objects, path to serialized functions,
+        # path to serialized function contexts, and whether functions are serialized.
+        # Helpful to detect inconsistencies in serverless functions.
+        # Helpful to deduplicate the same function.
+        self._map_func_names_to_func_details: Dict[str, Dict] = {}
+
         # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
@@ -229,8 +242,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
         os.makedirs(log_dir)
-        tmp_prefix = f'{self.label}-{getpass.getuser()}-{datetime.now().strftime("%Y%m%d%H%M%S%f")}-'
-        self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix)
+
+        if self.use_tmp_dir_for_staging:
+            tmp_prefix = f'{self.label}-{getpass.getuser()}-{datetime.now().strftime("%Y%m%d%H%M%S%f")}-'
+            self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix).name
+        else:
+            self._function_data_dir = os.path.join(log_dir, 'function')
+            os.makedirs(self._function_data_dir, exist_ok=True)
 
         # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
         # Parsl does not.
@@ -240,7 +258,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # factory logs go with manager logs regardless
         self.factory_config.scratch_dir = self.manager_config.vine_log_dir
-        logger.debug(f"Function data directory: {self._function_data_dir.name}, log directory: {log_dir}")
+        logger.debug(f"Function data directory: {self._function_data_dir}, log directory: {log_dir}")
         logger.debug(
             f"TaskVine manager log directory: {self.manager_config.vine_log_dir}, "
             f"factory log directory: {self.factory_config.scratch_dir}")
@@ -307,7 +325,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             'map': Pickled file with a dict between local parsl names, and remote taskvine names.
         """
         task_dir = "{:04d}".format(executor_task_id)
-        return os.path.join(self._function_data_dir.name, task_dir, *path_components)
+        return os.path.join(self._function_data_dir, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
@@ -330,10 +348,29 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Keyword arguments to the Parsl app
         """
 
+        # a Parsl function must have a name
+        if func.__name__ is None:
+            raise ValueError('A Parsl function must have a name')
+
         logger.debug(f'Got resource specification: {resource_specification}')
 
         # Default execution mode of apps is regular
         exec_mode = resource_specification.get('exec_mode', self.function_exec_mode)
+
+        if exec_mode == 'serverless':
+            if func.__name__ not in self._map_func_names_to_func_details:
+                self._map_func_names_to_func_details[func.__name__] = {'func_obj': func}
+            else:
+                if func is not self._map_func_names_to_func_details[func.__name__]['func_obj']:
+                    logger.error(
+                        ('Inconsistency in a serverless function call detected. '
+                         'A function name cannot point to two different function objects.')
+                    )
+                    raise ExecutorError(
+                        self,
+                        ('In the serverless mode, a function name cannot '
+                         'point to two different function objects.')
+                    )
 
         # Detect resources and features of a submitted Parsl app
         cores = None
@@ -365,7 +402,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._executor_task_counter += 1
 
         # Create a per task directory for the function, argument, map, and result files
-        os.mkdir(self._path_in_task(executor_task_id))
+        os.makedirs(self._path_in_task(executor_task_id), exist_ok=True)
 
         input_files = []
         output_files = []
@@ -398,21 +435,70 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         argument_file = None
         result_file = None
         map_file = None
+        function_context_file = None
+        function_context_input_files = {}
 
         # Get path to files that will contain the pickled function,
         # arguments, result, and map of input and output files
-        function_file = self._path_in_task(executor_task_id, "function")
+        if exec_mode == 'serverless':
+            if 'function_file' not in self._map_func_names_to_func_details[func.__name__]:
+                function_file = os.path.join(self._function_data_dir, func.__name__, 'function')
+                os.makedirs(os.path.join(self._function_data_dir, func.__name__))
+                self._map_func_names_to_func_details[func.__name__].update({'function_file': function_file, 'is_serialized': False})
+            else:
+                function_file = self._map_func_names_to_func_details[func.__name__]['function_file']
+        else:
+            function_file = self._path_in_task(executor_task_id, "function")
         argument_file = self._path_in_task(executor_task_id, "argument")
         result_file = self._path_in_task(executor_task_id, "result")
         map_file = self._path_in_task(executor_task_id, "map")
 
-        logger.debug("Creating executor task {} with function at: {}, argument at: {}, \
-                and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
+        if exec_mode == 'serverless':
+            if 'function_context' in resource_specification:
+                if 'function_context_file' not in self._map_func_names_to_func_details[func.__name__]:
+                    function_context = resource_specification.get('function_context')
+                    function_context_args = resource_specification.get('function_context_args', [])
+                    function_context_kwargs = resource_specification.get('function_context_kwargs', {})
+                    function_context_file = os.path.join(self._function_data_dir, func.__name__, 'function_context')
+
+                    self._cloudpickle_serialize_object_to_file(function_context_file,
+                                                               [function_context,
+                                                                function_context_args,
+                                                                function_context_kwargs])
+                    self._map_func_names_to_func_details[func.__name__].update({'function_context_file': function_context_file})
+                else:
+                    function_context_file = self._map_func_names_to_func_details[func.__name__]['function_context_file']
+                function_context_input_files = resource_specification.get('function_context_input_files', {})
+
+        logger.debug("Creating executor task {} with function at: {}, argument at: {}, and result to be found at: {}".format(executor_task_id,
+                                                                                                                             function_file,
+                                                                                                                             argument_file,
+                                                                                                                             result_file))
 
         # Serialize function object and arguments, separately
-        self._serialize_object_to_file(function_file, func)
+        if exec_mode == 'regular' or not self._map_func_names_to_func_details[func.__name__]['is_serialized']:
+            self._serialize_object_to_file(function_file, func)
+            if exec_mode == 'serverless':
+                self._map_func_names_to_func_details[func.__name__]['is_serialized'] = True
+
+        # Delete references of function context information from resource_specification
+        # as they are not needed to be transferred to remote nodes.
+        # They are restored when the kwargs serialization is done.
+        if exec_mode == 'serverless':
+            function_context = kwargs['parsl_resource_specification'].pop('function_context', None)
+            function_context_args = kwargs['parsl_resource_specification'].pop('function_context_args', [])
+            function_context_kwargs = kwargs['parsl_resource_specification'].pop('function_context_kwargs', {})
+            function_context_input_files = kwargs['parsl_resource_specification'].pop('function_context_input_files', {})
+
         args_dict = {'args': args, 'kwargs': kwargs}
         self._serialize_object_to_file(argument_file, args_dict)
+
+        if exec_mode == 'serverless':
+            if function_context:
+                kwargs['parsl_resource_specification']['function_context'] = function_context
+                kwargs['parsl_resource_specification']['function_context_args'] = function_context_args
+                kwargs['parsl_resource_specification']['function_context_kwargs'] = function_context_kwargs
+                kwargs['parsl_resource_specification']['function_context_input_files'] = function_context_input_files
 
         # Construct the map file of local filenames at worker
         self._construct_map_file(map_file, input_files, output_files)
@@ -431,6 +517,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             category = func.__name__ if self.manager_config.autocategory else 'parsl-default'
 
         task_info = ParslTaskToVine(executor_id=executor_task_id,
+                                    func_name=func.__name__,
                                     exec_mode=exec_mode,
                                     category=category,
                                     input_files=input_files,
@@ -439,6 +526,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                     function_file=function_file,
                                     argument_file=argument_file,
                                     result_file=result_file,
+                                    function_context_file=function_context_file,
+                                    function_context_input_files=function_context_input_files,
                                     cores=cores,
                                     memory=memory,
                                     disk=disk,
@@ -492,6 +581,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             written = 0
             while written < len(serialized_obj):
                 written += f_out.write(serialized_obj[written:])
+
+    def _cloudpickle_serialize_object_to_file(self, path, obj):
+        """Takes any object and serializes it to the file path."""
+        import cloudpickle  # type: ignore[import-not-found]
+        with open(path, 'wb') as f:
+            cloudpickle.dump(obj, f)
 
     def _construct_map_file(self, map_file, input_files, output_files):
         """ Map local filepath of parsl files to the filenames at the execution worker.

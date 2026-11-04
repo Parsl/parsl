@@ -6,5 +6,5 @@ from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 
 
 def fresh_config():
-    return Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
-                                              worker_launch_method='provider')])
+    return Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000, shared_fs=True),
+                                              worker_launch_method='factory')])
