@@ -63,7 +63,7 @@ def test_MPISched_get_result():
     scheduler._free_node_counter.value = 4
     scheduler._map_tasks_to_nodes[1] = nodes
 
-    result_package = pickle.dumps({"task_id": 1, "type": "result", "buffer": "Foo"})
+    result_package = pickle.dumps({"task_id": 1, "type": "result", "result": b"Foo"})
     result_q.put(result_package)
     result_received = scheduler.get_result(block=True, timeout=1)
     assert result_received == result_package
@@ -89,7 +89,7 @@ def test_MPISched_roundtrip():
         assert scheduler._free_node_counter.value == 8 - trip
 
         # Pop in a mock result
-        result_pkl = pickle.dumps({"task_id": trip, "type": "result", "buffer": "RESULT BUF"})
+        result_pkl = pickle.dumps({"task_id": trip, "type": "result", "result": b"RESULT BUF"})
         result_q.put(result_pkl)
 
         got_result = scheduler.get_result(True, 1)
@@ -128,7 +128,7 @@ def test_MPISched_contention():
     assert task_q.empty()  # Confirm that task 2 is not yet scheduled
 
     # Simulate worker returning result and the scheduler picking up result
-    result_pkl = pickle.dumps({"task_id": 1, "type": "result", "buffer": "RESULT BUF"})
+    result_pkl = pickle.dumps({"task_id": 1, "type": "result", "result": b"RESULT BUF"})
     result_q.put(result_pkl)
     got_result = scheduler.get_result(True, 1)
     assert got_result == result_pkl

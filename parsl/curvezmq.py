@@ -127,6 +127,7 @@ class ServerContext(BaseContext):
         # previously deleted
         if getattr(self, "auth_thread", None):
             self.auth_thread.stop()
+            self.auth_thread = None
 
     def _start_auth_thread(self) -> ThreadAuthenticator:
         auth_thread = ThreadAuthenticator(self._ctx)
@@ -157,11 +158,13 @@ class ServerContext(BaseContext):
     def term(self):
         if self.auth_thread:
             self.auth_thread.stop()
+            self.auth_thread = None
         super().term()
 
     def destroy(self, linger: Optional[int] = None):
         if self.auth_thread:
             self.auth_thread.stop()
+            self.auth_thread = None
         super().destroy(linger)
 
 

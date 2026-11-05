@@ -1,13 +1,18 @@
-import argparse
-import os
-
 import pytest
 
-import parsl
 import parsl.app.errors as pe
 from parsl.app.app import bash_app
-from parsl.app.errors import BashExitFailure
 from parsl.tests.configs.local_threads import fresh_config as local_config
+
+
+@pytest.fixture
+def test_fn(tmpd_cwd):
+    def _wrapper(parsl_app):
+        serr = str(tmpd_cwd / "std.err")
+        sout = str(tmpd_cwd / "std.out")
+        return parsl_app(stdout=sout, stderr=serr)
+
+    return _wrapper
 
 
 @bash_app
@@ -34,104 +39,19 @@ def not_executable(stderr='std.err', stdout='std.out'):
     return cmd_line
 
 
-@bash_app
-def bad_format(stderr='std.err', stdout='std.out'):
-    cmd_line = 'echo {0}'
-    return cmd_line
-
-
-test_matrix = {
-    div_0: {
-        'exit_code': 1
-    },
-    bash_misuse: {
-        'exit_code': 15
-    },
-    command_not_found: {
-        'exit_code': 127
-    },
-    not_executable: {
-        'exit_code': 126
-    }
+exit_codes = {
+    div_0: 1,
+    bash_misuse: 15,
+    not_executable: 126,
+    command_not_found: 127,
 }
 
-whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
-
 
 @pytest.mark.shared_fs
-def test_div_0(test_fn=div_0):
-    err_code = test_matrix[test_fn]['exit_code']
-    f = test_fn()
-    try:
-        f.result()
-    except BashExitFailure as e:
-        print("Caught exception", e)
-        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                      err_code,
-                                                                                      e.exitcode)
-    print(os.listdir('.'))
-    os.remove('std.err')
-    os.remove('std.out')
-
-
-@pytest.mark.shared_fs
-def test_bash_misuse(test_fn=bash_misuse):
-    err_code = test_matrix[test_fn]['exit_code']
-    f = test_fn()
-    try:
-        f.result()
-    except pe.BashExitFailure as e:
-        print("Caught expected BashExitFailure", e)
-        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                      err_code,
-                                                                                      e.exitcode)
-    os.remove('std.err')
-    os.remove('std.out')
-
-
-@pytest.mark.shared_fs
-def test_command_not_found(test_fn=command_not_found):
-    err_code = test_matrix[test_fn]['exit_code']
-    f = test_fn()
-    try:
-        f.result()
-    except pe.BashExitFailure as e:
-        print("Caught exception", e)
-        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                      err_code,
-                                                                                      e.exitcode)
-
-    os.remove('std.err')
-    os.remove('std.out')
-    return True
-
-
-@pytest.mark.shared_fs
-def test_not_executable(test_fn=not_executable):
-    err_code = test_matrix[test_fn]['exit_code']
-    f = test_fn()
-    try:
-        f.result()
-    except BashExitFailure as e:
-        print("Caught exception", e)
-        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                      err_code,
-                                                                                      e.exitcode)
-    os.remove('std.err')
-    os.remove('std.out')
-    return True
-
-
-def run_app(test_fn, err_code):
-    f = test_fn()
-    print(f)
-    try:
-        f.result()
-    except BashExitFailure as e:
-        print("Caught exception", e)
-        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                      err_code,
-                                                                                      e.exitcode)
-    os.remove('std.err')
-    os.remove('std.out')
-    return True
+@pytest.mark.parametrize("app", (div_0, bash_misuse, not_executable, command_not_found))
+def test_failing_bash_app(test_fn, app):
+    err_code = exit_codes[app]
+    with pytest.raises(pe.BashExitFailure) as pyt_e:
+        test_fn(app).result()
+    e: pe.BashExitFailure = pyt_e.value
+    assert e.exitcode == err_code, f"[{e}] {app.__name__} expected {err_code=} but got {e.exitcode}"

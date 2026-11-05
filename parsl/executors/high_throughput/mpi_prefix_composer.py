@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import Dict, List, Tuple
 
 from parsl.executors.errors import InvalidResourceSpecification
@@ -10,7 +11,7 @@ VALID_LAUNCHERS = ('srun',
                    'mpiexec')
 
 
-def validate_resource_spec(resource_spec: Dict[str, str]):
+def validate_resource_spec(resource_spec: Dict):
     """Basic validation of keys in the resource_spec
 
     Raises: InvalidResourceSpecification if the resource_spec
@@ -34,9 +35,10 @@ def validate_resource_spec(resource_spec: Dict[str, str]):
         raise InvalidResourceSpecification(invalid_keys)
     if "num_nodes" in resource_spec:
         if not resource_spec.get("num_ranks") and resource_spec.get("ranks_per_node"):
-            resource_spec["num_ranks"] = str(int(resource_spec["num_nodes"]) * int(resource_spec["ranks_per_node"]))
+            resource_spec["num_ranks"] = int(resource_spec["num_nodes"]) * int(resource_spec["ranks_per_node"])
         if not resource_spec.get("ranks_per_node") and resource_spec.get("num_ranks"):
-            resource_spec["ranks_per_node"] = str(int(resource_spec["num_ranks"]) / int(resource_spec["num_nodes"]))
+            # round up so there's enough space to fit all requested ranks on allocated nodes
+            resource_spec["ranks_per_node"] = math.ceil(int(resource_spec["num_ranks"]) / int(resource_spec["num_nodes"]))
     return
 
 

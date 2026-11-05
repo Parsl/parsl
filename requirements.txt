@@ -1,12 +1,5 @@
 pyzmq>=17.1.2
-
-# typeguard uses semantic versioning.
-# major v3 was a shortlived version that was rapidly replaced by major v4,
-# so this specification excludes it.
-# v2 and v4 are both seen in the wild with users in complex deployments.
-typeguard>=2.10,!=3.*,<5
-
-
+typeguard>=4,<5
 typing-extensions>=4.6,<5
 dill
 tblib
@@ -14,4 +7,4 @@ requests
 sortedcontainers
 psutil>=5.5.1
 setproctitle
-filelock>=3.13,<4
+filelock>=3.13,<5

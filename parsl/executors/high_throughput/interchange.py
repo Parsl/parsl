@@ -29,7 +29,7 @@ from parsl.serialize import serialize as serialize_object
 from parsl.version import VERSION as PARSL_VERSION
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
-PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
+PKL_SHUTDOWN_CODE = pickle.dumps((2 ** 32) - 2)
 
 logger = logging.getLogger("parsl.executors.high_throughput.interchange")
 
@@ -218,6 +218,7 @@ class Interchange:
             d['timestamp'] = datetime.datetime.now()
             d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
             d['run_id'] = self.run_id
+            d['python_v'] = manager['python_version']
 
             monitoring_radio.send((MessageType.NODE_INFO, d))
 
@@ -342,10 +343,10 @@ class Interchange:
             priority = resource_spec.get('priority', float('inf'))
             queue_entry = (-priority, -task_id, msg)
 
-            logger.debug("Putting task %s onto pending_task_queue", task_id)
+            logger.debug("Putting task %s onto pending_task_queue", task_id, extra={"parsl.htex.task": task_id})
 
             self.pending_task_queue.add(queue_entry)
-            logger.debug("Put task %s onto pending_task_queue", task_id)
+            logger.debug("Put task %s onto pending_task_queue", task_id, extra={"parsl.htex.task": task_id})
 
     def process_manager_socket_message(
         self,
@@ -382,31 +383,9 @@ class Interchange:
         elif mtype == 'registration':
             ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
             ix_parsl_v = self.current_platform['parsl_v']
-            mgr_minor_py = msg['python_v'].rsplit('.', 1)[0]
+            mgr_python_v = msg['python_v']
+            mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
             mgr_parsl_v = msg['parsl_v']
-
-            new_rec = ManagerRecord(
-                block_id=None,
-                start_time=msg['start_time'],
-                tasks=[],
-                worker_count=0,
-                max_capacity=0,
-                active=True,
-                draining=False,
-                last_heartbeat=time.time(),
-                idle_since=time.time(),
-                parsl_version=mgr_parsl_v,
-                python_version=msg['python_v'],
-            )
-
-            # m is a ManagerRecord, but meta is a dict[Any,Any] and so can
-            # contain arbitrary fields beyond those in ManagerRecord (and
-            # indeed does - for example, python_v) which are then ignored
-            # later.
-            new_rec.update(msg)
-
-            logger.info(f'Registration info for manager {manager_id!r}: {msg}')
-            self._send_monitoring_info(monitoring_radio, new_rec)
 
             python_mismatch: bool = ix_minor_py != mgr_minor_py
             parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
@@ -429,23 +408,44 @@ class Interchange:
                     f'\n  Interchange: {vm_exc.interchange_version}'
                     f'\n  Manager:     {vm_exc.manager_version}'
                 )
+                return
 
-            else:
-                # We really should update the associated data structure; but not
-                # at this time.  *kicks can down the road*
-                assert new_rec['block_id'] is not None, 'Verified externally'
+            # legacy draining handling. remove in ~6 months (ca Apr 2027)
+            drain_time = msg.get('drain_time', float('inf'))
 
-                # set up entry only if we accept the registration
-                self._ready_managers[manager_id] = new_rec
-                self.connected_block_history.append(new_rec['block_id'])
+            new_rec = ManagerRecord(
+                block_id=msg['block_id'],
+                start_time=msg['start_time'],
+                tasks=[],
+                worker_count=msg['worker_count'],
+                max_capacity=msg['max_capacity'],
+                active=True,
+                draining=False,
+                drain_time=drain_time,
+                last_heartbeat=time.time(),
+                idle_since=time.time(),
+                parsl_version=mgr_parsl_v,
+                python_version=mgr_python_v,
+                packages=msg['packages'],
+                hostname=msg['hostname'],
+                uid=msg['uid'],
+                cpu_count=msg['cpu_count'],
+                total_memory=msg['total_memory'],
+            )
 
-                interesting_managers.add(manager_id)
+            logger.info(f'Registration info for manager {manager_id!r}: {msg}')
+            self._send_monitoring_info(monitoring_radio, new_rec)
 
-                logger.info(
-                    f"Registered manager {manager_id!r} (py{mgr_minor_py},"
-                    f" {mgr_parsl_v}) and added to ready queue"
-                )
-                logger.debug("Manager %r -> %s", manager_id, new_rec)
+            self._ready_managers[manager_id] = new_rec
+            self.connected_block_history.append(new_rec['block_id'])
+
+            interesting_managers.add(manager_id)
+
+            logger.info(
+                f"Registered manager {manager_id!r} (py{mgr_minor_py},"
+                f" {mgr_parsl_v}) and added to ready queue"
+            )
+            logger.debug("Manager %r -> %s", manager_id, new_rec)
 
             return
 
@@ -456,7 +456,7 @@ class Interchange:
         if mtype == 'result':
             # process this for task ID and forward to executor
             tid = msg['task_id']
-            logger.debug("Removing task %s from manager", tid)
+            logger.debug("Removing task %s from manager", tid, extra={"parsl.htex.task": tid})
             try:
                 m['tasks'].remove(tid)
             except Exception:
@@ -464,13 +464,14 @@ class Interchange:
                     'Ignoring exception removing task_id %s from manager'
                     ' task list %s',
                     tid,
-                    m['tasks']
+                    m['tasks'],
+                    extra={"parsl.htex.task": tid}
                 )
                 return
 
-            logger.debug('Sending result on results_outgoing')
+            logger.debug('Sending result on results_outgoing', extra={"parsl.htex.task": tid})
             self.results_outgoing.send(msg_b)
-            logger.debug('Sent result on results_outgoing')
+            logger.debug('Sent result on results_outgoing', extra={"parsl.htex.task": tid})
 
             # Result received, so manager now has idle capacity
             interesting_managers.add(manager_id)
@@ -493,6 +494,7 @@ class Interchange:
             m['last_heartbeat'] = time.time()
             self.manager_sock.send_multipart([manager_id, PKL_HEARTBEAT_CODE])
 
+        # legacy draining handling. remove in ~6 months (ca Apr 2027)
         elif mtype == 'drain':
             m['draining'] = True
 
@@ -502,15 +504,16 @@ class Interchange:
         logger.debug("leaving worker message section")
 
     def expire_drained_managers(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
+        now = time.time()
+        for manager_id, m in list(self._ready_managers.items()):
+            if not m['draining'] and now >= m['drain_time']:
+                logger.info(f"Manager {manager_id!r} has reached its drain time - draining")
+                m['draining'] = True
 
-        for manager_id in list(interesting_managers):
-            # is it always true that a draining manager will be in interesting managers?
-            # i think so because it will have outstanding capacity?
-            m = self._ready_managers[manager_id]
             if m['draining'] and len(m['tasks']) == 0:
-                logger.info(f"Manager {manager_id!r} is drained - sending drained message to manager")
-                self.manager_sock.send_multipart([manager_id, PKL_DRAINED_CODE])
-                interesting_managers.remove(manager_id)
+                logger.info(f"Manager {manager_id!r} is drained - telling manager to shutdown")
+                self.manager_sock.send_multipart([manager_id, PKL_SHUTDOWN_CODE])
+                interesting_managers.discard(manager_id)
                 self._ready_managers.pop(manager_id)
 
                 m['active'] = False
@@ -552,7 +555,8 @@ class Interchange:
                         tids = [t['task_id'] for t in tasks]
                         m['tasks'].extend(tids)
                         m['idle_since'] = None
-                        logger.debug("Sent tasks: %s to manager %r", tids, manager_id)
+                        for tid in tids:
+                            logger.debug("Sending task %s to manager %r", tid, manager_id, extra={"parsl.htex.task": tid})
                         # recompute real_capacity after sending tasks
                         real_capacity -= task_count
                         if real_capacity > 0:
@@ -576,8 +580,9 @@ class Interchange:
                 m['active'] = False
                 self._send_monitoring_info(monitoring_radio, m)
 
-            logger.warning(f"Cancelling htex tasks {m['tasks']} on removed manager")
+            logger.warning("Cancelling htex tasks on removed manager")
             for tid in m['tasks']:
+                logger.warning(f"Cancelling htex task {tid} on removed manager", extra={"parsl.htex.task": tid})
                 try:
                     raise ManagerLost(manager_id, m['hostname'])
                 except Exception:
