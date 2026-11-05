@@ -81,6 +81,14 @@
             "email": "becker.mr@gmail.com"
         }
     ],
+    "contributor": [
+        {
+            "@type": "Person",
+            "givenName": "Rutuja",
+            "familyName": "Nikumb",
+            "email": "rutuja.r.nikumb@gmail.com"
+        }
+    ],
     "softwareRequirements": [
         {
             "@type": "SoftwareApplication",
