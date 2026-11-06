@@ -2,7 +2,7 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.executors import WorkQueueExecutor
+from parsl.executors import EnsembleExecutor, WorkQueueExecutor
 from parsl.executors.errors import InvalidResourceSpecification
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
 from parsl.executors.threads import ThreadPoolExecutor
@@ -31,7 +31,8 @@ def test_resource(n=2):
         assert (
             isinstance(executor, HighThroughputExecutor) or
             isinstance(executor, WorkQueueExecutor) or
-            isinstance(executor, ThreadPoolExecutor))
+            isinstance(executor, ThreadPoolExecutor) or
+            isinstance(executor, EnsembleExecutor))
 
     # Specify resources with wrong types
     # 'cpus' is incorrect, should be 'cores'
@@ -43,4 +44,5 @@ def test_resource(n=2):
         assert (
             isinstance(executor, HighThroughputExecutor) or
             isinstance(executor, WorkQueueExecutor) or
-            isinstance(executor, ThreadPoolExecutor))
+            isinstance(executor, ThreadPoolExecutor) or
+            isinstance(executor, EnsembleExecutor))
