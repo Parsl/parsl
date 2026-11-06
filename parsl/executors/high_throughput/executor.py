@@ -22,7 +22,7 @@ from parsl.executors.errors import (
     InvalidResourceSpecification,
     ScalingFailed,
 )
-from parsl.executors.high_throughput import zmq_pipes
+from parsl.executors.high_throughput import protocol, zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
@@ -523,47 +523,40 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
             else:
 
-                msg = pickle.loads(serialized_msg)
+                msg = protocol.from_wire(serialized_msg, protocol.INTERCHANGE_TO_EXECUTOR)
+                tid = msg.task_id
 
-                if msg['type'] == 'result':
+                if tid == -1 and msg.exception is not None:
+                    logger.warning("Executor shutting down due to exception from interchange")
+                    exception = deserialize(msg.exception)
+                    self.set_bad_state_and_fail_all(exception)
+                    break
+
+                task_fut = self.tasks.pop(tid)
+
+                if msg.result is not None:
+                    result = deserialize(msg.result)
+                    task_fut.set_result(result)
+
+                elif msg.exception is not None:
                     try:
-                        tid = msg['task_id']
-                    except Exception:
-                        raise BadMessage("Message received does not contain 'task_id' field")
-
-                    if tid == -1 and 'exception' in msg:
-                        logger.warning("Executor shutting down due to exception from interchange")
-                        exception = deserialize(msg['exception'])
-                        self.set_bad_state_and_fail_all(exception)
-                        break
-
-                    task_fut = self.tasks.pop(tid)
-
-                    if 'result' in msg:
-                        result = deserialize(msg['result'])
-                        task_fut.set_result(result)
-
-                    elif 'exception' in msg:
-                        try:
-                            s = deserialize(msg['exception'])
-                            # s should be a RemoteExceptionWrapper... so we can reraise it
-                            if isinstance(s, RemoteExceptionWrapper):
-                                try:
-                                    s.reraise()
-                                except Exception as e:
-                                    task_fut.set_exception(e)
-                            elif isinstance(s, Exception):
-                                task_fut.set_exception(s)
-                            else:
-                                raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                        except Exception as e:
-                            # TODO could be a proper wrapped exception?
-                            task_fut.set_exception(
-                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                    else:
-                        raise BadMessage("Message received is neither result or exception")
+                        s = deserialize(msg.exception)
+                        # s should be a RemoteExceptionWrapper... so we can reraise it
+                        if isinstance(s, RemoteExceptionWrapper):
+                            try:
+                                s.reraise()
+                            except Exception as e:
+                                task_fut.set_exception(e)
+                        elif isinstance(s, Exception):
+                            task_fut.set_exception(s)
+                        else:
+                            raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                    except Exception as e:
+                        # TODO could be a proper wrapped exception?
+                        task_fut.set_exception(
+                            DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                 else:
-                    raise BadMessage("Message received with unknown type {}".format(msg['type']))
+                    raise BadMessage("Message received is neither result or exception")
 
         logger.info("Closing result ZMQ pipe")
         self.incoming_q.close()
@@ -610,7 +603,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         stdin.close()
         logger.debug("Sent config object. Requesting worker ports")
         try:
-            self.worker_port = self.command_client.run("WORKER_BINDS", timeout_s=120)
+            self.worker_port = self.command_client.run(protocol.WorkerBinds(), timeout_s=120).port
         except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
@@ -646,7 +639,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         manager_id : str
             Manager id to be put on hold
         """
-        self.command_client.run(["HOLD_MANAGER", manager_id])
+        self.command_client.run(protocol.HoldManager(manager_id=manager_id))
         logger.debug("Sent hold request to manager: {}".format(manager_id))
 
     def outstanding(self) -> int:
@@ -659,17 +652,17 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         The dict contains info on manager(str:manager_id), block_id,
         worker_count, tasks(int), idle_durations(float), active(bool)
         """
-        return self.command_client.run("MANAGERS")
+        return self.command_client.run(protocol.Managers()).managers
 
     def connected_managers_packages(self) -> Dict[str, Dict[str, str]]:
         """Returns a dict mapping each manager ID to a dict of installed
         packages and their versions
         """
-        return self.command_client.run("MANAGERS_PACKAGES")
+        return self.command_client.run(protocol.ManagersPackages()).packages
 
     def connected_blocks(self) -> List[str]:
         """List of connected block ids"""
-        return self.command_client.run("CONNECTED_BLOCKS")
+        return self.command_client.run(protocol.ConnectedBlocks()).block_ids
 
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
@@ -782,7 +775,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         fut = HTEXFuture(task_id)
         self.tasks[task_id] = fut
 
-        msg = {"task_id": task_id, "context": context, "buffer": buffer}
+        msg = protocol.Task(task_id=task_id, context=typing.cast(protocol.TaskContext, context), buffer=buffer)
         self.outgoing_q.put(msg)
 
         return fut

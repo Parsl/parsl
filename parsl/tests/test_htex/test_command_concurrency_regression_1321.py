@@ -4,6 +4,7 @@ from threading import Event, Thread
 import pytest
 
 import parsl
+from parsl.executors.high_throughput import protocol
 from parsl.tests.configs.htex_local import fresh_config as local_config
 
 N_THREADS = 50
@@ -44,9 +45,9 @@ def blast(cc, e):
     target_end = time.monotonic() + DURATION_S
 
     while time.monotonic() < target_end:
-        cc.run("MANGERS_PACKAGES")
-        cc.run("CONNECTED_BLOCKS")
-        cc.run("WORKER_BINDS")
+        cc.run(protocol.ManagersPackages())
+        cc.run(protocol.ConnectedBlocks())
+        cc.run(protocol.WorkerBinds())
 
     # If any of the preceeding cc.run calls raises an exception, the thread
     # will not set its successful completion event.

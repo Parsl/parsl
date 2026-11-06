@@ -11,6 +11,7 @@ import pytest
 import zmq
 
 import parsl.executors.high_throughput.zmq_pipes as zmq_pipes
+from parsl.executors.high_throughput import protocol
 from parsl.executors.high_throughput.executor import DEFAULT_INTERCHANGE_LAUNCH_CMD
 from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 from parsl.version import VERSION as PARSL_VERSION
@@ -69,7 +70,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
     # responsive. if the interchange process didn't start enough to get the command
     # thread running, this will time out.
 
-    worker_port = command_client.run("WORKER_BINDS", timeout_s=120)
+    worker_port = command_client.run(protocol.WorkerBinds(), timeout_s=120).port
 
     # now we'll assume that if the interchange command thread is responding,
     # then the worker polling code is also running and that the interchange has
@@ -188,7 +189,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
     # responsive. if the interchange process didn't start enough to get the command
     # thread running, this will time out.
 
-    worker_port = command_client.run("WORKER_BINDS", timeout_s=120)
+    worker_port = command_client.run(protocol.WorkerBinds(), timeout_s=120).port
 
     # now we'll assume that if the interchange command thread is responding,
     # then the worker polling code is also running and that the interchange has
@@ -233,7 +234,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
     # Run a command against the interchange to confirm that the interchange has
     # not failed, this call will hang if the interchange exits early
     try_assert(
-        lambda: len(command_client.run("MANAGERS", max_retries=0, timeout_s=1)) == 1,
+        lambda: len(command_client.run(protocol.Managers(), max_retries=0, timeout_s=1).managers) == 1,
         "Interchange did not accept the version-mismatched registration",
         timeout_ms=5000,
     )

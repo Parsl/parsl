@@ -8,14 +8,16 @@ import platform
 import sys
 import threading
 import time
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 import zmq
 from sortedcontainers import SortedList
+from typing_extensions import assert_never
 
 from parsl import curvezmq
 from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.high_throughput import protocol
 from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
@@ -27,9 +29,6 @@ from parsl.monitoring.radios.zmq import ZMQRadioSender
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.version import VERSION as PARSL_VERSION
-
-PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
-PKL_SHUTDOWN_CODE = pickle.dumps((2 ** 32) - 2)
 
 logger = logging.getLogger("parsl.executors.high_throughput.interchange")
 
@@ -171,7 +170,7 @@ class Interchange:
 
         self._ready_managers: Dict[bytes, ManagerRecord] = {}
         self._logged_manager_count_token: object = None
-        self.connected_block_history: List[str] = []
+        self.connected_block_history: List[Optional[str]] = []
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -187,7 +186,7 @@ class Interchange:
 
         logger.info("Platform info: {}".format(self.current_platform))
 
-    def get_tasks(self, count: int) -> Sequence[dict]:
+    def get_tasks(self, count: int) -> List[protocol.Task]:
         """ Obtains a batch of tasks from the internal pending_task_queue
 
         Parameters
@@ -198,9 +197,9 @@ class Interchange:
         Returns
         -------
         List of upto count tasks. May return fewer than count down to an empty list
-            eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
+            eg. [Task(task_id=<x>, buffer=<buf>, ...), ...]
         """
-        tasks = []
+        tasks: List[protocol.Task] = []
         try:
             for _ in range(count):
                 *_, task = self.pending_task_queue.pop()
@@ -226,42 +225,53 @@ class Interchange:
         """ Command server to run async command to the interchange
         """
 
-        reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
+        if self.socks.get(self.command_channel) != zmq.POLLIN:
+            return
 
-        if self.socks.get(self.command_channel) == zmq.POLLIN:
-            logger.debug("entering command_server section")
+        logger.debug("entering command_server section")
+        command_b = self.command_channel.recv()
+        reply: protocol.Message
+        command: protocol.AnyCommand | protocol.ProtocolError
 
-            command_req = self.command_channel.recv_pyobj()
-            logger.debug("Received command request: {}".format(command_req))
-            if command_req == "CONNECTED_BLOCKS":
-                reply = self.connected_block_history
+        try:
+            command = protocol.from_wire(command_b, protocol.COMMANDS)
+        except protocol.ProtocolError as e:
+            command = e
+        else:
+            logger.debug("Received command request: {}".format(command))
 
-            elif command_req == "MANAGERS":
-                reply = []
+        match command:
+            case protocol.ConnectedBlocks():
+                reply = protocol.ConnectedBlocksReply(block_ids=self.connected_block_history)
+
+            case protocol.Managers():
+                managers = []
                 now = time.time()
                 for manager_id, m in self._ready_managers.items():
                     idle_duration = now - (m['idle_since'] or now)
-                    resp = {
-                        'manager': manager_id.decode('utf-8'),
-                        'block_id': m['block_id'],
-                        'worker_count': m['worker_count'],
-                        'tasks': len(m['tasks']),
-                        'idle_duration': idle_duration,
-                        'active': m['active'],
-                        'parsl_version': m['parsl_version'],
-                        'python_version': m['python_version'],
-                        'draining': m['draining']
-                    }
-                    reply.append(resp)
+                    resp = protocol.ManagerInfo(
+                        manager=manager_id.decode('utf-8'),
+                        block_id=m['block_id'],
+                        worker_count=m['worker_count'],
+                        tasks=len(m['tasks']),
+                        idle_duration=idle_duration,
+                        active=m['active'],
+                        parsl_version=m['parsl_version'],
+                        python_version=m['python_version'],
+                        draining=m['draining'],
+                    )
+                    managers.append(resp)
+                reply = protocol.ManagersReply(managers=managers)
 
-            elif command_req == "MANAGERS_PACKAGES":
-                reply = {}
+            case protocol.ManagersPackages():
+                packages = {}
                 for manager_id, m in self._ready_managers.items():
                     manager_id_str = manager_id.decode('utf-8')
-                    reply[manager_id_str] = m["packages"]
+                    packages[manager_id_str] = m["packages"]
+                reply = protocol.ManagersPackagesReply(packages=packages)
 
-            elif isinstance(command_req, list) and len(command_req) == 2 and command_req[0] == "HOLD_MANAGER":
-                manager_id = command_req[1].encode('utf-8')
+            case protocol.HoldManager(manager_id=manager_id_str):
+                manager_id = manager_id_str.encode('utf-8')
                 logger.info("Received HOLD_MANAGER for {!r}".format(manager_id))
                 if manager_id in self._ready_managers:
                     m = self._ready_managers[manager_id]
@@ -270,17 +280,20 @@ class Interchange:
                 else:
                     logger.warning("Worker to hold was not in ready managers list")
 
-                reply = None
+                reply = protocol.HoldManagerReply()
 
-            elif command_req == "WORKER_BINDS":
-                reply = self.worker_port
+            case protocol.WorkerBinds():
+                reply = protocol.WorkerBindsReply(port=self.worker_port)
 
-            else:
-                logger.error(f"Received unknown command: {command_req}")
-                reply = None
+            case protocol.ProtocolError():
+                logger.error(f"Received unknown command: {command}")
+                reply = protocol.CommandError()
 
-            logger.debug("Reply: {}".format(reply))
-            self.command_channel.send_pyobj(reply)
+            case _:
+                assert_never(command)
+
+        logger.debug("Reply: {}".format(reply))
+        self.command_channel.send(reply.to_wire())
 
     @wrap_with_logs
     def start(self) -> None:
@@ -335,11 +348,11 @@ class Interchange:
 
         if self.socks.get(self.task_incoming) == zmq.POLLIN:
             logger.debug("start task_incoming section")
-            msg = self.task_incoming.recv_pyobj()
+            msg = protocol.from_wire(self.task_incoming.recv(), protocol.EXECUTOR_TO_INTERCHANGE)
 
             # Process priority, higher number = lower priority
-            task_id = msg['task_id']
-            resource_spec = msg['context'].get('resource_spec', {})
+            task_id = msg.task_id
+            resource_spec = msg.context.get('resource_spec', {})
             priority = resource_spec.get('priority', float('inf'))
             queue_entry = (-priority, -task_id, msg)
 
@@ -362,8 +375,7 @@ class Interchange:
         msg_parts = self.manager_sock.recv_multipart()
         try:
             manager_id, msg_b = msg_parts
-            msg = pickle.loads(msg_b)
-            mtype = msg['type']
+            msg = protocol.from_wire(msg_b, protocol.MANAGER_TO_INTERCHANGE)
         except Exception as e:
             logger.warning(
                 'Failed to read manager message; ignoring message'
@@ -373,133 +385,126 @@ class Interchange:
             return
 
         logger.debug(
-            'Processing message type %r from manager %r', mtype, manager_id
+            'Processing message type %s from manager %r', type(msg).__name__, manager_id
         )
 
-        if mtype == 'connection_probe':
-            self.manager_sock.send_multipart([manager_id, b''])
-            return
-
-        elif mtype == 'registration':
-            ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
-            ix_parsl_v = self.current_platform['parsl_v']
-            mgr_python_v = msg['python_v']
-            mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
-            mgr_parsl_v = msg['parsl_v']
-
-            python_mismatch: bool = ix_minor_py != mgr_minor_py
-            parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
-            if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
-                kill_event.set()
-                vm_exc = VersionMismatch(
-                    f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
-                    f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
-                )
-                result_package = {
-                    'type': 'result',
-                    'task_id': -1,
-                    'exception': serialize_object(vm_exc),
-                }
-                pkl_package = pickle.dumps(result_package)
-                self.results_outgoing.send(pkl_package)
-                logger.error(
-                    'Manager has incompatible version info with the interchange;'
-                    ' sending failure reports and shutting down:'
-                    f'\n  Interchange: {vm_exc.interchange_version}'
-                    f'\n  Manager:     {vm_exc.manager_version}'
-                )
+        match msg:
+            case protocol.ConnectionProbe():
+                self.manager_sock.send_multipart([manager_id, protocol.ConnectionProbeReply().to_wire()])
                 return
 
-            # legacy draining handling. remove in ~6 months (ca Apr 2027)
-            drain_time = msg.get('drain_time', float('inf'))
+            case protocol.Registration():
+                ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
+                ix_parsl_v = self.current_platform['parsl_v']
+                mgr_python_v = msg.python_v
+                mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
+                mgr_parsl_v = msg.parsl_v
 
-            new_rec = ManagerRecord(
-                block_id=msg['block_id'],
-                start_time=msg['start_time'],
-                tasks=[],
-                worker_count=msg['worker_count'],
-                max_capacity=msg['max_capacity'],
-                active=True,
-                draining=False,
-                drain_time=drain_time,
-                last_heartbeat=time.time(),
-                idle_since=time.time(),
-                parsl_version=mgr_parsl_v,
-                python_version=mgr_python_v,
-                packages=msg['packages'],
-                hostname=msg['hostname'],
-                uid=msg['uid'],
-                cpu_count=msg['cpu_count'],
-                total_memory=msg['total_memory'],
-            )
+                python_mismatch: bool = ix_minor_py != mgr_minor_py
+                parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
+                if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
+                    kill_event.set()
+                    vm_exc = VersionMismatch(
+                        f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
+                        f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
+                    )
+                    result_package = protocol.Result(task_id=-1, exception=serialize_object(vm_exc))
+                    self.results_outgoing.send(result_package.to_wire())
+                    logger.error(
+                        'Manager has incompatible version info with the interchange;'
+                        ' sending failure reports and shutting down:'
+                        f'\n  Interchange: {vm_exc.interchange_version}'
+                        f'\n  Manager:     {vm_exc.manager_version}'
+                    )
+                    return
 
-            logger.info(f'Registration info for manager {manager_id!r}: {msg}')
-            self._send_monitoring_info(monitoring_radio, new_rec)
+                new_rec = ManagerRecord(
+                    block_id=msg.block_id,
+                    start_time=msg.start_time,
+                    tasks=[],
+                    worker_count=msg.worker_count,
+                    max_capacity=msg.max_capacity,
+                    active=True,
+                    draining=False,
+                    drain_time=msg.drain_time,
+                    last_heartbeat=time.time(),
+                    idle_since=time.time(),
+                    parsl_version=mgr_parsl_v,
+                    python_version=mgr_python_v,
+                    packages=msg.packages,
+                    hostname=msg.hostname,
+                    uid=msg.uid,
+                    cpu_count=msg.cpu_count,
+                    total_memory=msg.total_memory,
+                )
 
-            self._ready_managers[manager_id] = new_rec
-            self.connected_block_history.append(new_rec['block_id'])
+                logger.info(f'Registration info for manager {manager_id!r}: {msg}')
+                self._send_monitoring_info(monitoring_radio, new_rec)
 
-            interesting_managers.add(manager_id)
+                self._ready_managers[manager_id] = new_rec
+                self.connected_block_history.append(new_rec['block_id'])
 
-            logger.info(
-                f"Registered manager {manager_id!r} (py{mgr_minor_py},"
-                f" {mgr_parsl_v}) and added to ready queue"
-            )
-            logger.debug("Manager %r -> %s", manager_id, new_rec)
+                interesting_managers.add(manager_id)
 
-            return
+                logger.info(
+                    f"Registered manager {manager_id!r} (py{mgr_minor_py},"
+                    f" {mgr_parsl_v}) and added to ready queue"
+                )
+                logger.debug("Manager %r -> %s", manager_id, new_rec)
+
+                return
 
         if not (m := self._ready_managers.get(manager_id)):
             logger.warning(f"Ignoring message from unknown manager: {manager_id!r}")
             return
 
-        if mtype == 'result':
-            # process this for task ID and forward to executor
-            tid = msg['task_id']
-            logger.debug("Removing task %s from manager", tid, extra={"parsl.htex.task": tid})
-            try:
-                m['tasks'].remove(tid)
-            except Exception:
-                logger.exception(
-                    'Ignoring exception removing task_id %s from manager'
-                    ' task list %s',
-                    tid,
-                    m['tasks'],
-                    extra={"parsl.htex.task": tid}
-                )
-                return
+        match msg:
+            case protocol.Result(task_id=tid):
+                # process this for task ID and forward to executor
+                logger.debug("Removing task %s from manager", tid, extra={"parsl.htex.task": tid})
+                try:
+                    m['tasks'].remove(tid)
+                except Exception:
+                    logger.exception(
+                        'Ignoring exception removing task_id %s from manager'
+                        ' task list %s',
+                        tid,
+                        m['tasks'],
+                        extra={"parsl.htex.task": tid}
+                    )
+                    return
 
-            logger.debug('Sending result on results_outgoing', extra={"parsl.htex.task": tid})
-            self.results_outgoing.send(msg_b)
-            logger.debug('Sent result on results_outgoing', extra={"parsl.htex.task": tid})
+                logger.debug('Sending result on results_outgoing', extra={"parsl.htex.task": tid})
+                self.results_outgoing.send(msg_b)
+                logger.debug('Sent result on results_outgoing', extra={"parsl.htex.task": tid})
 
-            # Result received, so manager now has idle capacity
-            interesting_managers.add(manager_id)
+                # Result received, so manager now has idle capacity
+                interesting_managers.add(manager_id)
 
-            if len(m['tasks']) == 0 and m['idle_since'] is None:
-                m['idle_since'] = time.time()
+                if len(m['tasks']) == 0 and m['idle_since'] is None:
+                    m['idle_since'] = time.time()
 
-            self._send_monitoring_info(monitoring_radio, m)
+                self._send_monitoring_info(monitoring_radio, m)
 
-        elif mtype == 'monitoring':
-            # the monitoring code makes the assumption that no
-            # monitoring messages will be received if monitoring
-            # is not configured, and that monitoring_radio will only
-            # be None when monitoring is not configurated.
-            assert monitoring_radio is not None
+            case protocol.Monitoring(payload=payload):
+                # the monitoring code makes the assumption that no
+                # monitoring messages will be received if monitoring
+                # is not configured, and that monitoring_radio will only
+                # be None when monitoring is not configurated.
+                assert monitoring_radio is not None
 
-            monitoring_radio.send(msg['payload'])
+                monitoring_radio.send(pickle.loads(payload))
 
-        elif mtype == 'heartbeat':
-            m['last_heartbeat'] = time.time()
-            self.manager_sock.send_multipart([manager_id, PKL_HEARTBEAT_CODE])
+            case protocol.Heartbeat():
+                m['last_heartbeat'] = time.time()
+                self.manager_sock.send_multipart([manager_id, protocol.HeartbeatReply().to_wire()])
 
-        # legacy draining handling. remove in ~6 months (ca Apr 2027)
-        elif mtype == 'drain':
-            m['draining'] = True
+            # legacy draining handling. remove in ~6 months (ca Apr 2027)
+            case protocol.Drain():
+                m['draining'] = True
 
-        else:
-            logger.error(f"Unexpected message type received from manager: {mtype}")
+            case _:
+                assert_never(msg)
 
         logger.debug("leaving worker message section")
 
@@ -512,7 +517,7 @@ class Interchange:
 
             if m['draining'] and len(m['tasks']) == 0:
                 logger.info(f"Manager {manager_id!r} is drained - telling manager to shutdown")
-                self.manager_sock.send_multipart([manager_id, PKL_SHUTDOWN_CODE])
+                self.manager_sock.send_multipart([manager_id, protocol.Shutdown().to_wire()])
                 interesting_managers.discard(manager_id)
                 self._ready_managers.pop(manager_id)
 
@@ -549,10 +554,10 @@ class Interchange:
                 if real_capacity and m["active"] and not m["draining"]:
                     tasks = self.get_tasks(real_capacity)
                     if tasks:
-                        self.manager_sock.send_multipart([manager_id, pickle.dumps(tasks)])
+                        self.manager_sock.send_multipart([manager_id, protocol.Tasks(tasks=tasks).to_wire()])
                         task_count = len(tasks)
                         self.count += task_count
-                        tids = [t['task_id'] for t in tasks]
+                        tids = [t.task_id for t in tasks]
                         m['tasks'].extend(tids)
                         m['idle_since'] = None
                         for tid in tids:
@@ -586,9 +591,10 @@ class Interchange:
                 try:
                     raise ManagerLost(manager_id, m['hostname'])
                 except Exception:
-                    result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
-                    pkl_package = pickle.dumps(result_package)
-                    self.results_outgoing.send(pkl_package)
+                    result_package = protocol.Result(
+                        task_id=tid, exception=serialize_object(RemoteExceptionWrapper(*sys.exc_info()))
+                    )
+                    self.results_outgoing.send(result_package.to_wire())
             logger.warning("Sent failure reports, unregistering manager")
             self._ready_managers.pop(manager_id, 'None')
             if manager_id in interesting_managers:

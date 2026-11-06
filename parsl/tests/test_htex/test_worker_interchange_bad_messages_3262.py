@@ -4,6 +4,7 @@ import zmq
 import parsl
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.executors.high_throughput import protocol
 from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
 
@@ -61,7 +62,7 @@ def test_bad_messages(try_assert, msg):
         # channel, and then check that the interchange is still alive enough
         # that we can scale out a block and run a task.
 
-        worker_port = htex.command_client.run("WORKER_BINDS")
+        worker_port = htex.command_client.run(protocol.WorkerBinds()).port
 
         context = zmq.Context()
         channel_timeout = 10000  # in milliseconds

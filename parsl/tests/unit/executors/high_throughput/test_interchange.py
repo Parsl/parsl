@@ -3,19 +3,20 @@ import pickle
 import threading
 import time
 import uuid
-from typing import cast
+from typing import TypeVar, cast
 from unittest import mock
 
+import msgspec
 import pytest
 import zmq
 
 from parsl import curvezmq
-from parsl.executors.high_throughput.interchange import (
-    PKL_SHUTDOWN_CODE,
-    Interchange,
-)
+from parsl.executors.high_throughput import protocol
+from parsl.executors.high_throughput.interchange import Interchange
 from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 from parsl.version import VERSION as PARSL_VERSION
+
+R = TypeVar("R", bound=protocol.Message)
 
 
 @pytest.fixture
@@ -44,35 +45,54 @@ def manager_id() -> bytes:
     return f"manager-{uuid.uuid4()}".encode()
 
 
-def send_from_manager(ix: Interchange, manager_id: bytes, msg: dict) -> None:
+def send_bytes_from_manager(ix: Interchange, manager_id: bytes, data: bytes) -> None:
     ix.socks = {ix.manager_sock: zmq.POLLIN}
     mock_sock = cast(mock.MagicMock, ix.manager_sock)
-    mock_sock.recv_multipart.return_value = [manager_id, pickle.dumps(msg)]
+    mock_sock.recv_multipart.return_value = [manager_id, data]
     ix.process_manager_socket_message(set(), None, threading.Event())
 
 
-def registration_msg(ix: Interchange, **kw) -> dict:
-    return {'type': 'registration',
-            'parsl_v': PARSL_VERSION,
-            'python_v': ix.current_platform['python_v'],
-            'worker_count': 1,
-            'uid': 'testuid',
-            'block_id': '0',
-            'start_time': time.time(),
-            'prefetch_capacity': 0,
-            'max_capacity': 1,
-            'packages': {},
-            'os': 'testos',
-            'hostname': 'testhost',
-            'dir': '/test/dir',
-            'cpu_count': 1,
-            'total_memory': 1,
-            **kw}
+def send_from_manager(ix: Interchange, manager_id: bytes, msg: protocol.Message) -> None:
+    send_bytes_from_manager(ix, manager_id, msg.to_wire())
+
+
+def send_command_bytes(ix: Interchange, data: bytes) -> bytes:
+    ix.socks = {ix.command_channel: zmq.POLLIN}
+    mock_sock = cast(mock.MagicMock, ix.command_channel)
+    mock_sock.recv.return_value = data
+    mock_sock.send.reset_mock()
+    ix.process_command(None)
+    (reply,), _ = mock_sock.send.call_args
+    return reply
+
+
+def send_command(ix: Interchange, command: protocol.Command[R]) -> R:
+    return protocol.from_wire(send_command_bytes(ix, command.to_wire()), command.reply_channel)
+
+
+def registration_msg(ix: Interchange, **kw) -> protocol.Registration:
+    return protocol.Registration(**{
+        'parsl_v': PARSL_VERSION,
+        'python_v': ix.current_platform['python_v'],
+        'worker_count': 1,
+        'uid': 'testuid',
+        'block_id': '0',
+        'start_time': time.time(),
+        'prefetch_capacity': 0,
+        'max_capacity': 1,
+        'packages': {},
+        'os': 'testos',
+        'hostname': 'testhost',
+        'dir': '/test/dir',
+        'cpu_count': 1,
+        'total_memory': 1,
+        **kw})
 
 
 def shutdown_sent(ix: Interchange, manager_id: bytes) -> bool:
     mock_sock = cast(mock.MagicMock, ix.manager_sock)
-    return mock.call([manager_id, PKL_SHUTDOWN_CODE]) in mock_sock.send_multipart.call_args_list
+    call_args = [manager_id, protocol.Shutdown().to_wire()]
+    return mock.call(call_args) in mock_sock.send_multipart.call_args_list
 
 
 @pytest.mark.local
@@ -114,7 +134,7 @@ def test_draining_manager_shut_down_after_last_result(ix, manager_id):
     assert ix._ready_managers[manager_id]['draining']
     assert not shutdown_sent(ix, manager_id)
 
-    send_from_manager(ix, manager_id, {'type': 'result', 'task_id': 1, 'result': b''})
+    send_from_manager(ix, manager_id, protocol.Result(task_id=1, result=b''))
     ix.expire_drained_managers(set(), None)
 
     assert shutdown_sent(ix, manager_id)
@@ -124,16 +144,37 @@ def test_draining_manager_shut_down_after_last_result(ix, manager_id):
 @pytest.mark.local
 def test_legacy_manager_without_drain_time(ix, manager_id):
     # ensure new/post-drain_time interchanges work with old/pre-drain_time managers
-    reg_msg = registration_msg(ix)
-    assert 'drain_time' not in reg_msg, "test prerequisite"
-    send_from_manager(ix, manager_id, reg_msg)
+    reg_msg = {'type': 'registration', **msgspec.structs.asdict(registration_msg(ix))}
+    del reg_msg['drain_time']
+    send_bytes_from_manager(ix, manager_id, pickle.dumps(reg_msg))
     assert manager_id in ix._ready_managers, "manager should have been registered"
 
     ix.expire_drained_managers(set(), None)
     assert not shutdown_sent(ix, manager_id), "ix should wait for legacy manager to request shutdown"
 
-    send_from_manager(ix, manager_id, {'type': 'drain'})
+    send_from_manager(ix, manager_id, protocol.Drain())
     ix.expire_drained_managers(set(), None)
 
     assert shutdown_sent(ix, manager_id)
     assert manager_id not in ix._ready_managers
+
+
+@pytest.mark.local
+def test_commands(ix, manager_id):
+    ix.worker_port = 54321
+    send_from_manager(ix, manager_id, registration_msg(ix, block_id='7'))
+
+    assert send_command(ix, protocol.WorkerBinds()) == protocol.WorkerBindsReply(port=54321)
+    assert send_command(ix, protocol.ConnectedBlocks()) == protocol.ConnectedBlocksReply(block_ids=['7'])
+    managers = send_command(ix, protocol.Managers()).managers
+    assert [m['manager'] for m in managers] == [manager_id.decode()]
+    assert managers[0]['active']
+    assert send_command(ix, protocol.ManagersPackages()) == protocol.ManagersPackagesReply(packages={manager_id.decode(): {}})
+    assert send_command(ix, protocol.HoldManager(manager_id=manager_id.decode())) == protocol.HoldManagerReply()
+    assert not ix._ready_managers[manager_id]['active']
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("data", (pickle.dumps("MANGERS_PACKAGES"), b"not a pickle"))
+def test_unknown_command_answered(ix, data):
+    assert send_command_bytes(ix, data) == protocol.CommandError().to_wire() == pickle.dumps(None)
