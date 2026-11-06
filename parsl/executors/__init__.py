@@ -1,3 +1,4 @@
+from parsl.executors.el.executor import EnsembleExecutor
 from parsl.executors.flux.executor import FluxExecutor
 from parsl.executors.globus_compute import GlobusComputeExecutor
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
@@ -10,4 +11,5 @@ __all__ = ['ThreadPoolExecutor',
            'MPIExecutor',
            'WorkQueueExecutor',
            'FluxExecutor',
-           'GlobusComputeExecutor']
+           'GlobusComputeExecutor',
+           'EnsembleExecutor']
