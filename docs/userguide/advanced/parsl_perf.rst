@@ -73,3 +73,42 @@ For example:
     Cleaning up DFK
     The end
     
+
+JSON reports
+------------
+
+Add ``--json-output`` to save a JSON report alongside the normal terminal
+output::
+
+    python -m parsl.benchmark.perf --config parsl/tests/configs/local_threads.py --json-output
+
+By default, reports are saved in ``outputs/`` relative to the current working
+directory. Use ``--output-dir PATH`` to select another directory::
+
+    python -m parsl.benchmark.perf --config parsl/tests/configs/local_threads.py --json-output --output-dir results
+
+Directories are created automatically. Filenames have the form
+``parsl_perf_YYYYMMDDTHHMMSSffffffZ.json``, using the start time in UTC.
+The six ``f`` digits represent microseconds, and ``Z`` indicates UTC; for
+example, ``parsl_perf_20261104T153025123456Z.json``.
+Existing files are never overwritten. ``--output-dir`` has no effect unless
+``--json-output`` is supplied.
+
+Use ``--output-file NAME`` to replace the generated filename::
+
+    python -m parsl.benchmark.perf --config parsl/tests/configs/local_threads.py --json-output --output-dir results --output-file baseline.json
+
+This saves ``results/baseline.json``. ``--output-file`` requires
+``--json-output`` and accepts a filename only; use ``--output-dir`` for the
+directory. Existing files are never overwritten, including custom filenames.
+
+Each report contains ``schema_version``, timezone-aware ``started_at`` and
+``finished_at`` timestamps, Parsl and Python versions, platform information,
+and the configuration path and benchmark arguments. The ``iterations`` array
+contains each completed batch's iteration number, task count, submission time
+and throughput, total runtime, and completed-task throughput. Durations are in
+seconds and throughput is in tasks per second.
+
+The ``status`` field is ``completed``, ``failed``, or ``interrupted``. If a run
+fails or is interrupted with Ctrl+C, the report preserves completed batches and
+includes an ``error`` object with the exception type and message.
