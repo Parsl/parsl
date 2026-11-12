@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import hmac
 import logging
@@ -13,6 +15,7 @@ from parsl.monitoring.radios.base import (
     RadioConfig,
 )
 from parsl.monitoring.radios.udp_router import start_udp_receiver
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -30,7 +33,7 @@ class UDPRadio(RadioConfig, RepresentationMixin):
         assert self.port is not None, "self.port should have been initialized by create_receiver"
         return UDPRadioSender(self.address, self.port, self.hmac_key, self.hmac_digest)
 
-    def create_receiver(self, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+    def create_receiver(self, run_dir: str, resource_msgs: Queue[TaggedMonitoringMessage]) -> MonitoringRadioReceiver:
         # RFC 2104 section 2 recommends that the key length be at
         # least as long as the hash output (64 bytes in the case of SHA512).
         # RFC 2014 section 3 talks about periodic key refreshing. This key is
@@ -65,14 +68,14 @@ class UDPRadioSender(MonitoringRadioSender):
                                   socket.IPPROTO_UDP)  # UDP
         self.sock.settimeout(self.sock_timeout)
 
-    def send(self, message: object) -> None:
+    def send(self, message: TaggedMonitoringMessage) -> None:
         """ Sends a message to the UDP receiver
 
         Parameter
         ---------
 
-        message: object
-            Arbitrary pickle-able object that is to be sent
+        message: TaggedMonitoringMessage
+            The monitoring message to be sent
 
         Returns:
             None

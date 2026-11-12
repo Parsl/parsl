@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pickle
 from multiprocessing.queues import Queue
@@ -7,6 +9,7 @@ from parsl.monitoring.radios.base import (
     MonitoringRadioSender,
     RadioConfig,
 )
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -16,7 +19,7 @@ class HTEXRadio(RadioConfig, RepresentationMixin):
     def create_sender(self) -> MonitoringRadioSender:
         return HTEXRadioSender()
 
-    def create_receiver(self, *, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+    def create_receiver(self, *, run_dir: str, resource_msgs: Queue[TaggedMonitoringMessage]) -> MonitoringRadioReceiver:
         return HTEXRadioReceiver()
 
 
@@ -26,14 +29,14 @@ class HTEXRadioSender(MonitoringRadioSender):
         # there is nothing to initialize
         pass
 
-    def send(self, message: object) -> None:
+    def send(self, message: TaggedMonitoringMessage) -> None:
         """ Sends a message via HTEX result channel.
 
         Parameter
         ---------
 
-        message: object
-            Arbitrary pickle-able object that is to be sent
+        message: TaggedMonitoringMessage
+            The monitoring message to be sent
 
         Returns:
             None

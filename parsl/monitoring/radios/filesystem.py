@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import pickle
@@ -10,6 +12,7 @@ from parsl.monitoring.radios.base import (
     RadioConfig,
 )
 from parsl.monitoring.radios.filesystem_router import FilesystemRadioReceiver
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -36,7 +39,7 @@ class FilesystemRadio(RadioConfig, RepresentationMixin):
     def create_sender(self) -> MonitoringRadioSender:
         return FilesystemRadioSender(run_dir=self.run_dir)
 
-    def create_receiver(self, *, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+    def create_receiver(self, *, run_dir: str, resource_msgs: Queue[TaggedMonitoringMessage]) -> MonitoringRadioReceiver:
         self.run_dir = run_dir
         return FilesystemRadioReceiver(resource_msgs, run_dir)
 
@@ -51,7 +54,7 @@ class FilesystemRadioSender(MonitoringRadioSender):
         os.makedirs(self.tmp_path, exist_ok=True)
         os.makedirs(self.new_path, exist_ok=True)
 
-    def send(self, message: object) -> None:
+    def send(self, message: TaggedMonitoringMessage) -> None:
         logger.info("Sending a monitoring message via filesystem")
 
         unique_id = str(uuid.uuid4())

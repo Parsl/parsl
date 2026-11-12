@@ -7,7 +7,7 @@ import pathlib
 import queue
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+from typing import Any, Dict, List, Optional, Set, TypeVar
 
 import typeguard
 
@@ -318,7 +318,7 @@ class DatabaseManager:
         self.external_exit_event = exit_event
 
     def start(self,
-              resource_queue: mpq.Queue) -> None:
+              resource_queue: "mpq.Queue[TaggedMonitoringMessage]") -> None:
 
         self._kill_event = threading.Event()
 
@@ -487,12 +487,7 @@ class DatabaseManager:
                 if block_info_messages:
                     logger.debug(
                         "Got {} messages from block queue".format(len(block_info_messages)))
-                    # block_info_messages is possibly a nested list of dict (at different polling times)
-                    # Each dict refers to the info of a job/block at one polling time
-                    block_messages_to_insert: List[Any] = []
-                    for block_msg in block_info_messages:
-                        block_messages_to_insert.extend(block_msg)
-                    self._insert(table=BLOCK, messages=block_messages_to_insert)
+                    self._insert(table=BLOCK, messages=block_info_messages)
 
                 """
                 Worker task status messages
@@ -569,7 +564,7 @@ class DatabaseManager:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
     @wrap_with_logs
-    def _migrate_logs_to_internal(self, logs_queue: mpq.Queue, kill_event: threading.Event) -> None:
+    def _migrate_logs_to_internal(self, logs_queue: "mpq.Queue[TaggedMonitoringMessage]", kill_event: threading.Event) -> None:
         logger.info("Starting _migrate_logs_to_internal")
 
         while not kill_event.is_set() or not logs_queue.empty():
@@ -583,12 +578,12 @@ class DatabaseManager:
             else:
                 self._dispatch_to_internal(x)
 
-    def _dispatch_to_internal(self, x: Tuple) -> None:
+    def _dispatch_to_internal(self, x: TaggedMonitoringMessage) -> None:
         assert isinstance(x, tuple)
         assert len(x) == 2, "expected message tuple to have exactly two elements"
 
         if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
-            self.pending_priority_queue.put(cast(Any, x))
+            self.pending_priority_queue.put(x)
         elif x[0] == MessageType.RESOURCE_INFO:
             self.pending_resource_queue.put(x[1])
         elif x[0] == MessageType.WORKER_TASK_INFO:

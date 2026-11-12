@@ -1,10 +1,13 @@
-from multiprocessing import Queue
+from __future__ import annotations
+
+from multiprocessing.queues import Queue
 
 from parsl.monitoring.radios.base import (
     MonitoringRadioReceiver,
     MonitoringRadioSender,
     RadioConfig,
 )
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.utils import RepresentationMixin
 
 
@@ -15,10 +18,10 @@ class MultiprocessingQueueRadioSender(MonitoringRadioSender, RepresentationMixin
     access to a Queue shared with the monitoring database code (bypassing the
     monitoring router).
     """
-    def __init__(self, queue: Queue) -> None:
+    def __init__(self, queue: Queue[TaggedMonitoringMessage]) -> None:
         self.queue = queue
 
-    def send(self, message: object) -> None:
+    def send(self, message: TaggedMonitoringMessage) -> None:
         self.queue.put(message)
 
 
@@ -26,7 +29,7 @@ class MultiprocessingQueueRadio(RadioConfig):
     def create_sender(self) -> MonitoringRadioSender:
         return MultiprocessingQueueRadioSender(self._queue)
 
-    def create_receiver(self, *, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+    def create_receiver(self, *, run_dir: str, resource_msgs: Queue[TaggedMonitoringMessage]) -> MonitoringRadioReceiver:
         # This object is only for use with an in-process thread-pool so it
         # is fine to store a reference to the message queue directly.
         self._queue = resource_msgs
