@@ -614,16 +614,30 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             The status codes of the requsted jobs.
         """
 
-        all_states = []
+        job_ids = list(job_ids)
+        if not job_ids:
+            # describe_instances with no InstanceIds describes every instance
+            # in the account/region, not none of them.
+            return []
 
-        status = self.client.describe_instances(InstanceIds=list(job_ids))
-        for r in status['Reservations']:
-            for i in r['Instances']:
-                instance_id = i['InstanceId']
-                instance_state = translate_table.get(i['State']['Name'], JobState.UNKNOWN)
-                instance_status = JobStatus(instance_state)
-                self.resources[instance_id]['status'] = instance_status
-                all_states.extend([instance_status])
+        # Filter on instance-id rather than passing InstanceIds: the latter
+        # fails the whole call with InvalidInstanceID.NotFound once any one
+        # instance has aged out of EC2's view after termination.
+        found = {}
+        paginator = self.client.get_paginator('describe_instances')
+        for page in paginator.paginate(Filters=[{'Name': 'instance-id', 'Values': job_ids}]):
+            for r in page['Reservations']:
+                for i in r['Instances']:
+                    found[i['InstanceId']] = translate_table.get(i['State']['Name'], JobState.UNKNOWN)
+
+        # Callers zip the result with job_ids, so it must be in job_ids order.
+        all_states = []
+        for job_id in job_ids:
+            # An instance EC2 no longer reports has been terminated.
+            instance_status = JobStatus(found.get(job_id, JobState.COMPLETED))
+            if job_id in self.resources:
+                self.resources[job_id]['status'] = instance_status
+            all_states.append(instance_status)
 
         return all_states
 
