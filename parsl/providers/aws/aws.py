@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import shlex
+import sys
 import time
 from string import Template
 
@@ -9,7 +11,8 @@ from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.aws.template import template_string
 from parsl.providers.base import ExecutionProvider
-from parsl.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin, wtime_to_minutes
+from parsl.version import VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -44,16 +47,16 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     Parameters
     ----------
     image_id : str
-        Identification of the Amazon Machine Image (AMI).
+        Identification of the Amazon Machine Image (AMI). The user data script
+        supports apt-based (Debian, Ubuntu) and dnf-based (Amazon Linux 2023) images.
     worker_init : str
-        String to append to the Userdata script executed in the cloudinit phase of
-        instance initialization.
-    walltime : str
-        Walltime requested per block in HH:MM:SS.
+        Commands to run in the user data script executed in the cloud-init phase of
+        instance initialization. These run after Parsl has been installed into the
+        virtual environment ``/opt/parsl-venv`` (which is then first on ``PATH``, so
+        ``pip install`` here adds packages to that environment) and before the
+        worker is started.
     key_file : str
         Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'.
-    nodes_per_block : int
-        This is always 1 for ec2. Nodes to provision per block.
     profile : str
         Profile to be used from the standard aws config file ~/.aws/config.
     nodes_per_block : int
@@ -80,13 +83,25 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     state_file : str
         Path to the state file from a previous run to re-use.
     walltime : str
-        Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
+        Walltime requested per block in HH:MM:SS. Each instance schedules its own
+        shutdown (and so termination) this long after boot, unless ``linger`` is set.
     launcher : Launcher
         Launcher for this provider. With AWS, usually the default
         :class:`~parsl.launchers.SingleNodeLauncher` will be appropriate.
     linger : Bool
-        When set to True, the workers will not ``halt``. The user is responsible for shutting
-        down the node.
+        When set to True, instances will not shut down when the workers exit or when
+        the walltime expires. The user is responsible for shutting down the node.
+    parsl_requirement : str
+        pip requirement specifier used to install Parsl on each instance. The
+        HighThroughputExecutor only accepts workers running exactly the same Parsl
+        version, and the same Python major.minor version, as the submitting side.
+        Defaults to ``parsl==<this version of Parsl>``, or, when running a
+        development version of Parsl which is not published on PyPI, to the
+        current Parsl master branch on GitHub. Set this to install another release,
+        a fork or a wheel URL. The instance installs the ``python3.X`` matching the
+        submitting side if its package manager offers it, and otherwise the
+        image's default ``python3``; for example, Ubuntu 24.04 offers only Python 3.12,
+        and Amazon Linux 2023 offers 3.11 and 3.12 in addition to its default 3.9.
     """
 
     def __init__(self,
@@ -110,7 +125,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  state_file=None,
                  walltime="01:00:00",
                  linger=False,
-                 launcher=SingleNodeLauncher()):
+                 launcher=SingleNodeLauncher(),
+                 parsl_requirement=None):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
 
@@ -136,6 +152,15 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.walltime = walltime
         self.launcher = launcher
         self.linger = linger
+        if parsl_requirement is None:
+            if 'dev' in VERSION:
+                parsl_requirement = 'parsl @ https://github.com/Parsl/parsl/archive/refs/heads/master.tar.gz'
+                logger.warning("Parsl %s is a development version which is not on PyPI, so "
+                               "instances will install Parsl from the GitHub master branch. "
+                               "Set parsl_requirement to control this.", VERSION)
+            else:
+                parsl_requirement = 'parsl=={}'.format(VERSION)
+        self.parsl_requirement = parsl_requirement
         self.resources = {}
         self.script_dir = None
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
@@ -453,6 +478,18 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def xstr(self, s):
         return '' if s is None else s
 
+    def _user_data(self, command, job_name):
+        """Render the user data script which installs Parsl and runs command on an instance."""
+        return Template(template_string).substitute(
+            jobname=job_name,
+            user_script=command,
+            linger=str(self.linger).lower(),
+            worker_init=self.worker_init,
+            walltime_minutes=wtime_to_minutes(self.walltime),
+            python_version='{}.{}'.format(*sys.version_info[:2]),
+            parsl_requirement=shlex.quote(self.parsl_requirement),
+        )
+
     def spin_up_instance(self, command, job_name):
         """Start an instance in the VPC in the first available subnet.
 
@@ -467,10 +504,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             Name associated with the instances.
         """
 
-        command = Template(template_string).substitute(jobname=job_name,
-                                                       user_script=command,
-                                                       linger=str(self.linger).lower(),
-                                                       worker_init=self.worker_init)
+        command = self._user_data(command, job_name)
         instance_type = self.instance_type
         ami_id = self.image_id
         total_instances = len(self.instances)
