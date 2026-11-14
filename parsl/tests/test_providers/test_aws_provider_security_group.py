@@ -32,6 +32,9 @@ def mock_session():
         vpc.id = vpc.vpc_id = 'vpc-0123'
         vpc.create_subnet.return_value.id = 'subnet-0123'
         vpc.create_security_group.return_value.id = 'sg-0123'
+        vpc.create_route_table.return_value.id = 'rtb-0123'
+        igw = session.resource.return_value.create_internet_gateway.return_value
+        igw.id = igw.internet_gateway_id = 'igw-0123'
         yield session_cls
 
 
