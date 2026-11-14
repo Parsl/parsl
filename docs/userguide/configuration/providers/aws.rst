@@ -104,6 +104,22 @@ and why. Teardown leaves these in place:
 
 Resources that no longer exist are skipped, so teardown can be re-run once the cause is removed.
 
+**Teardown at shutdown.** During :meth:`DataFlowKernel.cleanup <parsl.dataflow.dflow.DataFlowKernel.cleanup>`,
+Parsl first cancels the remaining blocks. It then shuts down each executor. At the end of its
+shutdown, the executor calls the provider's :meth:`~parsl.providers.base.ExecutionProvider.shutdown`
+hook. In ``AWSProvider``, that hook behaves as follows:
+
+* With ``teardown_on_shutdown=False`` (the default), it keeps the infrastructure. It logs the VPC ID,
+  the state file path, and how to remove the infrastructure.
+* With ``teardown_on_shutdown=True``, it calls ``teardown()``. If something is left in place, a warning
+  says so.
+* With ``linger=True``, it skips teardown, with a warning, because teardown would terminate the
+  lingering instances.
+
+Errors in the hook are logged and do not stop the rest of the shutdown. If the executor never
+started, the hook is not called, even though the constructor has already created the infrastructure.
+In that case, call ``teardown()`` yourself.
+
 AWS accounts allow five VPCs per region by default, so remove infrastructure you no longer use.
 
 
