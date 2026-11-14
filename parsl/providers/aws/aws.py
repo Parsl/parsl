@@ -35,11 +35,12 @@ translate_table = {
 class AWSProvider(ExecutionProvider, RepresentationMixin):
     """A provider for using Amazon Elastic Compute Cloud (EC2) resources.
 
-    One of 3 methods are required to authenticate: keyfile, profile or environment
-    variables. If neither keyfile or profile are set, the following environment
-    variables must be set: ``AWS_ACCESS_KEY_ID`` (the access key for your AWS account),
-    ``AWS_SECRET_ACCESS_KEY`` (the secret key for your AWS account), and (optionaly) the
-    ``AWS_SESSION_TOKEN`` (the session key for your AWS account).
+    Credentials are taken from ``key_file`` or ``profile`` if either is set. Otherwise,
+    boto3's default credential chain is used, which includes the ``AWS_PROFILE``,
+    ``AWS_ACCESS_KEY_ID``, ``AWS_SECRET_ACCESS_KEY`` and ``AWS_SESSION_TOKEN`` environment
+    variables, the shared credentials and config files (``~/.aws/credentials`` and
+    ``~/.aws/config``), and container or EC2 instance roles. A
+    :class:`~parsl.errors.ConfigurationError` is raised if no credentials can be found.
 
     Parameters
     ----------
@@ -140,11 +141,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.script_dir = None
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
 
-        env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
-        if profile is None and key_file is None and not env_specified:
-            raise ConfigurationError("Must specify either profile', 'key_file', or "
-                                     "'AWS_ACCESS_KEY_ID' and 'AWS_SECRET_ACCESS_KEY' environment variables.")
-
         try:
             self.initialize_boto_client()
         except Exception as e:
@@ -228,14 +224,11 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         to use the Session call to automatically pick up the keys for the profile from
         the user default keys file ~/.aws/config.
 
-        Finally, boto3 will look for the keys in environment variables:
-        AWS_ACCESS_KEY_ID: The access key for your AWS account.
-        AWS_SECRET_ACCESS_KEY: The secret key for your AWS account.
-        AWS_SESSION_TOKEN: The session key for your AWS account.
-        This is only needed when you are using temporary credentials.
-        The AWS_SECURITY_TOKEN environment variable can also be used,
-        but is only supported for backwards compatibility purposes.
-        AWS_SESSION_TOKEN is supported by multiple AWS SDKs besides python.
+        Finally, boto3's default credential chain is used, which looks at
+        environment variables (such as AWS_PROFILE, or AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN), the shared credentials and
+        config files, and container or EC2 instance roles. A ConfigurationError
+        is raised if no credentials are found.
         """
 
         session = None
@@ -268,8 +261,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 profile_name=self.profile, region_name=self.region
             )
         else:
-            logger.debug("EC2Provider '{}': Using environment variables to create session".format(self.label))
+            logger.debug("EC2Provider '{}': Using default credential chain to create session".format(self.label))
             session = boto3.session.Session(region_name=self.region)
+            if session.get_credentials() is None:
+                raise ConfigurationError("No AWS credentials found. Specify 'profile' or 'key_file', "
+                                         "or configure credentials so that boto3 can find them, for example "
+                                         "with the AWS_PROFILE or AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY "
+                                         "environment variables, ~/.aws/credentials, or an instance role.")
 
         return session
 
