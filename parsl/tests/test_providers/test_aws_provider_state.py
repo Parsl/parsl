@@ -12,6 +12,16 @@ from botocore.exceptions import ClientError  # noqa: E402
 from parsl.errors import ConfigurationError  # noqa: E402
 from parsl.providers import AWSProvider  # noqa: E402
 
+INFRA_ID = "parsl.aws.test"
+OWNERSHIP_TAGS = [{"Key": "parsl:provider", "Value": "AWSProvider"},
+                  {"Key": "parsl:infrastructure", "Value": INFRA_ID}]
+
+
+@pytest.fixture(autouse=True)
+def fixed_infrastructure_id():
+    with mock.patch.object(AWSProvider, "generate_aws_id", return_value=INFRA_ID):
+        yield
+
 
 def _configure_session(Session):
     """Make the mocked boto3 session able to run create_vpc()."""
@@ -30,6 +40,11 @@ def _configure_session(Session):
         "AvailabilityZones": [{"State": "available", "ZoneName": "us-east-2a"}]
     }
     client.get_paginator.return_value.paginate.return_value = [{"Reservations": []}]
+    # Everything created in the test is described with this provider's tags
+    for method, key in [("describe_vpcs", "Vpcs"), ("describe_security_groups", "SecurityGroups"),
+                        ("describe_internet_gateways", "InternetGateways"),
+                        ("describe_subnets", "Subnets"), ("describe_route_tables", "RouteTables")]:
+        getattr(client, method).return_value = {key: [{"Tags": OWNERSHIP_TAGS}]}
     return client, ec2, vpc
 
 
@@ -74,7 +89,42 @@ def test_missing_state_file_creates_and_records_infrastructure(tmp_path, caplog)
     assert state["snIDs"] == ["subnet-new"]
     assert state["igwID"] == "igw-new"
     assert state["rtbID"] == "rtb-new"
+    assert state["infrastructureID"] == INFRA_ID
     assert str(state_file) in caplog.text
+
+
+def _assert_tagged(create_call, resource_type):
+    [tag_spec] = create_call.kwargs["TagSpecifications"]
+    assert tag_spec["ResourceType"] == resource_type
+    for tag in OWNERSHIP_TAGS:
+        assert tag in tag_spec["Tags"]
+
+
+@pytest.mark.local
+def test_created_resources_carry_ownership_tags(tmp_path):
+    state_file = tmp_path / "state.json"
+
+    with mock.patch("parsl.providers.aws.aws.boto3.session.Session") as Session:
+        client, ec2, vpc = _configure_session(Session)
+        provider = _provider(state_file)
+
+    assert provider.infrastructure_id == INFRA_ID
+    _assert_tagged(ec2.create_vpc.call_args, "vpc")
+    _assert_tagged(ec2.create_internet_gateway.call_args, "internet-gateway")
+    _assert_tagged(vpc.create_route_table.call_args, "route-table")
+    _assert_tagged(vpc.create_subnet.call_args, "subnet")
+    _assert_tagged(vpc.create_security_group.call_args, "security-group")
+    # Tags are applied on creation, never afterwards with create_tags
+    ec2.create_tags.assert_not_called()
+    client.create_tags.assert_not_called()
+
+    # Instances are tagged through create_name_tag_spec() in spin_up_instance()
+    client.describe_instance_type_offerings.return_value = {
+        "InstanceTypeOfferings": [{"Location": "us-east-2a"}]}
+    client.describe_subnets.return_value = {
+        "Subnets": [{"SubnetId": "subnet-new", "AvailabilityZone": "us-east-2a"}]}
+    provider.spin_up_instance("true", "job")
+    _assert_tagged(ec2.create_instances.call_args, "instance")
 
 
 @pytest.mark.local

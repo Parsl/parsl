@@ -31,6 +31,20 @@ translate_table = {
     'stopped': JobState.COMPLETED,  # We shouldn't really see this state
 }
 
+# Tags applied to every EC2 resource created by AWSProvider. teardown() only
+# deletes resources tagged with the infrastructure ID recorded in the state file.
+PROVIDER_TAG_KEY = 'parsl:provider'
+INFRASTRUCTURE_TAG_KEY = 'parsl:infrastructure'
+
+# resource kind -> (describe method, ID list parameter, result key)
+_DESCRIBE_RESOURCE = {
+    'VPC': ('describe_vpcs', 'VpcIds', 'Vpcs'),
+    'security group': ('describe_security_groups', 'GroupIds', 'SecurityGroups'),
+    'internet gateway': ('describe_internet_gateways', 'InternetGatewayIds', 'InternetGateways'),
+    'subnet': ('describe_subnets', 'SubnetIds', 'Subnets'),
+    'route table': ('describe_route_tables', 'RouteTableIds', 'RouteTables'),
+}
+
 
 class AWSProvider(ExecutionProvider, RepresentationMixin):
     """A provider for using Amazon Elastic Compute Cloud (EC2) resources.
@@ -40,6 +54,12 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     variables must be set: ``AWS_ACCESS_KEY_ID`` (the access key for your AWS account),
     ``AWS_SECRET_ACCESS_KEY`` (the secret key for your AWS account), and (optionaly) the
     ``AWS_SESSION_TOKEN`` (the session key for your AWS account).
+
+    Every EC2 resource created by this provider (VPC, subnets, security group,
+    internet gateway, route table and instances) is tagged with
+    ``parsl:provider=AWSProvider`` and ``parsl:infrastructure=<infrastructure id>``,
+    where the infrastructure ID is recorded in the state file. :meth:`teardown`
+    only deletes resources carrying the matching ``parsl:infrastructure`` tag.
 
     Parameters
     ----------
@@ -83,6 +103,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         If the file exists, that infrastructure is re-used; otherwise new
         infrastructure is created and recorded there. A relative path, including the
         default ``awsproviderstate.json``, is relative to the current working directory.
+        The file is managed by the provider and should not be written by hand:
+        :meth:`teardown` will not delete resources which do not carry the
+        infrastructure ID it records, including infrastructure recorded by older
+        versions of Parsl, which did not tag resources.
     walltime : str
         Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
     launcher : Launcher
@@ -180,7 +204,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.error("Failed to create EC2 infrastructure: {}. "
                          "Removing partially created resources.".format(e))
             try:
-                self.teardown()
+                if not self.teardown():
+                    logger.error("Some partially created EC2 infrastructure was not removed; "
+                                 "see the warnings above")
             except Exception:
                 logger.exception("Failed to remove partially created EC2 infrastructure; "
                                  "these resources must be removed manually: VPC {}, internet gateway {}, "
@@ -202,6 +228,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.sn_ids = []
         self.internet_gateway = None
         self.route_table = None
+        self.infrastructure_id = None
 
     def read_state_file(self, state_file):
         """Read the state file, if it exists.
@@ -232,14 +259,17 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             vpc_id = state['vpcID']
             sg_id = state['sgID']
             sn_ids = state['snIDs']
-            # Not present in state files written by older versions of this provider;
-            # teardown() will discover them from the VPC if missing.
+            # Not present in state files written by older versions of this provider,
+            # which did not tag their resources; teardown() leaves those in place.
             internet_gateway = state.get('igwID')
             route_table = state.get('rtbID')
+            infrastructure_id = state.get('infrastructureID')
             if not (isinstance(vpc_id, str) and vpc_id and isinstance(sg_id, str) and sg_id):
                 raise ValueError("vpcID and sgID must be non-empty strings")
             if not (isinstance(sn_ids, list) and all(isinstance(sn, str) for sn in sn_ids)):
                 raise ValueError("snIDs must be a list of strings")
+            if not (infrastructure_id is None or isinstance(infrastructure_id, str)):
+                raise ValueError("infrastructureID must be a string")
         except FileNotFoundError:
             raise
         except Exception as e:
@@ -252,6 +282,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.sn_ids = sn_ids
         self.internet_gateway = internet_gateway
         self.route_table = route_table
+        self.infrastructure_id = infrastructure_id
         logger.debug("Done reading state from the local state file.")
 
     def write_state_file(self):
@@ -266,6 +297,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         state['snIDs'] = self.sn_ids
         state['igwID'] = self.internet_gateway
         state['rtbID'] = self.route_table
+        state['infrastructureID'] = self.infrastructure_id
         state['instances'] = self.instances
         state["instanceState"] = self.instance_states
         with open(self.state_file, 'w') as fh:
@@ -339,6 +371,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         """
 
         vpc_name = self.generate_aws_id()
+        # Set before anything is created, so that every resource is tagged with it.
+        self.infrastructure_id = vpc_name
 
         try:
             tag_spec = self.create_name_tag_spec('vpc', vpc_name)
@@ -360,7 +394,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         # Attach internet gateway so that our cluster can
         # talk to the outside internet
-        internet_gateway = self.ec2.create_internet_gateway()
+        internet_gateway = self.ec2.create_internet_gateway(
+            TagSpecifications=self.create_name_tag_spec('internet-gateway', vpc_name),
+        )
         self.internet_gateway = internet_gateway.id
         internet_gateway.attach_to_vpc(VpcId=vpc.vpc_id)  # Returns None
 
@@ -499,7 +535,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         internet_gateway : dict
             Representation of the internet gateway (created by create_vpc()).
         """
-        route_table = vpc.create_route_table()
+        route_table = vpc.create_route_table(
+            TagSpecifications=self.create_name_tag_spec('route-table', self.infrastructure_id),
+        )
         self.route_table = route_table.id
         route_table.create_route(
             DestinationCidrBlock='0.0.0.0/0', GatewayId=internet_gateway.internet_gateway_id
@@ -776,32 +814,169 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         return status_string
 
     def teardown(self):
-        """Teardown the EC2 infastructure.
+        """Teardown the EC2 infastructure created by this provider.
 
-        Terminate all EC2 instances in the VPC and wait for them to terminate, then
-        delete the security group, detach and delete the internet gateway, delete the
-        subnets, the route table and finally the VPC, and remove the state file.
+        Only resources which carry the ``parsl:infrastructure`` tag matching the
+        infrastructure ID in the state file are deleted:
 
+        1. Instances tagged with the infrastructure ID, or launched by this provider
+           object, are terminated, and teardown waits for them to terminate.
+        2. If any other instances remain in the VPC, they are left running and the
+           VPC and its resources are kept.
+        3. Otherwise the security group is deleted, the internet gateway detached
+           and deleted, then the subnets, the route table and finally the VPC are
+           deleted, and the state file is removed.
+
+        Resources which are not tagged as created by this provider, including all
+        infrastructure recorded by older versions of Parsl which did not tag
+        resources, are left in place with a warning and the state file is kept.
         Resources which no longer exist are skipped, so teardown can be re-run
-        (for example from the same state file) after a partial failure. If any
-        other error occurs, it is raised and the state file is kept.
+        after a partial failure. Any other EC2 error is raised and the state file
+        is kept.
 
         This is not called automatically when Parsl shuts down; call it explicitly
         once the provider is no longer needed.
+
+        Returns
+        -------
+        bool
+            True if all of the infrastructure was removed, False if some was left.
         """
 
         if not self.vpc_id:
             logger.info("No VPC recorded; nothing to tear down")
             self._remove_state_file()
-            return
+            return True
 
-        vpc_filter = [{'Name': 'vpc-id', 'Values': [self.vpc_id]}]
+        vpc_filter = {'Name': 'vpc-id', 'Values': [self.vpc_id]}
 
         # Instances must be fully terminated before the security group,
         # internet gateway and subnets can be deleted.
+        owned_queries = []
+        if self.infrastructure_id:
+            owned_queries.append([vpc_filter, {'Name': 'tag:' + INFRASTRUCTURE_TAG_KEY,
+                                               'Values': [self.infrastructure_id]}])
+        if self.instances:
+            owned_queries.append([{'Name': 'instance-id', 'Values': list(self.instances)}])
+        instance_ids = []
+        for filters in owned_queries:
+            for instance_id in self._live_instance_ids(filters):
+                if instance_id not in instance_ids:
+                    instance_ids.append(instance_id)
+        if instance_ids:
+            logger.info("Terminating instances: {}".format(instance_ids))
+            self.client.terminate_instances(InstanceIds=instance_ids)
+            self.client.get_waiter('instance_terminated').wait(InstanceIds=instance_ids)
+        self.instances = []
+
+        others = self._live_instance_ids([vpc_filter])
+        if others:
+            logger.warning("Not removing VPC {} or its resources: it contains instances which are not "
+                           "tagged {}={} as launched by this provider, and which have been left running: "
+                           "{}. Terminate them, then call teardown() again.".format(
+                               self.vpc_id, INFRASTRUCTURE_TAG_KEY, self.infrastructure_id, others))
+            return False
+
+        vpc_ownership = self._ownership('VPC', self.vpc_id)
+        if vpc_ownership == 'foreign' and not self.infrastructure_id:
+            logger.warning(
+                "Not removing EC2 infrastructure recorded in state file {}: the state file has no "
+                "infrastructure ID, so it was written by an older version of Parsl (which did not "
+                "tag the resources it created) or by hand, and the resources cannot be confirmed as "
+                "created by this provider. Left in place: VPC {}, security group {}, internet gateway "
+                "{}, route table {}, subnets {}. If they are no longer needed, delete them manually "
+                "(for example with the AWS console or CLI: the security group, then detach and delete "
+                "the internet gateway, then the subnets, the non-main route tables and the VPC), "
+                "then remove the state file.".format(
+                    os.path.abspath(self.state_file), self.vpc_id, self.sg_id,
+                    self.internet_gateway or 'unknown', self.route_table or 'unknown', self.sn_ids))
+            return False
+
+        if vpc_ownership == 'missing':
+            logger.info("VPC {} no longer exists".format(self.vpc_id))
+        elif vpc_ownership == 'foreign':
+            logger.warning(
+                "Not removing VPC {} or the resources recorded with it in state file {}: the VPC is not "
+                "tagged {}={}, so it was not created by this provider. Left in place: security group "
+                "{}, internet gateway {}, route table {}, subnets {}.".format(
+                    self.vpc_id, os.path.abspath(self.state_file), INFRASTRUCTURE_TAG_KEY,
+                    self.infrastructure_id, self.sg_id, self.internet_gateway, self.route_table,
+                    self.sn_ids))
+            return False
+        else:
+            if not self._delete_owned_vpc_resources():
+                return False
+            self._delete_if_exists("VPC " + self.vpc_id, self.client.delete_vpc, VpcId=self.vpc_id)
+
+        self.vpc_id = None
+        self.sg_id = None
+        self.internet_gateway = None
+        self.route_table = None
+        self.sn_ids = []
+        logger.info("EC2 infrastructure torn down")
+        self._remove_state_file()
+        return True
+
+    def _delete_owned_vpc_resources(self):
+        """Delete the resources inside the VPC which carry this provider's tag.
+
+        Returns False if any of them exist but are not tagged as created by this
+        provider, in which case the VPC cannot be deleted.
+        """
+        left = []
+
+        def remove(kind, resource_id, *deletes):
+            """Run deletes if the resource is owned; return False if it is left in place."""
+            ownership = self._ownership(kind, resource_id)
+            if ownership == 'foreign':
+                left.append("{} {}".format(kind, resource_id))
+                return False
+            if ownership == 'owned':
+                for description, func, kwargs in deletes:
+                    self._delete_if_exists(description, func, **kwargs)
+            return True
+
+        if self.sg_id and remove('security group', self.sg_id,
+                                 ("security group " + self.sg_id, self.client.delete_security_group,
+                                  {'GroupId': self.sg_id})):
+            self.sg_id = None
+
+        igw_id = self.internet_gateway
+        if igw_id and remove('internet gateway', igw_id,
+                             ("internet gateway {} attachment".format(igw_id),
+                              self.client.detach_internet_gateway,
+                              {'InternetGatewayId': igw_id, 'VpcId': self.vpc_id}),
+                             ("internet gateway " + igw_id, self.client.delete_internet_gateway,
+                              {'InternetGatewayId': igw_id})):
+            self.internet_gateway = None
+
+        # Deleting the subnets removes their route table associations,
+        # which must happen before the route table can be deleted.
+        for subnet in list(self.sn_ids):
+            if remove('subnet', subnet, ("subnet " + subnet, self.client.delete_subnet, {'SubnetId': subnet})):
+                self.sn_ids.remove(subnet)
+
+        # The VPC's main route table and default security group are deleted with the VPC.
+        rtb_id = self.route_table
+        if rtb_id and remove('route table', rtb_id,
+                             ("route table " + rtb_id, self.client.delete_route_table,
+                              {'RouteTableId': rtb_id})):
+            self.route_table = None
+
+        if left:
+            logger.warning("Not removing VPC {}: these resources recorded with it in state file {} are "
+                           "not tagged {}={}, so were not created by this provider, and have been left "
+                           "in place: {}".format(self.vpc_id, os.path.abspath(self.state_file),
+                                                 INFRASTRUCTURE_TAG_KEY, self.infrastructure_id,
+                                                 ", ".join(left)))
+            return False
+        return True
+
+    def _live_instance_ids(self, filters):
+        """Return the IDs of instances matching filters which are not terminated."""
         instance_ids = []
         paginator = self.client.get_paginator('describe_instances')
-        pages = paginator.paginate(Filters=vpc_filter + [{
+        pages = paginator.paginate(Filters=filters + [{
             'Name': 'instance-state-name',
             'Values': ['pending', 'running', 'shutting-down', 'stopping', 'stopped'],
         }])
@@ -809,54 +984,27 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             for reservation in page['Reservations']:
                 for instance in reservation['Instances']:
                     instance_ids.append(instance['InstanceId'])
-        if instance_ids:
-            logger.info("Terminating instances: {}".format(instance_ids))
-            self.client.terminate_instances(InstanceIds=instance_ids)
-            self.client.get_waiter('instance_terminated').wait(InstanceIds=instance_ids)
-        self.instances = []
+        return instance_ids
 
-        if self.sg_id:
-            self._delete_if_exists("security group " + self.sg_id,
-                                   self.client.delete_security_group, GroupId=self.sg_id)
-            self.sg_id = None
+    def _ownership(self, kind, resource_id):
+        """Check whether an EC2 resource carries this provider's ownership tag.
 
-        if self.internet_gateway:
-            igw_ids = [self.internet_gateway]
-        else:
-            igws = self.client.describe_internet_gateways(
-                Filters=[{'Name': 'attachment.vpc-id', 'Values': [self.vpc_id]}])
-            igw_ids = [igw['InternetGatewayId'] for igw in igws['InternetGateways']]
-        for igw_id in igw_ids:
-            self._delete_if_exists("internet gateway {} attachment".format(igw_id),
-                                   self.client.detach_internet_gateway,
-                                   InternetGatewayId=igw_id, VpcId=self.vpc_id)
-            self._delete_if_exists("internet gateway " + igw_id,
-                                   self.client.delete_internet_gateway, InternetGatewayId=igw_id)
-        self.internet_gateway = None
-
-        # Deleting the subnets removes their route table associations,
-        # which must happen before the route table can be deleted.
-        for subnet in list(self.sn_ids):
-            self._delete_if_exists("subnet " + subnet, self.client.delete_subnet, SubnetId=subnet)
-            self.sn_ids.remove(subnet)
-
-        if self.route_table:
-            rtb_ids = [self.route_table]
-        else:
-            # The main route table is deleted along with the VPC.
-            rtbs = self.client.describe_route_tables(Filters=vpc_filter)
-            rtb_ids = [rtb['RouteTableId'] for rtb in rtbs['RouteTables']
-                       if not any(a.get('Main') for a in rtb.get('Associations', []))]
-        for rtb_id in rtb_ids:
-            self._delete_if_exists("route table " + rtb_id,
-                                   self.client.delete_route_table, RouteTableId=rtb_id)
-        self.route_table = None
-
-        self._delete_if_exists("VPC " + self.vpc_id, self.client.delete_vpc, VpcId=self.vpc_id)
-        self.vpc_id = None
-
-        logger.info("EC2 infrastructure torn down")
-        self._remove_state_file()
+        Returns 'owned', 'foreign' (exists, but not tagged with this provider's
+        infrastructure ID) or 'missing' (does not exist).
+        """
+        method, id_param, result_key = _DESCRIBE_RESOURCE[kind]
+        try:
+            resources = getattr(self.client, method)(**{id_param: [resource_id]})[result_key]
+        except ClientError as e:
+            if e.response.get('Error', {}).get('Code', '').endswith('.NotFound'):
+                return 'missing'
+            raise
+        if not resources:
+            return 'missing'
+        tags = {tag['Key']: tag['Value'] for tag in resources[0].get('Tags', [])}
+        if self.infrastructure_id and tags.get(INFRASTRUCTURE_TAG_KEY) == self.infrastructure_id:
+            return 'owned'
+        return 'foreign'
 
     def _delete_if_exists(self, description, func, **kwargs):
         """Call an EC2 delete/detach function, ignoring resources which are already gone."""
@@ -891,6 +1039,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def create_name_tag_spec(self, resource_type, name):
         """Create a new tag specification for a resource name.
 
+        As well as the Name tag, this includes the ``parsl:provider`` tag and, once
+        the infrastructure ID is known, the ``parsl:infrastructure`` ownership tag.
+
         Parameters
         ----------
         resource_type : str
@@ -903,7 +1054,11 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         record
             A TagSpecifications record to be passed into the creation of a new AWS resource.
         """
-        return [{"ResourceType": resource_type, "Tags": [{'Key': 'Name', 'Value': name}]}]
+        tags = [{'Key': 'Name', 'Value': name},
+                {'Key': PROVIDER_TAG_KEY, 'Value': 'AWSProvider'}]
+        if self.infrastructure_id:
+            tags.append({'Key': INFRASTRUCTURE_TAG_KEY, 'Value': self.infrastructure_id})
+        return [{"ResourceType": resource_type, "Tags": tags}]
 
     @property
     def label(self):
