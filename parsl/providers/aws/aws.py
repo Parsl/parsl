@@ -1,8 +1,10 @@
+import ipaddress
 import json
 import logging
 import os
 import time
 from string import Template
+from typing import List, Optional, Sequence, Union
 
 from parsl.errors import ConfigurationError, OptionalModuleMissing
 from parsl.jobs.states import JobState, JobStatus
@@ -30,6 +32,39 @@ translate_table = {
     'stopping': JobState.COMPLETED,  # We shouldn't really see this state
     'stopped': JobState.COMPLETED,  # We shouldn't really see this state
 }
+
+VPC_CIDR = '10.0.0.0/16'
+
+
+def _parse_ssh_cidr(ssh_cidr: Optional[Union[str, Sequence[str]]]) -> List[str]:
+    """Validate and normalise the ``ssh_cidr`` AWSProvider parameter.
+
+    Returns a de-duplicated list of IPv4 CIDR strings, in the order given.
+    A bare address such as ``203.0.113.7`` is treated as ``203.0.113.7/32``.
+    """
+    if ssh_cidr is None:
+        return []
+    if isinstance(ssh_cidr, str):
+        ssh_cidr = [ssh_cidr]
+    if not isinstance(ssh_cidr, (list, tuple)):
+        raise ConfigurationError(
+            "ssh_cidr must be None, a CIDR string, or a list of CIDR strings, "
+            "not {!r}".format(ssh_cidr))
+
+    cidrs: List[str] = []
+    for c in ssh_cidr:
+        if not isinstance(c, str):
+            raise ConfigurationError("ssh_cidr entries must be strings, not {!r}".format(c))
+        try:
+            network = ipaddress.ip_network(c.strip(), strict=True)
+        except ValueError as e:
+            raise ConfigurationError("Invalid ssh_cidr entry {!r}: {}".format(c, e))
+        if not isinstance(network, ipaddress.IPv4Network):
+            # The VPC created by this provider has no IPv6 CIDR block.
+            raise ConfigurationError("ssh_cidr entry {!r} is not an IPv4 network".format(c))
+        if str(network) not in cidrs:
+            cidrs.append(str(network))
+    return cidrs
 
 
 class AWSProvider(ExecutionProvider, RepresentationMixin):
@@ -87,6 +122,21 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     linger : Bool
         When set to True, the workers will not ``halt``. The user is responsible for shutting
         down the node.
+    ssh_cidr : str or list of str
+        IPv4 CIDR block(s), e.g. ``'203.0.113.7/32'``, from which inbound SSH (TCP port 22)
+        and ICMP to the worker instances are allowed. Default is None, which opens no
+        inbound ports to addresses outside the VPC: workers do not need inbound access
+        from outside, because they connect out to the interchange. (ICMP "fragmentation
+        needed" is always accepted from anywhere, for path MTU discovery.)
+
+        Before this parameter existed, the security group created by this provider allowed
+        SSH and ICMP from anywhere (``0.0.0.0/0``). To keep SSH access to workers (for
+        example together with ``key_name``), set this to the address range you connect from.
+
+        This only affects a newly created security group. When infrastructure is re-used
+        from ``state_file``, the existing security group and its rules are left unchanged;
+        groups created by older versions of Parsl may still allow SSH from anywhere and
+        should be reviewed or recreated.
     """
 
     def __init__(self,
@@ -110,9 +160,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  state_file=None,
                  walltime="01:00:00",
                  linger=False,
-                 launcher=SingleNodeLauncher()):
+                 launcher=SingleNodeLauncher(),
+                 ssh_cidr=None):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
+
+        self.ssh_cidr = ssh_cidr
+        self._ssh_cidrs = _parse_ssh_cidr(ssh_cidr)
 
         self.image_id = image_id
         self._label = 'ec2'
@@ -166,6 +220,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 raise
             else:
                 self.write_state_file()
+        else:
+            logger.warning("Re-using security group %s from state file %s; its ingress rules "
+                           "are not modified (ssh_cidr is not applied to it)",
+                           self.sg_id, self.state_file)
 
     def initialize_boto_client(self):
         """Initialize the boto client."""
@@ -292,7 +350,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
             # We use a large VPC so that the cluster can get large
             vpc = self.ec2.create_vpc(
-                CidrBlock='10.0.0.0/16',
+                CidrBlock=VPC_CIDR,
                 AmazonProvidedIpv6CidrBlock=False,
                 TagSpecifications=tag_spec,
             )
@@ -352,11 +410,12 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def security_group(self, vpc, name):
         """Create and configure a new security group.
 
-        Allows all ICMP in, all TCP and UDP in within VPC.
+        Allows all TCP, UDP and ICMP in from within the VPC, and ICMP "fragmentation
+        needed" (type 3, code 4) from anywhere so that path MTU discovery works. If
+        ``ssh_cidr`` was given, also allows SSH (TCP port 22) and ICMP in from those CIDR
+        blocks. No other inbound traffic from outside the VPC is allowed.
 
-        This security group is very open. It allows all incoming ping requests on all
-        ports. It also allows all outgoing traffic on all ports. This can be limited by
-        changing the allowed port ranges.
+        Outbound traffic is not restricted.
 
         Parameters
         ----------
@@ -374,9 +433,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             TagSpecifications=tag_spec,
         )
 
-        ip_ranges = [{'CidrIp': '10.0.0.0/16'}]
+        ip_ranges = [{'CidrIp': VPC_CIDR}]
 
-        # Allows all ICMP in, all TCP and UDP in within VPC
+        # Allows all TCP, UDP and ICMP in within VPC
         in_permissions = [
             {
                 'IpProtocol': 'TCP',
@@ -392,18 +451,30 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 'IpProtocol': 'ICMP',
                 'FromPort': -1,
                 'ToPort': -1,
-                'IpRanges': [{
-                    'CidrIp': '0.0.0.0/0'
-                }],
-            }, {
+                # AWS rejects a duplicate rule, so skip ssh_cidr entries equal to the VPC
+                'IpRanges': ip_ranges + [{'CidrIp': c} for c in self._ssh_cidrs if c != VPC_CIDR],
+            }
+        ]
+
+        # Path MTU discovery: the VPC MTU is 9001 but traffic leaving through the
+        # internet gateway is limited to 1500, so workers must be able to receive
+        # ICMP "fragmentation needed" (type 3, code 4) from routers on the path to an
+        # off-VPC submit host. This rule admits no echo requests or other ICMP.
+        in_permissions.append({
+            'IpProtocol': 'ICMP',
+            'FromPort': 3,
+            'ToPort': 4,
+            'IpRanges': [{'CidrIp': '0.0.0.0/0'}],
+        })
+
+        # Optional SSH access from outside the VPC
+        if self._ssh_cidrs:
+            in_permissions.append({
                 'IpProtocol': 'TCP',
                 'FromPort': 22,
                 'ToPort': 22,
-                'IpRanges': [{
-                    'CidrIp': '0.0.0.0/0'
-                }],
-            }
-        ]
+                'IpRanges': [{'CidrIp': c} for c in self._ssh_cidrs],
+            })
 
         # Allows all TCP out, all TCP and UDP out within VPC
         out_permissions = [
