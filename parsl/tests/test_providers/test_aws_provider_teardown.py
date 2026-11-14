@@ -303,3 +303,11 @@ def test_state_file_round_trip(tmp_path):
     assert reloaded.internet_gateway == "igw-1"
     assert reloaded.route_table == "rtb-1"
     assert reloaded.infrastructure_id == INFRA_ID
+
+
+@pytest.mark.local
+def test_cancel_no_jobs_makes_no_ec2_call(tmp_path):
+    """Executors can scale in with an empty list; EC2 rejects an empty InstanceIds."""
+    provider = _make_provider(_write_state(tmp_path))
+    assert provider.cancel([]) == []
+    provider.client.terminate_instances.assert_not_called()

@@ -776,12 +776,17 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             Each entry in the list will contain False if the operation fails. Otherwise, the entry will be True.
         """
 
+        job_ids = list(job_ids)
+        if not job_ids:
+            # terminate_instances rejects an empty InstanceIds list.
+            return []
+
         if self.linger is True:
             logger.debug("Ignoring cancel requests due to linger mode")
             return [False for x in job_ids]
 
         try:
-            self.client.terminate_instances(InstanceIds=list(job_ids))
+            self.client.terminate_instances(InstanceIds=job_ids)
         except Exception as e:
             logger.error("Caught error while attempting to remove instances: {0}".format(job_ids))
             raise e
