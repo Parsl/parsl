@@ -60,7 +60,13 @@ class JobStatusPoller(Timer):
                 # code will cope with being asked to cancel more blocks
                 # than exist.
                 block_count = len(executor.status_facade)
-                executor.scale_in_facade(block_count)
+                try:
+                    executor.scale_in_facade(block_count)
+                except Exception:
+                    # Keep going: a failure here must not stop other
+                    # executors from being scaled in, or prevent the DFK
+                    # from going on to shut down the executors themselves.
+                    logger.exception(f"Failed to scale in executor {executor.label}")
 
             else:  # and bad_state_is_set
                 logger.warning(f"Not scaling in executor {executor.label} because it is in bad state")
