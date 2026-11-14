@@ -34,7 +34,7 @@ def clear_aws_env(monkeypatch):
 
 
 def _make_provider(state_file, **kwargs):
-    return AWSProvider(image_id="ami-1", key_name="key", state_file=state_file, **kwargs)
+    return AWSProvider(image_id="ami-1", key_name="key", region="us-east-2", state_file=state_file, **kwargs)
 
 
 @pytest.mark.local
