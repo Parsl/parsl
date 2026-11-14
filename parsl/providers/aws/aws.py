@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import os
 import shlex
 import sys
@@ -12,7 +13,7 @@ from parsl.launchers import SingleNodeLauncher
 from parsl.providers.aws.template import template_string
 from parsl.providers.base import ExecutionProvider
 from parsl.providers.errors import SubmitException
-from parsl.utils import RepresentationMixin, wtime_to_minutes
+from parsl.utils import RepresentationMixin
 from parsl.version import VERSION
 
 logger = logging.getLogger(__name__)
@@ -480,6 +481,15 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def xstr(self, s):
         return '' if s is None else s
 
+    def _walltime_minutes(self):
+        """Walltime in whole minutes for ``shutdown -h +N``, rounded up.
+
+        wtime_to_minutes drops the seconds, so a walltime under a minute would
+        become ``+0`` and shut the instance down immediately.
+        """
+        hours, mins, secs = (int(x) for x in self.walltime.split(':'))
+        return max(1, math.ceil((hours * 3600 + mins * 60 + secs) / 60))
+
     def _user_data(self, command, job_name):
         """Render the user data script which installs Parsl and runs command on an instance."""
         return Template(template_string).substitute(
@@ -487,7 +497,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             user_script=command,
             linger=str(self.linger).lower(),
             worker_init=self.worker_init,
-            walltime_minutes=wtime_to_minutes(self.walltime),
+            walltime_minutes=self._walltime_minutes(),
             python_version='{}.{}'.format(*sys.version_info[:2]),
             parsl_requirement=shlex.quote(self.parsl_requirement),
         )

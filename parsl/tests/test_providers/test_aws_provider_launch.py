@@ -240,3 +240,13 @@ def test_submit_instance_limit(make_provider):
     # instances which have finished do not count towards the limit
     p.resources[first]["status"] = JobStatus(JobState.COMPLETED)
     assert p.submit("process_worker_pool.py", 1) == "i-2"
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("walltime, minutes", [
+    ("00:00:30", 1), ("00:01:00", 1), ("00:01:01", 2), ("01:30:00", 90), ("00:00:00", 1),
+])
+def test_walltime_rounds_up_to_whole_minutes(make_provider, walltime, minutes):
+    """A sub-minute walltime must not become `shutdown -h +0` (immediate shutdown)."""
+    user_data = make_provider(walltime=walltime)._user_data("cmd", "job")
+    assert f"shutdown -h +{minutes}\n" in user_data
