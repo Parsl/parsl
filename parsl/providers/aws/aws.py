@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import boto3
-    from botocore.exceptions import ClientError
+    from botocore.exceptions import ClientError, ProfileNotFound
 
 except ImportError:
     _boto_enabled = False
@@ -29,6 +29,14 @@ translate_table = {
     'shutting-down': JobState.COMPLETED,  # (configuring),
     'stopping': JobState.COMPLETED,  # We shouldn't really see this state
     'stopped': JobState.COMPLETED,  # We shouldn't really see this state
+}
+
+# Keys accepted in a key_file, mapped to the corresponding boto3 Session arguments.
+# The boto3 argument names are accepted as well.
+_KEY_FILE_KEYS = {
+    'AWSAccessKeyId': 'aws_access_key_id',
+    'AWSSecretKey': 'aws_secret_access_key',
+    'AWSSessionToken': 'aws_session_token',
 }
 
 
@@ -52,7 +60,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     walltime : str
         Walltime requested per block in HH:MM:SS.
     key_file : str
-        Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'.
+        Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey', and
+        optionally 'AWSSessionToken'. The boto3 names 'aws_access_key_id',
+        'aws_secret_access_key' and 'aws_session_token' are also accepted.
     nodes_per_block : int
         This is always 1 for ec2. Nodes to provision per block.
     profile : str
@@ -218,7 +228,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         """Create a session.
 
         First we look in self.key_file for a path to a json file with the
-        credentials. The key file should have 'AWSAccessKeyId' and 'AWSSecretKey'.
+        credentials. The key file should have 'AWSAccessKeyId' and 'AWSSecretKey',
+        and optionally 'AWSSessionToken' (or the equivalent boto3 argument names).
 
         Next we look at self.profile for a profile name and try
         to use the Session call to automatically pick up the keys for the profile from
@@ -253,13 +264,22 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 )
                 raise e
 
+            accepted = list(_KEY_FILE_KEYS) + list(_KEY_FILE_KEYS.values())
+            if not isinstance(creds, dict) or not set(creds) <= set(accepted):
+                raise ConfigurationError("Credential file {} must be a JSON object containing only "
+                                         "the keys: {}".format(credfile, ", ".join(accepted)))
+            creds = {_KEY_FILE_KEYS.get(k, k): v for k, v in creds.items()}
+
             logger.debug("EC2Provider '{}': Using credential file to create session".format(self.label))
             session = boto3.session.Session(region_name=self.region, **creds)
         elif self.profile is not None:
             logger.debug("EC2Provider '{}': Using profile name to create session".format(self.label))
-            session = boto3.session.Session(
-                profile_name=self.profile, region_name=self.region
-            )
+            try:
+                session = boto3.session.Session(
+                    profile_name=self.profile, region_name=self.region
+                )
+            except ProfileNotFound as e:
+                raise ConfigurationError("AWS profile '{}' not found: {}".format(self.profile, e)) from e
         else:
             logger.debug("EC2Provider '{}': Using default credential chain to create session".format(self.label))
             session = boto3.session.Session(region_name=self.region)

@@ -64,3 +64,62 @@ def test_explicit_profile(state_file):
         _make_provider(state_file, profile="myprofile")
 
     mock_session.assert_called_once_with(profile_name="myprofile", region_name="us-east-2")
+
+
+def _write_key_file(tmp_path, creds):
+    path = tmp_path / "creds.json"
+    path.write_text(json.dumps(creds))
+    return str(path)
+
+
+@pytest.mark.local
+def test_key_file_documented_keys(state_file, tmp_path):
+    key_file = _write_key_file(tmp_path, {
+        "AWSAccessKeyId": "AKIA1",
+        "AWSSecretKey": "secret",
+        "AWSSessionToken": "token",
+    })
+    with mock.patch(_MOCK_SESSION) as mock_session:
+        _make_provider(state_file, key_file=key_file)
+
+    mock_session.assert_called_once_with(region_name="us-east-2",
+                                         aws_access_key_id="AKIA1",
+                                         aws_secret_access_key="secret",
+                                         aws_session_token="token")
+
+
+@pytest.mark.local
+def test_key_file_boto3_keys(state_file, tmp_path):
+    key_file = _write_key_file(tmp_path, {
+        "aws_access_key_id": "AKIA1",
+        "aws_secret_access_key": "secret",
+    })
+    with mock.patch(_MOCK_SESSION) as mock_session:
+        _make_provider(state_file, key_file=key_file)
+
+    mock_session.assert_called_once_with(region_name="us-east-2",
+                                         aws_access_key_id="AKIA1",
+                                         aws_secret_access_key="secret")
+
+
+@pytest.mark.local
+def test_key_file_unknown_key(state_file, tmp_path):
+    key_file = _write_key_file(tmp_path, {
+        "AWSAccessKeyId": "AKIA1",
+        "AWSSecretKey": "secret",
+        "Bogus": "x",
+    })
+    with mock.patch(_MOCK_SESSION) as mock_session:
+        with pytest.raises(ConfigurationError, match="AWSAccessKeyId"):
+            _make_provider(state_file, key_file=key_file)
+
+    mock_session.assert_not_called()
+
+
+@pytest.mark.local
+def test_missing_profile(state_file):
+    from botocore.exceptions import ProfileNotFound
+
+    with mock.patch(_MOCK_SESSION, side_effect=ProfileNotFound(profile="nosuchprofile")):
+        with pytest.raises(ConfigurationError, match="nosuchprofile"):
+            _make_provider(state_file, profile="nosuchprofile")
