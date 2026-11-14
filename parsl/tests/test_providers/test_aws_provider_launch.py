@@ -7,7 +7,9 @@ from unittest import mock
 
 import pytest
 
+from parsl.jobs.states import JobState, JobStatus
 from parsl.providers import AWSProvider
+from parsl.providers.errors import SubmitException
 
 pytest.importorskip("boto3")
 
@@ -23,10 +25,27 @@ def make_provider(tmp_path):
     state_file.write_text(json.dumps({"vpcID": "vpc-1", "sgID": "sg-1",
                                       "snIDs": ["subnet-1"], "instances": []}))
 
-    with mock.patch("parsl.providers.aws.aws.boto3.session.Session"):
+    with mock.patch("parsl.providers.aws.aws.boto3.session.Session") as session:
+        client = session.return_value.client.return_value
+        client.describe_instance_type_offerings.return_value = {
+            "InstanceTypeOfferings": [{"Location": "us-east-2a"}]}
+        client.describe_subnets.return_value = {
+            "Subnets": [{"SubnetId": "subnet-1", "AvailabilityZone": "us-east-2a"}]}
+
+        ec2 = session.return_value.resource.return_value
+        launched = []
+
+        def create_instances(**kwargs):
+            instance_id = "i-{}".format(len(launched))
+            launched.append(instance_id)
+            return [mock.Mock(id=instance_id, instance_id=instance_id, state={"Name": "pending"})]
+        ec2.create_instances.side_effect = create_instances
+
         def make(**kwargs):
             kwargs.setdefault("key_name", None)
             return AWSProvider("ami-1", profile="p", state_file=str(state_file), **kwargs)
+        make.client = client
+        make.ec2 = ec2
         yield make
 
 
@@ -152,3 +171,72 @@ def test_user_data_linger(tmp_path, make_provider):
     log = run_user_data(tmp_path, make_provider(linger=True), "process_worker_pool.py")
     assert "process_worker_pool.py" in log
     assert not [line for line in log if line.startswith("shutdown")]
+
+
+@pytest.mark.local
+def test_create_instances_defaults(make_provider):
+    p = make_provider()
+    assert p.submit("process_worker_pool.py", 1) == "i-0"
+
+    kwargs = make_provider.ec2.create_instances.call_args.kwargs
+    assert "KeyName" not in kwargs
+    assert "IamInstanceProfile" not in kwargs
+    assert "InstanceMarketOptions" not in kwargs
+    assert kwargs["SubnetId"] == "subnet-1"
+    assert kwargs["SecurityGroupIds"] == ["sg-1"]
+    assert kwargs["InstanceInitiatedShutdownBehavior"] == "terminate"
+    assert "process_worker_pool.py" in kwargs["UserData"]
+    assert "pip install" in kwargs["UserData"]
+
+
+@pytest.mark.local
+def test_create_instances_options(make_provider):
+    p = make_provider(key_name="k", iam_instance_profile_arn="arn:aws:iam::1:instance-profile/x",
+                      spot_max_bid=0.25)
+    p.submit("process_worker_pool.py", 1)
+
+    kwargs = make_provider.ec2.create_instances.call_args.kwargs
+    assert kwargs["KeyName"] == "k"
+    assert kwargs["IamInstanceProfile"] == {"Arn": "arn:aws:iam::1:instance-profile/x"}
+    assert kwargs["InstanceMarketOptions"]["MarketType"] == "spot"
+    assert kwargs["InstanceMarketOptions"]["SpotOptions"]["MaxPrice"] == "0.25"
+
+
+@pytest.mark.local
+def test_submit_raises_on_ec2_error(make_provider):
+    from botocore.exceptions import ClientError
+
+    make_provider.ec2.create_instances.side_effect = ClientError(
+        {"Error": {"Code": "InvalidAMIID.NotFound", "Message": "no such AMI"}}, "RunInstances")
+    with pytest.raises(SubmitException, match="no such AMI"):
+        make_provider().submit("process_worker_pool.py", 1)
+
+
+@pytest.mark.local
+def test_submit_raises_on_other_error(make_provider):
+    make_provider.client.describe_subnets.side_effect = RuntimeError("boom")
+    with pytest.raises(SubmitException, match="boom"):
+        make_provider().submit("process_worker_pool.py", 1)
+
+
+@pytest.mark.local
+def test_submit_raises_without_subnet(make_provider):
+    make_provider.client.describe_instance_type_offerings.return_value = {"InstanceTypeOfferings": []}
+    with pytest.raises(SubmitException, match="No subnet"):
+        make_provider().submit("process_worker_pool.py", 1)
+    make_provider.ec2.create_instances.assert_not_called()
+
+
+@pytest.mark.local
+def test_submit_instance_limit(make_provider):
+    p = make_provider(max_blocks=2)
+    first = p.submit("process_worker_pool.py", 1)
+    p.submit("process_worker_pool.py", 1)
+
+    with pytest.raises(SubmitException, match="instance limit"):
+        p.submit("process_worker_pool.py", 1)
+    assert make_provider.ec2.create_instances.call_count == 2
+
+    # instances which have finished do not count towards the limit
+    p.resources[first]["status"] = JobStatus(JobState.COMPLETED)
+    assert p.submit("process_worker_pool.py", 1) == "i-2"
