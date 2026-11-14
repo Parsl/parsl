@@ -68,5 +68,20 @@ Configure :class:`~parsl.providers.KubernetesProvider` by providing:
 2. The type of each container (e.g., base image, RAM, CPU)
 3. Disk availability (e.g., which volumes containers can access)
 
+Amazon Web Services
+-------------------
+
+**Provider**: :class:`~parsl.providers.AWSProvider`
+
+The AWS provider starts each block as an Amazon EC2 instance.
+It creates and re-uses its own VPC, installs Parsl on each instance, and shuts instances down
+when their workers exit or their walltime expires.
+
+Configure :class:`~parsl.providers.AWSProvider` by providing:
+
+1. Credentials and a region (e.g., an AWS profile)
+2. The machine for each block (e.g., AMI, instance type, Spot price)
+3. A network path from the instances to the Parsl script (see :ref:`label-aws`)
+
 
 .. [#mpi] Except for Providers running `multi-node Apps <../../apps/mpi_apps.html>`_
