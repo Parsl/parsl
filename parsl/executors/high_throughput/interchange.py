@@ -8,14 +8,16 @@ import platform
 import sys
 import threading
 import time
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 import zmq
 from sortedcontainers import SortedList
+from typing_extensions import assert_never
 
 from parsl import curvezmq
 from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.high_throughput import protocol as proto
 from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
@@ -27,9 +29,6 @@ from parsl.monitoring.radios.zmq import ZMQRadioSender
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.version import VERSION as PARSL_VERSION
-
-PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
-PKL_SHUTDOWN_CODE = pickle.dumps((2 ** 32) - 2)
 
 logger = logging.getLogger("parsl.executors.high_throughput.interchange")
 
@@ -171,7 +170,7 @@ class Interchange:
 
         self._ready_managers: Dict[bytes, ManagerRecord] = {}
         self._logged_manager_count_token: object = None
-        self.connected_block_history: List[str] = []
+        self.connected_block_history: List[Optional[str]] = []
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -187,7 +186,7 @@ class Interchange:
 
         logger.info("Platform info: {}".format(self.current_platform))
 
-    def get_tasks(self, count: int) -> Sequence[dict]:
+    def get_tasks(self, count: int) -> List[proto.Task]:
         """ Obtains a batch of tasks from the internal pending_task_queue
 
         Parameters
@@ -200,7 +199,7 @@ class Interchange:
         List of upto count tasks. May return fewer than count down to an empty list
             eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
         """
-        tasks = []
+        tasks: List[proto.Task] = []
         try:
             for _ in range(count):
                 *_, task = self.pending_task_queue.pop()
@@ -335,7 +334,7 @@ class Interchange:
 
         if self.socks.get(self.task_incoming) == zmq.POLLIN:
             logger.debug("start task_incoming section")
-            msg = self.task_incoming.recv_pyobj()
+            msg: proto.Task = self.task_incoming.recv_pyobj()
 
             # Process priority, higher number = lower priority
             task_id = msg['task_id']
@@ -362,8 +361,7 @@ class Interchange:
         msg_parts = self.manager_sock.recv_multipart()
         try:
             manager_id, msg_b = msg_parts
-            msg = pickle.loads(msg_b)
-            mtype = msg['type']
+            msg = proto.decode(msg_b, proto.MANAGER_TO_INTERCHANGE)
         except Exception as e:
             logger.warning(
                 'Failed to read manager message; ignoring message'
@@ -373,133 +371,126 @@ class Interchange:
             return
 
         logger.debug(
-            'Processing message type %r from manager %r', mtype, manager_id
+            'Processing message type %s from manager %r', type(msg).__name__, manager_id
         )
 
-        if mtype == 'connection_probe':
-            self.manager_sock.send_multipart([manager_id, b''])
-            return
-
-        elif mtype == 'registration':
-            ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
-            ix_parsl_v = self.current_platform['parsl_v']
-            mgr_python_v = msg['python_v']
-            mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
-            mgr_parsl_v = msg['parsl_v']
-
-            python_mismatch: bool = ix_minor_py != mgr_minor_py
-            parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
-            if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
-                kill_event.set()
-                vm_exc = VersionMismatch(
-                    f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
-                    f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
-                )
-                result_package = {
-                    'type': 'result',
-                    'task_id': -1,
-                    'exception': serialize_object(vm_exc),
-                }
-                pkl_package = pickle.dumps(result_package)
-                self.results_outgoing.send(pkl_package)
-                logger.error(
-                    'Manager has incompatible version info with the interchange;'
-                    ' sending failure reports and shutting down:'
-                    f'\n  Interchange: {vm_exc.interchange_version}'
-                    f'\n  Manager:     {vm_exc.manager_version}'
-                )
+        match msg:
+            case proto.ConnectionProbe():
+                self.manager_sock.send_multipart([manager_id, proto.ConnectionProbeReply().encode()])
                 return
 
-            # legacy draining handling. remove in ~6 months (ca Apr 2027)
-            drain_time = msg.get('drain_time', float('inf'))
+            case proto.Registration():
+                ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
+                ix_parsl_v = self.current_platform['parsl_v']
+                mgr_python_v = msg.python_v
+                mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
+                mgr_parsl_v = msg.parsl_v
 
-            new_rec = ManagerRecord(
-                block_id=msg['block_id'],
-                start_time=msg['start_time'],
-                tasks=[],
-                worker_count=msg['worker_count'],
-                max_capacity=msg['max_capacity'],
-                active=True,
-                draining=False,
-                drain_time=drain_time,
-                last_heartbeat=time.time(),
-                idle_since=time.time(),
-                parsl_version=mgr_parsl_v,
-                python_version=mgr_python_v,
-                packages=msg['packages'],
-                hostname=msg['hostname'],
-                uid=msg['uid'],
-                cpu_count=msg['cpu_count'],
-                total_memory=msg['total_memory'],
-            )
+                python_mismatch: bool = ix_minor_py != mgr_minor_py
+                parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
+                if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
+                    kill_event.set()
+                    vm_exc = VersionMismatch(
+                        f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
+                        f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
+                    )
+                    result_package = proto.InterchangeFailure(exception=serialize_object(vm_exc))
+                    self.results_outgoing.send(result_package.encode())
+                    logger.error(
+                        'Manager has incompatible version info with the interchange;'
+                        ' sending failure reports and shutting down:'
+                        f'\n  Interchange: {vm_exc.interchange_version}'
+                        f'\n  Manager:     {vm_exc.manager_version}'
+                    )
+                    return
 
-            logger.info(f'Registration info for manager {manager_id!r}: {msg}')
-            self._send_monitoring_info(monitoring_radio, new_rec)
+                new_rec = ManagerRecord(
+                    block_id=msg.block_id,
+                    start_time=msg.start_time,
+                    tasks=[],
+                    worker_count=msg.worker_count,
+                    max_capacity=msg.max_capacity,
+                    active=True,
+                    draining=False,
+                    drain_time=msg.drain_time,
+                    last_heartbeat=time.time(),
+                    idle_since=time.time(),
+                    parsl_version=mgr_parsl_v,
+                    python_version=mgr_python_v,
+                    packages=msg.packages,
+                    hostname=msg.hostname,
+                    uid=msg.uid,
+                    cpu_count=msg.cpu_count,
+                    total_memory=msg.total_memory,
+                )
 
-            self._ready_managers[manager_id] = new_rec
-            self.connected_block_history.append(new_rec['block_id'])
+                logger.info(f'Registration info for manager {manager_id!r}: {msg}')
+                self._send_monitoring_info(monitoring_radio, new_rec)
 
-            interesting_managers.add(manager_id)
+                self._ready_managers[manager_id] = new_rec
+                self.connected_block_history.append(new_rec['block_id'])
 
-            logger.info(
-                f"Registered manager {manager_id!r} (py{mgr_minor_py},"
-                f" {mgr_parsl_v}) and added to ready queue"
-            )
-            logger.debug("Manager %r -> %s", manager_id, new_rec)
+                interesting_managers.add(manager_id)
 
-            return
+                logger.info(
+                    f"Registered manager {manager_id!r} (py{mgr_minor_py},"
+                    f" {mgr_parsl_v}) and added to ready queue"
+                )
+                logger.debug("Manager %r -> %s", manager_id, new_rec)
+
+                return
 
         if not (m := self._ready_managers.get(manager_id)):
             logger.warning(f"Ignoring message from unknown manager: {manager_id!r}")
             return
 
-        if mtype == 'result':
-            # process this for task ID and forward to executor
-            tid = msg['task_id']
-            logger.debug("Removing task %s from manager", tid, extra={"parsl.htex.task": tid})
-            try:
-                m['tasks'].remove(tid)
-            except Exception:
-                logger.exception(
-                    'Ignoring exception removing task_id %s from manager'
-                    ' task list %s',
-                    tid,
-                    m['tasks'],
-                    extra={"parsl.htex.task": tid}
-                )
-                return
+        match msg:
+            case proto.Result(task_id=tid):
+                # process this for task ID and forward to executor
+                logger.debug("Removing task %s from manager", tid, extra={"parsl.htex.task": tid})
+                try:
+                    m['tasks'].remove(tid)
+                except Exception:
+                    logger.exception(
+                        'Ignoring exception removing task_id %s from manager'
+                        ' task list %s',
+                        tid,
+                        m['tasks'],
+                        extra={"parsl.htex.task": tid}
+                    )
+                    return
 
-            logger.debug('Sending result on results_outgoing', extra={"parsl.htex.task": tid})
-            self.results_outgoing.send(msg_b)
-            logger.debug('Sent result on results_outgoing', extra={"parsl.htex.task": tid})
+                logger.debug('Sending result on results_outgoing', extra={"parsl.htex.task": tid})
+                self.results_outgoing.send(msg_b)
+                logger.debug('Sent result on results_outgoing', extra={"parsl.htex.task": tid})
 
-            # Result received, so manager now has idle capacity
-            interesting_managers.add(manager_id)
+                # Result received, so manager now has idle capacity
+                interesting_managers.add(manager_id)
 
-            if len(m['tasks']) == 0 and m['idle_since'] is None:
-                m['idle_since'] = time.time()
+                if len(m['tasks']) == 0 and m['idle_since'] is None:
+                    m['idle_since'] = time.time()
 
-            self._send_monitoring_info(monitoring_radio, m)
+                self._send_monitoring_info(monitoring_radio, m)
 
-        elif mtype == 'monitoring':
-            # the monitoring code makes the assumption that no
-            # monitoring messages will be received if monitoring
-            # is not configured, and that monitoring_radio will only
-            # be None when monitoring is not configurated.
-            assert monitoring_radio is not None
+            case proto.Monitoring(payload=payload):
+                # the monitoring code makes the assumption that no
+                # monitoring messages will be received if monitoring
+                # is not configured, and that monitoring_radio will only
+                # be None when monitoring is not configurated.
+                assert monitoring_radio is not None
 
-            monitoring_radio.send(msg['payload'])
+                monitoring_radio.send(payload)
 
-        elif mtype == 'heartbeat':
-            m['last_heartbeat'] = time.time()
-            self.manager_sock.send_multipart([manager_id, PKL_HEARTBEAT_CODE])
+            case proto.Heartbeat():
+                m['last_heartbeat'] = time.time()
+                self.manager_sock.send_multipart([manager_id, proto.HeartbeatReply().encode()])
 
-        # legacy draining handling. remove in ~6 months (ca Apr 2027)
-        elif mtype == 'drain':
-            m['draining'] = True
+            # legacy draining handling. remove in ~6 months (ca Apr 2027)
+            case proto.Drain():
+                m['draining'] = True
 
-        else:
-            logger.error(f"Unexpected message type received from manager: {mtype}")
+            case _:
+                assert_never(msg)
 
         logger.debug("leaving worker message section")
 
@@ -512,7 +503,7 @@ class Interchange:
 
             if m['draining'] and len(m['tasks']) == 0:
                 logger.info(f"Manager {manager_id!r} is drained - telling manager to shutdown")
-                self.manager_sock.send_multipart([manager_id, PKL_SHUTDOWN_CODE])
+                self.manager_sock.send_multipart([manager_id, proto.Shutdown().encode()])
                 interesting_managers.discard(manager_id)
                 self._ready_managers.pop(manager_id)
 
@@ -549,7 +540,7 @@ class Interchange:
                 if real_capacity and m["active"] and not m["draining"]:
                     tasks = self.get_tasks(real_capacity)
                     if tasks:
-                        self.manager_sock.send_multipart([manager_id, pickle.dumps(tasks)])
+                        self.manager_sock.send_multipart([manager_id, proto.Tasks(tasks=tasks).encode()])
                         task_count = len(tasks)
                         self.count += task_count
                         tids = [t['task_id'] for t in tasks]
@@ -586,9 +577,10 @@ class Interchange:
                 try:
                     raise ManagerLost(manager_id, m['hostname'])
                 except Exception:
-                    result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
-                    pkl_package = pickle.dumps(result_package)
-                    self.results_outgoing.send(pkl_package)
+                    result_package = proto.Result(
+                        task_id=tid, exception=serialize_object(RemoteExceptionWrapper(*sys.exc_info()))
+                    )
+                    self.results_outgoing.send(result_package.encode())
             logger.warning("Sent failure reports, unregistering manager")
             self._ready_managers.pop(manager_id, 'None')
             if manager_id in interesting_managers:
