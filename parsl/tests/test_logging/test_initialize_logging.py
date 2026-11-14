@@ -6,7 +6,7 @@ import pytest
 
 import parsl
 from parsl.logconfigs.file import FileLogging
-from parsl.logconfigs.json import JSONLogging
+from parsl.logconfigs.json import JSONHandler, JSONLogging
 from parsl.logconfigs.noop import NoopLogging
 
 
@@ -78,3 +78,27 @@ def test_parsl_log_JSONLogging(tmpd_cwd):
         msgs2 = [p for p in parsed if p['msg'] == msg2]
         assert len(msgs2) == 1, "msg2 should appear once"
         assert msgs2[0]['parsl.somekey'] == "vv", "extra key should have been stored in record"
+
+
+@pytest.mark.local
+def test_JSONHandler_bad_record_does_not_raise(tmpd_cwd, capsys):
+    """A record which cannot be formatted is reported via handleError, like the
+    standard library handlers, rather than raised into the logging thread."""
+    handler = JSONHandler(tmpd_cwd / "bad.jsonlog")
+    logger = logging.getLogger("parsl.tests.json_bad_record")
+    logger.propagate = False  # keep pytest's capturing handler, which re-raises, out of it
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+    old_raise = logging.raiseExceptions
+    logging.raiseExceptions = True  # make handleError report to stderr
+    try:
+        logger.debug("pending tasks: %d", "not a number")
+        logger.debug("after the bad record")
+    finally:
+        logging.raiseExceptions = old_raise
+        logger.removeHandler(handler)
+        handler.close()
+
+    assert "--- Logging error ---" in capsys.readouterr().err
+    messages = [json.loads(line)["msg"] for line in (tmpd_cwd / "bad.jsonlog").read_text().splitlines()]
+    assert messages == ["after the bad record"]
