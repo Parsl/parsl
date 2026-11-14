@@ -178,26 +178,35 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.vpc_id = 0
         self.sg_id = 0
         self.sn_ids = []
+        self.internet_gateway = None
+        self.route_table = None
 
     def read_state_file(self, state_file):
         """Read the state file, if it exists.
 
         If this script has been run previously, resource IDs will have been written to a
         state file. On starting a run, a state file will be looked for before creating new
-        infrastructure. Information on VPCs, security groups, and subnets are saved, as
-        well as running instances and their states.
+        infrastructure. Information on VPCs, security groups, subnets, the internet gateway
+        and the route table is saved.
+
+        Instance IDs from a previous run are not restored: they belong to a previous
+        session and are not tracked by this one. Any instances still running in the VPC
+        are discovered and terminated by :meth:`teardown`.
 
         AWS has a maximum number of VPCs per region per account, so we do not want to
         clutter users' AWS accounts with security groups and VPCs that will be used only
         once.
         """
         try:
-            fh = open(state_file, 'r')
-            state = json.load(fh)
+            with open(state_file, 'r') as fh:
+                state = json.load(fh)
             self.vpc_id = state['vpcID']
             self.sg_id = state['sgID']
             self.sn_ids = state['snIDs']
-            self.instances = state['instances']
+            # Not present in state files written by older versions of this provider;
+            # teardown() will discover them from the VPC if missing.
+            self.internet_gateway = state.get('igwID')
+            self.route_table = state.get('rtbID')
         except Exception as e:
             logger.debug("Caught exception while reading state file: {0}".format(e))
             raise e
@@ -209,14 +218,16 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         We do not want to create a new VPC and new identical security groups, so we save
         information about them in a file between runs.
         """
-        fh = open(self.state_file, 'w')
         state = {}
         state['vpcID'] = self.vpc_id
         state['sgID'] = self.sg_id
         state['snIDs'] = self.sn_ids
+        state['igwID'] = self.internet_gateway
+        state['rtbID'] = self.route_table
         state['instances'] = self.instances
         state["instanceState"] = self.instance_states
-        fh.write(json.dumps(state, indent=4))
+        with open(self.state_file, 'w') as fh:
+            fh.write(json.dumps(state, indent=4))
 
     def create_session(self):
         """Create a session.
@@ -571,11 +582,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         """
 
         if instances and len(self.instances) > 0:
-            print(instances)
-            try:
-                print([i.id for i in instances])
-            except Exception as e:
-                print(e)
             term = self.client.terminate_instances(InstanceIds=instances)
             logger.info("Shut down {} instances (ids:{}".format(len(instances), str(instances)))
         elif len(self.instances) > 0:
@@ -590,10 +596,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def get_instance_state(self, instances=None):
         """Get states of all instances on EC2 which were started by this file."""
-        if instances:
-            desc = self.client.describe_instances(InstanceIds=instances)
-        else:
-            desc = self.client.describe_instances(InstanceIds=self.instances)
+        if not instances:
+            instances = self.instances
+        if not instances:
+            # describe_instances with an empty InstanceIds list would describe
+            # every instance in the account, not just ours.
+            return self.instance_states
+        desc = self.client.describe_instances(InstanceIds=instances)
         # pprint.pprint(desc['Reservations'],indent=4)
         for i in range(len(desc['Reservations'])):
             instance = desc['Reservations'][i]['Instances'][0]
@@ -697,10 +706,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.debug("Removed the instances: {0}".format(job_ids))
 
         for job_id in job_ids:
-            self.resources[job_id]["status"] = JobStatus(JobState.COMPLETED)
-
-        for job_id in job_ids:
-            self.instances.remove(job_id)
+            if job_id in self.resources:
+                self.resources[job_id]["status"] = JobStatus(JobState.COMPLETED)
+            if job_id in self.instances:
+                self.instances.remove(job_id)
 
         return [True for x in job_ids]
 
