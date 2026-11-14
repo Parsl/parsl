@@ -733,32 +733,105 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def teardown(self):
         """Teardown the EC2 infastructure.
 
-        Terminate all EC2 instances, delete all subnets, delete security group, delete VPC,
-        and reset all instance variables.
+        Terminate all EC2 instances in the VPC and wait for them to terminate, then
+        delete the security group, detach and delete the internet gateway, delete the
+        subnets, the route table and finally the VPC, and remove the state file.
+
+        Resources which no longer exist are skipped, so teardown can be re-run
+        (for example from the same state file) after a partial failure. If any
+        other error occurs, it is raised and the state file is kept.
+
+        This is not called automatically when Parsl shuts down; call it explicitly
+        once the provider is no longer needed.
         """
 
-        self.shut_down_instance(self.instances)
+        if not self.vpc_id:
+            logger.info("No VPC recorded; nothing to tear down")
+            self._remove_state_file()
+            return
+
+        vpc_filter = [{'Name': 'vpc-id', 'Values': [self.vpc_id]}]
+
+        # Instances must be fully terminated before the security group,
+        # internet gateway and subnets can be deleted.
+        instance_ids = []
+        paginator = self.client.get_paginator('describe_instances')
+        pages = paginator.paginate(Filters=vpc_filter + [{
+            'Name': 'instance-state-name',
+            'Values': ['pending', 'running', 'shutting-down', 'stopping', 'stopped'],
+        }])
+        for page in pages:
+            for reservation in page['Reservations']:
+                for instance in reservation['Instances']:
+                    instance_ids.append(instance['InstanceId'])
+        if instance_ids:
+            logger.info("Terminating instances: {}".format(instance_ids))
+            self.client.terminate_instances(InstanceIds=instance_ids)
+            self.client.get_waiter('instance_terminated').wait(InstanceIds=instance_ids)
         self.instances = []
-        try:
-            self.client.delete_internet_gateway(InternetGatewayId=self.internet_gateway)
-            self.internet_gateway = None
-            self.client.delete_route_table(RouteTableId=self.route_table)
-            self.route_table = None
-            for subnet in list(self.sn_ids):
-                # Cast to list ensures that this is a copy
-                # Which is important because it means that
-                # the length of the list won't change during iteration
-                self.client.delete_subnet(SubnetId=subnet)
-                self.sn_ids.remove(subnet)
-            self.client.delete_security_group(GroupId=self.sg_id)
+
+        if self.sg_id:
+            self._delete_if_exists("security group " + self.sg_id,
+                                   self.client.delete_security_group, GroupId=self.sg_id)
             self.sg_id = None
-            self.client.delete_vpc(VpcId=self.vpc_id)
-            self.vpc_id = None
-        except Exception as e:
-            logger.error("{}".format(e))
-            raise e
-        self.show_summary()
-        os.remove(self.config['state_file_path'])
+
+        if self.internet_gateway:
+            igw_ids = [self.internet_gateway]
+        else:
+            igws = self.client.describe_internet_gateways(
+                Filters=[{'Name': 'attachment.vpc-id', 'Values': [self.vpc_id]}])
+            igw_ids = [igw['InternetGatewayId'] for igw in igws['InternetGateways']]
+        for igw_id in igw_ids:
+            self._delete_if_exists("internet gateway {} attachment".format(igw_id),
+                                   self.client.detach_internet_gateway,
+                                   InternetGatewayId=igw_id, VpcId=self.vpc_id)
+            self._delete_if_exists("internet gateway " + igw_id,
+                                   self.client.delete_internet_gateway, InternetGatewayId=igw_id)
+        self.internet_gateway = None
+
+        # Deleting the subnets removes their route table associations,
+        # which must happen before the route table can be deleted.
+        for subnet in list(self.sn_ids):
+            self._delete_if_exists("subnet " + subnet, self.client.delete_subnet, SubnetId=subnet)
+            self.sn_ids.remove(subnet)
+
+        if self.route_table:
+            rtb_ids = [self.route_table]
+        else:
+            # The main route table is deleted along with the VPC.
+            rtbs = self.client.describe_route_tables(Filters=vpc_filter)
+            rtb_ids = [rtb['RouteTableId'] for rtb in rtbs['RouteTables']
+                       if not any(a.get('Main') for a in rtb.get('Associations', []))]
+        for rtb_id in rtb_ids:
+            self._delete_if_exists("route table " + rtb_id,
+                                   self.client.delete_route_table, RouteTableId=rtb_id)
+        self.route_table = None
+
+        self._delete_if_exists("VPC " + self.vpc_id, self.client.delete_vpc, VpcId=self.vpc_id)
+        self.vpc_id = None
+
+        logger.info("EC2 infrastructure torn down")
+        self._remove_state_file()
+
+    def _delete_if_exists(self, description, func, **kwargs):
+        """Call an EC2 delete/detach function, ignoring resources which are already gone."""
+        try:
+            func(**kwargs)
+        except ClientError as e:
+            code = e.response.get('Error', {}).get('Code', '')
+            if code.endswith('.NotFound') or code == 'Gateway.NotAttached':
+                logger.info("Skipping {}: {}".format(description, code))
+            else:
+                logger.error("Failed to delete {}: {}".format(description, e))
+                raise
+        else:
+            logger.debug("Deleted {}".format(description))
+
+    def _remove_state_file(self):
+        try:
+            os.remove(self.state_file)
+        except FileNotFoundError:
+            pass
 
     def generate_aws_id(self):
         """Generate a new ID for AWS resources.
