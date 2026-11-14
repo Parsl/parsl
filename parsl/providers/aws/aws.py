@@ -78,7 +78,11 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     iam_instance_profile_arn : str
         Launch instance with a specific role.
     state_file : str
-        Path to the state file from a previous run to re-use.
+        Path to the state file recording the EC2 infrastructure (VPC, subnets,
+        security group, internet gateway and route table) created by this provider.
+        If the file exists, that infrastructure is re-used; otherwise new
+        infrastructure is created and recorded there. A relative path, including the
+        default ``awsproviderstate.json``, is relative to the current working directory.
     walltime : str
         Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
     launcher : Launcher
@@ -151,21 +155,39 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.error("{} failed to initialize.".format(self))
             raise e
 
-        state_file_exists = False
+        state_file_path = os.path.abspath(self.state_file)
         try:
             self.read_state_file(self.state_file)
-            state_file_exists = True
-        except Exception:
-            logger.info("No state file found. Cannot load previous options. Creating new infrastructure.")
+        except FileNotFoundError:
+            logger.info("No state file found at {}. Creating new EC2 infrastructure.".format(state_file_path))
+            self.create_infrastructure()
+            logger.info("Recorded new EC2 infrastructure in state file {}".format(state_file_path))
+        else:
+            logger.info("Re-using EC2 infrastructure from state file {}".format(state_file_path))
 
-        if not state_file_exists:
+    def create_infrastructure(self):
+        """Create the VPC and related resources, and record them in the state file.
+
+        If creation fails part way through, the resources created so far are removed
+        (best-effort) with :meth:`teardown` before the exception is re-raised, so that
+        a failed start does not leave orphaned resources behind with no state file
+        recording them.
+        """
+        try:
+            self.create_vpc()
+            self.write_state_file()
+        except BaseException as e:
+            logger.error("Failed to create EC2 infrastructure: {}. "
+                         "Removing partially created resources.".format(e))
             try:
-                self.create_vpc().id
-            except Exception as e:
-                logger.info("Failed to create ec2 infrastructure: {0}".format(e))
-                raise
-            else:
-                self.write_state_file()
+                self.teardown()
+            except Exception:
+                logger.exception("Failed to remove partially created EC2 infrastructure; "
+                                 "these resources must be removed manually: VPC {}, internet gateway {}, "
+                                 "route table {}, subnets {}, security group {}".format(
+                                     self.vpc_id, self.internet_gateway, self.route_table,
+                                     self.sn_ids, self.sg_id))
+            raise
 
     def initialize_boto_client(self):
         """Initialize the boto client."""
@@ -196,20 +218,40 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         AWS has a maximum number of VPCs per region per account, so we do not want to
         clutter users' AWS accounts with security groups and VPCs that will be used only
         once.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the state file does not exist.
+        ConfigurationError
+            If the state file exists but cannot be read or does not describe a VPC.
         """
         try:
             with open(state_file, 'r') as fh:
                 state = json.load(fh)
-            self.vpc_id = state['vpcID']
-            self.sg_id = state['sgID']
-            self.sn_ids = state['snIDs']
+            vpc_id = state['vpcID']
+            sg_id = state['sgID']
+            sn_ids = state['snIDs']
             # Not present in state files written by older versions of this provider;
             # teardown() will discover them from the VPC if missing.
-            self.internet_gateway = state.get('igwID')
-            self.route_table = state.get('rtbID')
+            internet_gateway = state.get('igwID')
+            route_table = state.get('rtbID')
+            if not (isinstance(vpc_id, str) and vpc_id and isinstance(sg_id, str) and sg_id):
+                raise ValueError("vpcID and sgID must be non-empty strings")
+            if not (isinstance(sn_ids, list) and all(isinstance(sn, str) for sn in sn_ids)):
+                raise ValueError("snIDs must be a list of strings")
+        except FileNotFoundError:
+            raise
         except Exception as e:
-            logger.debug("Caught exception while reading state file: {0}".format(e))
-            raise e
+            raise ConfigurationError(
+                "Could not load AWS provider state file {}: {!r}. Fix or remove the file; "
+                "if it is removed, any EC2 resources it records must be deleted manually.".format(
+                    os.path.abspath(state_file), e)) from e
+        self.vpc_id = vpc_id
+        self.sg_id = sg_id
+        self.sn_ids = sn_ids
+        self.internet_gateway = internet_gateway
+        self.route_table = route_table
         logger.debug("Done reading state from the local state file.")
 
     def write_state_file(self):
@@ -312,15 +354,18 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.error("{}\n".format(e))
             raise e
 
+        # Each resource ID is recorded as soon as the resource exists, so that
+        # teardown() can remove it if a later step fails.
+        self.vpc_id = vpc.id
+
         # Attach internet gateway so that our cluster can
         # talk to the outside internet
         internet_gateway = self.ec2.create_internet_gateway()
-        internet_gateway.attach_to_vpc(VpcId=vpc.vpc_id)  # Returns None
         self.internet_gateway = internet_gateway.id
+        internet_gateway.attach_to_vpc(VpcId=vpc.vpc_id)  # Returns None
 
         # Create and configure route table to allow proper traffic
         route_table = self.config_route_table(vpc, internet_gateway)
-        self.route_table = route_table.id
 
         # Get all avaliability zones
         availability_zones = self.client.describe_availability_zones()
@@ -337,6 +382,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                     AvailabilityZone=zone_name,
                     TagSpecifications=tag_spec,
                 )
+                self.sn_ids.append(subnet.id)
 
                 # Make subnet accessible
                 subnet.meta.client.modify_subnet_attribute(
@@ -344,7 +390,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 )
 
                 route_table.associate_with_subnet(SubnetId=subnet.id)
-                self.sn_ids.append(subnet.id)
             else:
                 logger.info("{} unavailable".format(zone['ZoneName']))
         # Security groups
@@ -357,7 +402,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             )
 
         self.security_group(vpc, vpc_name)
-        self.vpc_id = vpc.id
         return vpc
 
     def security_group(self, vpc, name):
@@ -384,6 +428,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             Description="security group for remote executors",
             TagSpecifications=tag_spec,
         )
+        self.sg_id = sg.id
 
         ip_ranges = [{'CidrIp': '10.0.0.0/16'}]
 
@@ -442,7 +487,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         sg.authorize_ingress(IpPermissions=in_permissions)
         sg.authorize_egress(IpPermissions=out_permissions)
-        self.sg_id = sg.id
         return sg
 
     def config_route_table(self, vpc, internet_gateway):
@@ -456,6 +500,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             Representation of the internet gateway (created by create_vpc()).
         """
         route_table = vpc.create_route_table()
+        self.route_table = route_table.id
         route_table.create_route(
             DestinationCidrBlock='0.0.0.0/0', GatewayId=internet_gateway.internet_gateway_id
         )
