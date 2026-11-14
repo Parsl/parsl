@@ -31,8 +31,13 @@ It takes credentials from the first of these that is set:
 A :class:`~parsl.errors.ConfigurationError` is raised if no credentials can be found, or if ``profile``
 names a profile that does not exist.
 
-If ``region`` is not set, boto3 resolves it from ``AWS_REGION``, ``AWS_DEFAULT_REGION`` or the profile,
-and falls back to ``us-east-2``. ``image_id`` must be an AMI in the resulting region.
+If ``region`` is not set, boto3 resolves it from the ``AWS_DEFAULT_REGION`` environment variable, and
+then from the ``region`` of the selected profile in ``~/.aws/config``. boto3 does not read
+``AWS_REGION``. If no region can be resolved, the provider uses ``us-east-2`` and logs this at INFO
+level. After construction, the provider's ``region`` attribute holds the region actually used.
+``image_id`` must be an AMI in that region, with an architecture matching ``instance_type``. The
+default ``instance_type`` is ``t3.small``, which is x86_64; an arm64 AMI needs a Graviton type, such as
+``t4g.small``.
 
 The credentials need permission to create, describe and delete VPCs, subnets, internet gateways,
 route tables, security groups and tags, and to run, describe and terminate instances. Attaching
@@ -49,10 +54,16 @@ and records their IDs in the state file:
 * a VPC with CIDR ``10.0.0.0/16``;
 * an internet gateway and a route table;
 * one public subnet in each available availability zone;
-* a security group. It allows all TCP and UDP traffic from within the VPC, and SSH from the CIDRs
-  given in ``ssh_cidr`` (by default, none).
+* a security group. It allows all TCP, UDP and ICMP traffic from within the VPC. From outside the
+  VPC, it allows only ICMP "fragmentation needed" (type 3, code 4), which path MTU discovery needs
+  (the VPC MTU is 9001, but traffic through the internet gateway is limited to 1500). That rule
+  admits no ping. If ``ssh_cidr`` is set, it also allows SSH (TCP port 22) and ICMP from those IPv4
+  ranges. ``ssh_cidr`` takes a CIDR string or a list of them. A bare address is treated as ``/32``,
+  and IPv6 networks or CIDRs with host bits set raise :class:`~parsl.errors.ConfigurationError`.
 
-If the state file exists, the recorded infrastructure is reused instead.
+If the state file exists, the recorded infrastructure is reused instead. A reused security group is
+not modified, so ``ssh_cidr`` does not apply to it; a warning names the group. Change a reused group's
+rules with the AWS console or CLI, or remove the infrastructure and let the provider recreate it.
 Note these properties of the state file:
 
 * ``state_file`` defaults to ``awsproviderstate.json``. A relative path is relative to the current
@@ -60,8 +71,12 @@ Note these properties of the state file:
   absolute path.
 * A state file that exists but cannot be read raises :class:`~parsl.errors.ConfigurationError`.
 * If creating the infrastructure fails part way, the provider removes what it had created.
+* The provider manages the file. Do not write or edit it by hand.
 
-Each resource is tagged with the name of its infrastructure, ``parsl.aws.<timestamp>``.
+Every resource the provider creates is tagged at creation with ``parsl:provider=AWSProvider`` and
+``parsl:infrastructure=<infrastructure ID>``. That covers the VPC, subnets, security group, internet
+gateway, route table and instances. The infrastructure ID has the form ``parsl.aws.<timestamp>``, and
+it is recorded in the state file as ``infrastructureID``.
 
 The infrastructure is kept after Parsl shuts down, so that later runs can reuse it.
 To remove it, either:
@@ -69,11 +84,25 @@ To remove it, either:
 * call :meth:`~parsl.providers.AWSProvider.teardown` once you no longer need it; or
 * pass ``teardown_on_shutdown=True``, which tears it down when the executor shuts down.
 
-Teardown terminates the provider's instances, waits for them to terminate, and deletes the
-infrastructure and the state file. It deletes only resources that the provider created and tagged, and
-it can be re-run after a partial failure. Anything else in the VPC is left alone, for example an
-instance you launched there yourself. Such resources stop the VPC from being deleted. In that case,
-teardown logs what it left behind and keeps the state file.
+Teardown deletes only resources whose ``parsl:infrastructure`` tag matches the state file:
+
+1. It terminates the instances carrying this infrastructure ID, and any launched by this provider
+   object, and waits for them to terminate.
+2. It deletes the security group, the internet gateway, the subnets, the route table and the VPC.
+3. It removes the state file.
+
+:meth:`~parsl.providers.AWSProvider.teardown` returns ``True`` if everything was removed. It returns
+``False`` if anything was left in place; the state file is then kept, and a warning lists what was left
+and why. Teardown leaves these in place:
+
+* instances in the VPC that the provider did not launch, for example a submit host. They are left
+  running, and they prevent the VPC from being deleted;
+* resources that are untagged or carry another infrastructure ID;
+* everything recorded in a state file without an ``infrastructureID``, for example one written by an
+  older version of Parsl, which did not tag resources. Instances that this provider object launched
+  are still terminated.
+
+Resources that no longer exist are skipped, so teardown can be re-run once the cause is removed.
 
 AWS accounts allow five VPCs per region by default, so remove infrastructure you no longer use.
 
@@ -132,7 +161,8 @@ interface:
 
 When setting this up:
 
-* ``ssh_cidr`` must include the workstation's public address.
+* ``ssh_cidr`` must include the workstation's public IPv4 address. It applies only when the security
+  group is created, so if the address changes later, update the group's rule by hand.
 * Each new instance needs its own tunnel. A script can poll the provider's ``resources`` attribute and
   ``describe_instances`` for the public IPs.
 * Keep ``ControlMaster=no``. A ``ControlMaster`` setting in ``~/.ssh/config`` would hand the
@@ -183,7 +213,8 @@ Instance lifetime and cost
 * **Instance shutdown.** Instances shut down, and so terminate, when their worker pool exits, for
   example after losing contact with the interchange. They also stop when Parsl cancels their block, for
   example after ``max_idletime`` or at the end of the workflow.
-* **Walltime.** ``walltime`` (default ``01:00:00``) is enforced on each instance, counted from boot.
+* **Walltime.** ``walltime`` (default ``01:00:00``) is enforced on each instance, counted from boot,
+  and rounded up to whole minutes.
   To let workers finish their tasks first, set the HighThroughputExecutor ``drain_period`` somewhat
   below it.
 * **Linger.** With ``linger=True``, instances are not shut down when their worker exits or at walltime,
@@ -195,6 +226,7 @@ Instance lifetime and cost
   instance per block.
 * **Leftover resources.** The infrastructure costs nothing while it is idle, but it counts against
   account quotas. Instances are billed until they terminate. To check for anything left over, search
-  for the ``parsl.aws.*`` ``Name`` tag.
+  for the ``parsl:provider=AWSProvider`` tag. Resources created by older versions of Parsl carry only
+  a ``Name`` tag of the form ``parsl.aws.*``, and their internet gateway and route table are untagged.
 
 An example configuration is in :ref:`the example configurations <configuring_aws>`.
