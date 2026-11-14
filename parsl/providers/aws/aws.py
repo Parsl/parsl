@@ -1,6 +1,9 @@
 import json
 import logging
+import math
 import os
+import shlex
+import sys
 import time
 from string import Template
 
@@ -9,7 +12,9 @@ from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.aws.template import template_string
 from parsl.providers.base import ExecutionProvider
+from parsl.providers.errors import SubmitException
 from parsl.utils import RepresentationMixin
+from parsl.version import VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -44,16 +49,16 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     Parameters
     ----------
     image_id : str
-        Identification of the Amazon Machine Image (AMI).
+        Identification of the Amazon Machine Image (AMI). The user data script
+        supports apt-based (Debian, Ubuntu) and dnf-based (Amazon Linux 2023) images.
     worker_init : str
-        String to append to the Userdata script executed in the cloudinit phase of
-        instance initialization.
-    walltime : str
-        Walltime requested per block in HH:MM:SS.
+        Commands to run in the user data script executed in the cloud-init phase of
+        instance initialization. These run after Parsl has been installed into the
+        virtual environment ``/opt/parsl-venv`` (which is then first on ``PATH``, so
+        ``pip install`` here adds packages to that environment) and before the
+        worker is started.
     key_file : str
         Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'.
-    nodes_per_block : int
-        This is always 1 for ec2. Nodes to provision per block.
     profile : str
         Profile to be used from the standard aws config file ~/.aws/config.
     nodes_per_block : int
@@ -73,20 +78,33 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     key_name : str
         Name of the AWS private key (.pem file) that is usually generated on the console
         to allow SSH access to the EC2 instances. This is mostly used for debugging.
+        If None, instances are launched without a key pair.
     spot_max_bid : float
         Maximum bid price (if requesting spot market machines).
     iam_instance_profile_arn : str
-        Launch instance with a specific role.
+        Launch instance with a specific role. If empty, no instance profile is attached.
     state_file : str
         Path to the state file from a previous run to re-use.
     walltime : str
-        Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
+        Walltime requested per block in HH:MM:SS. Each instance schedules its own
+        shutdown (and so termination) this long after boot, unless ``linger`` is set.
     launcher : Launcher
         Launcher for this provider. With AWS, usually the default
         :class:`~parsl.launchers.SingleNodeLauncher` will be appropriate.
     linger : Bool
-        When set to True, the workers will not ``halt``. The user is responsible for shutting
-        down the node.
+        When set to True, instances will not shut down when the workers exit or when
+        the walltime expires. The user is responsible for shutting down the node.
+    parsl_requirement : str
+        pip requirement specifier used to install Parsl on each instance. The
+        HighThroughputExecutor only accepts workers running exactly the same Parsl
+        version, and the same Python major.minor version, as the submitting side.
+        Defaults to ``parsl==<this version of Parsl>``, or, when running a
+        development version of Parsl which is not published on PyPI, to the
+        current Parsl master branch on GitHub. Set this to install another release,
+        a fork or a wheel URL. The instance installs the ``python3.X`` matching the
+        submitting side if its package manager offers it, and otherwise the
+        image's default ``python3``; for example, Ubuntu 24.04 offers only Python 3.12,
+        and Amazon Linux 2023 offers 3.11 and 3.12 in addition to its default 3.9.
     """
 
     def __init__(self,
@@ -110,7 +128,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  state_file=None,
                  walltime="01:00:00",
                  linger=False,
-                 launcher=SingleNodeLauncher()):
+                 launcher=SingleNodeLauncher(),
+                 parsl_requirement=None):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
 
@@ -136,6 +155,15 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.walltime = walltime
         self.launcher = launcher
         self.linger = linger
+        if parsl_requirement is None:
+            if 'dev' in VERSION:
+                parsl_requirement = 'parsl @ https://github.com/Parsl/parsl/archive/refs/heads/master.tar.gz'
+                logger.warning("Parsl %s is a development version which is not on PyPI, so "
+                               "instances will install Parsl from the GitHub master branch. "
+                               "Set parsl_requirement to control this.", VERSION)
+            else:
+                parsl_requirement = 'parsl=={}'.format(VERSION)
+        self.parsl_requirement = parsl_requirement
         self.resources = {}
         self.script_dir = None
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
@@ -453,6 +481,27 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def xstr(self, s):
         return '' if s is None else s
 
+    def _walltime_minutes(self):
+        """Walltime in whole minutes for ``shutdown -h +N``, rounded up.
+
+        wtime_to_minutes drops the seconds, so a walltime under a minute would
+        become ``+0`` and shut the instance down immediately.
+        """
+        hours, mins, secs = (int(x) for x in self.walltime.split(':'))
+        return max(1, math.ceil((hours * 3600 + mins * 60 + secs) / 60))
+
+    def _user_data(self, command, job_name):
+        """Render the user data script which installs Parsl and runs command on an instance."""
+        return Template(template_string).substitute(
+            jobname=job_name,
+            user_script=command,
+            linger=str(self.linger).lower(),
+            worker_init=self.worker_init,
+            walltime_minutes=self._walltime_minutes(),
+            python_version='{}.{}'.format(*sys.version_info[:2]),
+            parsl_requirement=shlex.quote(self.parsl_requirement),
+        )
+
     def spin_up_instance(self, command, job_name):
         """Start an instance in the VPC in the first available subnet.
 
@@ -465,15 +514,22 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             Command string to execute on the node.
         job_name : str
             Name associated with the instances.
+
+        Raises
+        ------
+        SubmitException
+            If no instance can be started.
         """
 
-        command = Template(template_string).substitute(jobname=job_name,
-                                                       user_script=command,
-                                                       linger=str(self.linger).lower(),
-                                                       worker_init=self.worker_init)
+        # Count only instances which have not finished: instances terminate
+        # themselves when their worker exits or their walltime expires.
+        live_instances = [r for r in self.resources.values() if not r['status'].terminal]
+        if len(live_instances) >= self.max_nodes:
+            raise SubmitException(job_name, "Exceeded instance limit ({})".format(self.max_nodes))
+
+        command = self._user_data(command, job_name)
         instance_type = self.instance_type
         ami_id = self.image_id
-        total_instances = len(self.instances)
 
         # not all availability zones support all instance types,
         # so we need to check which subnets can actually be used given the
@@ -514,11 +570,28 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 break
 
         if subnet is None:
-            logger.error("No subnet in region {0} supports instance type {1}".format(self.region, instance_type))
-            return [None]
+            raise SubmitException(job_name, "No subnet in region {0} supports instance type {1}".format(
+                self.region, instance_type))
 
+        create_args = {
+            'MinCount': 1,
+            'MaxCount': 1,
+            'InstanceType': instance_type,
+            'ImageId': ami_id,
+            'SubnetId': subnet,
+            'SecurityGroupIds': [self.sg_id],
+            'TagSpecifications': self.create_name_tag_spec('instance', job_name),
+            'InstanceInitiatedShutdownBehavior': 'terminate',
+            'UserData': command,
+        }
+        # Optional settings are only passed when set: botocore parameter
+        # validation rejects KeyName=None.
+        if self.key_name is not None:
+            create_args['KeyName'] = self.key_name
+        if self.iam_instance_profile_arn:
+            create_args['IamInstanceProfile'] = {'Arn': self.iam_instance_profile_arn}
         if float(self.spot_max_bid) > 0:
-            spot_options = {
+            create_args['InstanceMarketOptions'] = {
                 'MarketType': 'spot',
                 'SpotOptions': {
                     'MaxPrice': str(self.spot_max_bid),
@@ -526,37 +599,12 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                     'InstanceInterruptionBehavior': 'terminate'
                 }
             }
-        else:
-            spot_options = {}
 
-        if total_instances > self.max_nodes:
-            logger.warning("Exceeded instance limit ({}). Cannot continue\n".format(self.max_nodes))
-            return [None]
         try:
-            tag_spec = self.create_name_tag_spec('instance', job_name)
-
-            instance = self.ec2.create_instances(
-                MinCount=1,
-                MaxCount=1,
-                InstanceType=instance_type,
-                ImageId=ami_id,
-                KeyName=self.key_name,
-                SubnetId=subnet,
-                SecurityGroupIds=[self.sg_id],
-                TagSpecifications=tag_spec,
-                InstanceMarketOptions=spot_options,
-                InstanceInitiatedShutdownBehavior='terminate',
-                IamInstanceProfile={'Arn': self.iam_instance_profile_arn},
-                UserData=command,
-            )
+            instance = self.ec2.create_instances(**create_args)
         except ClientError as e:
-            print(e)
             logger.error(e.response)
-            return [None]
-
-        except Exception as e:
-            logger.error("Request for EC2 resources failed : {0}".format(e))
-            return [None]
+            raise SubmitException(job_name, "Request for EC2 resources failed: {}".format(e)) from e
 
         self.instances.append(instance[0].id)
         logger.info(
@@ -643,8 +691,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         Returns
         -------
-        None or str
-            If at capacity, None will be returned. Otherwise, the job identifier will be returned.
+        str
+            The job identifier, which is the EC2 instance ID.
+
+        Raises
+        ------
+        SubmitException
+            If the instance could not be started, including when at capacity.
         """
 
         job_name = self.generate_aws_id()
@@ -652,11 +705,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                                     tasks_per_node,
                                     self.nodes_per_block,
                                     self.script_dir)
-        [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
-
-        if not instance:
-            logger.error("Failed to submit request to EC2")
-            return None
+        try:
+            [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
+        except SubmitException:
+            raise
+        except Exception as e:
+            logger.exception("Failed to submit request to EC2")
+            raise SubmitException(job_name, "Failed to submit request to EC2: {}".format(e)) from e
 
         logger.debug("Started instance_id: {0}".format(instance.instance_id))
 
