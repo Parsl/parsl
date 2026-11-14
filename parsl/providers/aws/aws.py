@@ -126,7 +126,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         IPv4 CIDR block(s), e.g. ``'203.0.113.7/32'``, from which inbound SSH (TCP port 22)
         and ICMP to the worker instances are allowed. Default is None, which opens no
         inbound ports to addresses outside the VPC: workers do not need inbound access
-        from outside, because they connect out to the interchange.
+        from outside, because they connect out to the interchange. (ICMP "fragmentation
+        needed" is always accepted from anywhere, for path MTU discovery.)
 
         Before this parameter existed, the security group created by this provider allowed
         SSH and ICMP from anywhere (``0.0.0.0/0``). To keep SSH access to workers (for
@@ -409,9 +410,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def security_group(self, vpc, name):
         """Create and configure a new security group.
 
-        Allows all TCP, UDP and ICMP in from within the VPC. If ``ssh_cidr`` was given,
-        also allows SSH (TCP port 22) and ICMP in from those CIDR blocks. No other
-        inbound traffic from outside the VPC is allowed.
+        Allows all TCP, UDP and ICMP in from within the VPC, and ICMP "fragmentation
+        needed" (type 3, code 4) from anywhere so that path MTU discovery works. If
+        ``ssh_cidr`` was given, also allows SSH (TCP port 22) and ICMP in from those CIDR
+        blocks. No other inbound traffic from outside the VPC is allowed.
 
         Outbound traffic is not restricted.
 
@@ -453,6 +455,17 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 'IpRanges': ip_ranges + [{'CidrIp': c} for c in self._ssh_cidrs if c != VPC_CIDR],
             }
         ]
+
+        # Path MTU discovery: the VPC MTU is 9001 but traffic leaving through the
+        # internet gateway is limited to 1500, so workers must be able to receive
+        # ICMP "fragmentation needed" (type 3, code 4) from routers on the path to an
+        # off-VPC submit host. This rule admits no echo requests or other ICMP.
+        in_permissions.append({
+            'IpProtocol': 'ICMP',
+            'FromPort': 3,
+            'ToPort': 4,
+            'IpRanges': [{'CidrIp': '0.0.0.0/0'}],
+        })
 
         # Optional SSH access from outside the VPC
         if self._ssh_cidrs:

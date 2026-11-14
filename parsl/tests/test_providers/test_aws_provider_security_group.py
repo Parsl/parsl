@@ -59,6 +59,10 @@ def _cidrs(rule):
     return [r['CidrIp'] for r in rule['IpRanges']]
 
 
+# The only rule open to the internet: ICMP "fragmentation needed", for path MTU discovery.
+PMTU_RULE = {'IpProtocol': 'ICMP', 'FromPort': 3, 'ToPort': 4, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}
+
+
 def _rules_from(rules, cidr):
     return [r for r in rules if cidr in _cidrs(r)]
 
@@ -72,10 +76,12 @@ def test_default_has_no_public_ingress(mock_session, tmp_path):
     _make_provider(tmp_path)
     rules = _ingress_rules(mock_session)
 
-    assert _rules_from(rules, '0.0.0.0/0') == []
+    assert _rules_from(rules, '0.0.0.0/0') == [PMTU_RULE]
     for rule in rules:
-        assert _cidrs(rule) == [VPC_CIDR], rule
         assert rule.get('Ipv6Ranges', []) == []
+        if rule == PMTU_RULE:
+            continue
+        assert _cidrs(rule) == [VPC_CIDR], rule
 
 
 @pytest.mark.local
@@ -97,7 +103,7 @@ def test_ssh_cidr_allows_ssh_from_that_cidr_only(mock_session, tmp_path):
     _make_provider(tmp_path, ssh_cidr='203.0.113.0/24')
     rules = _ingress_rules(mock_session)
 
-    assert _rules_from(rules, '0.0.0.0/0') == []
+    assert _rules_from(rules, '0.0.0.0/0') == [PMTU_RULE]
 
     from_admin = _rules_from(rules, '203.0.113.0/24')
     assert any(r['IpProtocol'].lower() == 'tcp' and r['FromPort'] == 22 and r['ToPort'] == 22
@@ -121,7 +127,7 @@ def test_ssh_cidr_list_and_bare_address(mock_session, tmp_path):
     assert len(ssh_rules) == 1
     # bare address normalised to /32, duplicates removed, order kept
     assert _cidrs(ssh_rules[0]) == ['198.51.100.7/32', '203.0.113.0/24']
-    assert _rules_from(rules, '0.0.0.0/0') == []
+    assert _rules_from(rules, '0.0.0.0/0') == [PMTU_RULE]
 
     # RepresentationMixin needs the constructor argument stored as-is
     assert 'ssh_cidr=' in repr(p)
