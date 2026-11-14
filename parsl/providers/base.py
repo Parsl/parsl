@@ -132,6 +132,23 @@ class ExecutionProvider(metaclass=ABCMeta):
         ''' Provides the label for this provider '''
         pass
 
+    def shutdown(self) -> None:
+        """Release any provider-level resources at the end of a workflow.
+
+        This is called once by the owning
+        :class:`~parsl.executors.status_handling.BlockProviderExecutor` near
+        the end of its ``shutdown()``. When the executor is managed by a
+        DataFlowKernel, the DFK has already attempted to scale in (cancel)
+        this provider's blocks by the time this is called.
+
+        Most providers have no resources beyond their blocks, so the default
+        implementation does nothing. Providers that create longer-lived
+        resources (for example, cloud networking) can override this to release
+        them. Exceptions raised here are logged by the executor and do not
+        abort executor shutdown.
+        """
+        pass
+
     @property
     @abstractmethod
     def status_polling_interval(self) -> int:

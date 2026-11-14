@@ -277,6 +277,26 @@ class BlockProviderExecutor(ParslExecutor):
     def _get_launch_command(self, block_id: str) -> str:
         pass
 
+    @abstractmethod
+    def shutdown(self) -> None:
+        """Shutdown the executor.
+
+        In addition to the behaviour of :meth:`ParslExecutor.shutdown`, this
+        calls the provider's :meth:`ExecutionProvider.shutdown` hook exactly
+        once. Subclasses should call ``super().shutdown()`` as the last step
+        of their own shutdown, after they have finished using the provider.
+        """
+        try:
+            super().shutdown()
+        finally:
+            if self._provider is not None:
+                # A provider failing to clean up must not prevent the rest
+                # of the workflow from shutting down, so log and continue.
+                try:
+                    self._provider.shutdown()
+                except Exception:
+                    logger.exception("%s Provider shutdown hook raised an exception", self._scale_prefix)
+
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         # Not using self.blocks.keys() and self.blocks.values() simultaneously
         # The dictionary may be changed during invoking this function
