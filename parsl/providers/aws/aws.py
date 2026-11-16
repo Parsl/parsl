@@ -116,6 +116,15 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         submitting side if its package manager offers it, and otherwise the
         image's default ``python3``; for example, Ubuntu 24.04 offers only Python 3.12,
         and Amazon Linux 2023 offers 3.11 and 3.12 in addition to its default 3.9.
+    teardown_on_shutdown : bool
+        When set to True, the VPC, subnets, internet gateway, route table and security group
+        recorded in the state file (and any instances still known to this provider) are
+        removed by calling :meth:`teardown` when the owning executor shuts down. Default is
+        False, because the purpose of the state file is to let later runs re-use the same
+        infrastructure; in that case the infrastructure is kept, and a later run with
+        ``teardown_on_shutdown=True`` re-uses it and then removes it. This option is ignored,
+        with a warning, when ``linger`` is True, because teardown would terminate the
+        lingering instances.
     """
 
     def __init__(self,
@@ -140,7 +149,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  walltime="01:00:00",
                  linger=False,
                  launcher=SingleNodeLauncher(),
-                 parsl_requirement=None):
+                 parsl_requirement=None,
+                 teardown_on_shutdown=False):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
 
@@ -175,6 +185,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             else:
                 parsl_requirement = 'parsl=={}'.format(VERSION)
         self.parsl_requirement = parsl_requirement
+        self.teardown_on_shutdown = teardown_on_shutdown
         self.resources = {}
         self.script_dir = None
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
@@ -856,6 +867,40 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def goodbye(self):
         self.teardown()
+
+    def shutdown(self):
+        """Called by the owning executor when it shuts down.
+
+        If ``teardown_on_shutdown`` is set, tear down the EC2 infrastructure.
+        Otherwise keep it for re-use and log how to remove it. Failures are
+        logged rather than raised, so that executor shutdown can continue.
+        """
+        state_file = os.path.abspath(self.state_file)
+
+        if not self.teardown_on_shutdown:
+            logger.info("Keeping AWS infrastructure (VPC %s) for re-use by later runs; "
+                        "its IDs are recorded in state file %s. To remove it, run with "
+                        "teardown_on_shutdown=True: the next run re-uses it from the state "
+                        "file and removes it when it ends.",
+                        self.vpc_id, state_file)
+            return
+
+        if self.linger:
+            logger.warning("Not tearing down AWS infrastructure (VPC %s) although "
+                           "teardown_on_shutdown=True, because linger=True and teardown "
+                           "would terminate lingering instances %s. Once they have finished, "
+                           "a run with teardown_on_shutdown=True and linger=False removes it; "
+                           "state file is %s.",
+                           self.vpc_id, self.instances, state_file)
+            return
+
+        logger.info("Tearing down AWS infrastructure (VPC %s)", self.vpc_id)
+        try:
+            self.teardown()
+        except Exception:
+            logger.exception("Failed to tear down AWS infrastructure (VPC %s); some "
+                             "resources may remain. State file is %s.",
+                             self.vpc_id, state_file)
 
     @property
     def status_polling_interval(self):
