@@ -46,6 +46,15 @@ class JSONHandler(logging.Handler):
         self.f = open(filename, "w")
 
     def emit(self, record: logging.LogRecord) -> None:
+        # As with the standard library handlers, a problem with one log record
+        # (for example a bad format string) is reported via handleError rather
+        # than raised into the code that is logging.
+        try:
+            self._emit(record)
+        except Exception:
+            self.handleError(record)
+
+    def _emit(self, record: logging.LogRecord) -> None:
 
         d: dict[str, object] = {
             "created": record.created,
