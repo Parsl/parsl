@@ -79,6 +79,12 @@
             "givenName": "Matthew R.",
             "familyName": "Becker",
             "email": "becker.mr@gmail.com"
+        },
+        {
+            "@type": "Person",
+            "givenName": "Rutuja",
+            "familyName": "Nikumb",
+            "email": "rutuja.r.nikumb@gmail.com"
         }
     ],
     "softwareRequirements": [

@@ -73,3 +73,47 @@ For example:
     Cleaning up DFK
     The end
     
+
+JSON reports
+------------
+
+Add ``--json-output`` to save a JSON report alongside the normal terminal
+output::
+
+    python -m parsl.benchmark.perf --config parsl/tests/configs/local_threads.py --json-output
+
+By default, reports are saved in ``parsl-perf-output/`` relative to the current working
+directory. Use ``--output-dir PATH`` to select another directory::
+
+    python -m parsl.benchmark.perf --config parsl/tests/configs/local_threads.py --json-output --output-dir results
+
+Directories are created automatically. Filenames have the form
+``parsl_perf_YYYYMMDDTHHMMSSffffffZ.json``, using the start time in UTC.
+The six ``f`` digits represent microseconds, and ``Z`` indicates UTC; for
+example, ``parsl_perf_20261104T153025123456Z.json``.
+Existing files are never overwritten. ``--output-dir`` has no effect unless
+``--json-output`` is supplied.
+
+Use ``--output-file NAME`` to replace the generated filename::
+
+    python -m parsl.benchmark.perf --config parsl/tests/configs/local_threads.py --json-output --output-dir results --output-file baseline.json
+
+This saves ``results/baseline.json``. ``--output-file`` requires
+``--json-output`` and accepts a filename only; use ``--output-dir`` for the
+directory. Existing files are never overwritten, including custom filenames.
+
+Each report contains ``schema_version``, a timezone-aware ``started_at`` timestamp,
+Parsl and Python versions, platform information,
+and the configuration path and benchmark arguments. The ``iterations`` array
+contains each completed batch's iteration number, task count, submission time
+and throughput, total runtime, and completed-task throughput. Each batch also
+includes ``start_timestamp``, ``submitted_timestamp``, and ``end_timestamp`` in
+Unix epoch seconds. Durations are in seconds and throughput is in tasks per
+second.
+
+The report starts with status ``in-progress`` and an empty ``iterations``
+array. The file is updated after each completed batch and can be read while
+the benchmark runs. The final update sets ``finished_at`` and changes the
+status to ``completed``, ``failed``, or ``interrupted``. If the run fails or
+is interrupted with Ctrl+C, the report preserves completed batches and includes
+an ``error`` object with the exception type and message.
