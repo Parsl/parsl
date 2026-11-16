@@ -79,9 +79,7 @@
             "givenName": "Matthew R.",
             "familyName": "Becker",
             "email": "becker.mr@gmail.com"
-        }
-    ],
-    "contributor": [
+        },
         {
             "@type": "Person",
             "givenName": "Rutuja",

@@ -32,9 +32,9 @@ def benchmark_cli(monkeypatch, tmp_path):
     return run
 
 
-@pytest.mark.parametrize("directory", ["outputs", "custom/nested"])
+@pytest.mark.parametrize("directory", ["parsl-perf-output", "custom/nested"])
 def test_json_output(benchmark_cli, tmp_path, directory, capsys):
-    options = [] if directory == "outputs" else ["--output-dir", directory]
+    options = [] if directory == "parsl-perf-output" else ["--output-dir", directory]
     benchmark_cli("--json-output", *options)
     files = list((tmp_path / directory).glob("*.json"))
     assert len(files) == 1
@@ -49,6 +49,8 @@ def test_json_output(benchmark_cli, tmp_path, directory, capsys):
     assert files[0].name == started_at_utc.strftime("parsl_perf_%Y%m%dT%H%M%S%fZ.json")
     assert [row["task_count"] for row in report["iterations"]] == [1, 2]
     for row in report["iterations"]:
+        assert row["submission_seconds"] == pytest.approx(row["submitted_timestamp"] - row["start_timestamp"])
+        assert row["runtime_seconds"] == pytest.approx(row["end_timestamp"] - row["start_timestamp"])
         assert row["tasks_per_second"] == pytest.approx(row["task_count"] / row["runtime_seconds"])
         assert row["submission_tasks_per_second"] == pytest.approx(row["task_count"] / row["submission_seconds"])
     assert "Tasks per second:" in capsys.readouterr().out
@@ -81,7 +83,7 @@ def test_partial_results(benchmark_cli, monkeypatch, tmp_path, error, status):
     with pytest.raises(type(error)) as raised:
         benchmark_cli("--json-output")
     assert raised.value is error
-    report = json.loads(next((tmp_path / "outputs").glob("*.json")).read_text())
+    report = json.loads(next((tmp_path / "parsl-perf-output").glob("*.json")).read_text())
     assert report["status"] == status
     assert report["error"] == {"type": type(error).__name__, "message": str(error)}
     assert [row["task_count"] for row in report["iterations"]] == [1]
@@ -94,7 +96,7 @@ def test_configuration_failure(benchmark_cli, monkeypatch, tmp_path):
     monkeypatch.setattr(perf, "load_dfk_from_config", fail)
     with pytest.raises(RuntimeError, match="configuration failed"):
         benchmark_cli("--json-output")
-    report = json.loads(next((tmp_path / "outputs").glob("*.json")).read_text())
+    report = json.loads(next((tmp_path / "parsl-perf-output").glob("*.json")).read_text())
     assert report["status"] == "failed"
     assert report["iterations"] == []
 
@@ -106,9 +108,9 @@ def test_invalid_output_directory(benchmark_cli, tmp_path):
     assert raised.value.code == 2
 
 
-@pytest.mark.parametrize("directory", ["outputs", "results/nested"])
+@pytest.mark.parametrize("directory", ["parsl-perf-output", "results/nested"])
 def test_custom_output_filename(benchmark_cli, tmp_path, directory):
-    options = [] if directory == "outputs" else ["--output-dir", directory]
+    options = [] if directory == "parsl-perf-output" else ["--output-dir", directory]
     benchmark_cli("--json-output", "--output-file", "baseline.json", *options)
     path = tmp_path / directory / "baseline.json"
     assert json.loads(path.read_text())["status"] == "completed"
@@ -116,7 +118,7 @@ def test_custom_output_filename(benchmark_cli, tmp_path, directory):
 
 
 def test_custom_output_file_not_overwritten(benchmark_cli, tmp_path):
-    directory = tmp_path / "outputs"
+    directory = tmp_path / "parsl-perf-output"
     directory.mkdir()
     path = directory / "baseline.json"
     path.write_text("existing report")
@@ -139,3 +141,54 @@ def test_output_filename_requires_json(benchmark_cli, tmp_path):
         benchmark_cli("--output-file", "baseline.json")
     assert raised.value.code == 2
     assert list(tmp_path.iterdir()) == []
+
+
+def test_json_report_updates_during_benchmark(benchmark_cli, monkeypatch, tmp_path):
+    path = tmp_path / "parsl-perf-output" / "progress.json"
+    observed_iterations = []
+    real_app = perf.app
+
+    def inspect_report(*args, **kwargs):
+        report = json.loads(path.read_text())
+        assert report["status"] == "in-progress"
+        assert "finished_at" not in report
+        observed_iterations.append([row["task_count"] for row in report["iterations"]])
+        return real_app(*args, **kwargs)
+
+    monkeypatch.setattr(perf, "app", inspect_report)
+    benchmark_cli("--json-output", "--output-file", path.name)
+
+    assert observed_iterations == [[], [1], [1]]
+    final_report = json.loads(path.read_text())
+    assert final_report["status"] == "completed"
+    assert [row["task_count"] for row in final_report["iterations"]] == [1, 2]
+
+
+@pytest.mark.parametrize("benchmark_failed", [False, True])
+def test_report_write_failure(benchmark_cli, monkeypatch, benchmark_failed, capsys):
+    benchmark_error = RuntimeError("benchmark failed")
+    write_error = OSError("report write failed")
+
+    def fail_benchmark(*args, **kwargs):
+        raise benchmark_error
+
+    real_publish = perf.publish_report
+
+    def fail_final_write(path, contents, *, create=False):
+        if json.loads(contents)["status"] != "in-progress":
+            raise write_error
+        real_publish(path, contents, create=create)
+
+    if benchmark_failed:
+        monkeypatch.setattr(perf, "performance", fail_benchmark)
+    monkeypatch.setattr(perf, "publish_report", fail_final_write)
+
+    expected_error = benchmark_error if benchmark_failed else write_error
+    with pytest.raises(type(expected_error)) as raised:
+        benchmark_cli("--json-output")
+    assert raised.value is expected_error
+
+    captured = capsys.readouterr()
+    assert "JSON results saved to:" not in captured.out
+    if benchmark_failed:
+        assert "Could not save JSON results: report write failed" in captured.err
