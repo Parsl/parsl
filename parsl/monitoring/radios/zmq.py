@@ -4,6 +4,7 @@ import zmq
 
 import parsl.curvezmq as curvezmq
 from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.types import TaggedMonitoringMessage
 
 
 class ZMQRadioSender(MonitoringRadioSender):
@@ -16,5 +17,5 @@ class ZMQRadioSender(MonitoringRadioSender):
         self._hub_channel.set_hwm(0)
         self._hub_channel.connect(f"tcp://{hub_address}:{hub_zmq_port}")
 
-    def send(self, message: object) -> None:
+    def send(self, message: TaggedMonitoringMessage) -> None:
         self._hub_channel.send_pyobj(message)

@@ -40,7 +40,7 @@ class MonitoringRouter:
 
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
-                 resource_msgs: mpq.Queue,
+                 resource_msgs: mpq.Queue[TaggedMonitoringMessage],
                  exit_event: EventType,
                  cert_dir: Optional[str],
                  ):
@@ -157,7 +157,7 @@ class ZMQRadioReceiver():
 
 
 def start_zmq_receiver(*,
-                       monitoring_messages: QueueType,
+                       monitoring_messages: QueueType[TaggedMonitoringMessage],
                        loopback_address: str,
                        port_range: Tuple[int, int],
                        logdir: str,

@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from multiprocessing.queues import Queue
+
+from parsl.monitoring.types import TaggedMonitoringMessage
 
 
 class MonitoringRadioReceiver(metaclass=ABCMeta):
@@ -10,7 +14,7 @@ class MonitoringRadioReceiver(metaclass=ABCMeta):
 
 class MonitoringRadioSender(metaclass=ABCMeta):
     @abstractmethod
-    def send(self, message: object) -> None:
+    def send(self, message: TaggedMonitoringMessage) -> None:
         pass
 
 
@@ -57,7 +61,7 @@ class RadioConfig(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def create_receiver(self, *, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+    def create_receiver(self, *, run_dir: str, resource_msgs: Queue[TaggedMonitoringMessage]) -> MonitoringRadioReceiver:
         """Create a receiver for this RadioConfig, and update this RadioConfig
         with enough context to create senders.
         """

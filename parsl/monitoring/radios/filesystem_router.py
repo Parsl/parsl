@@ -5,7 +5,6 @@ import os
 import pickle
 from multiprocessing.queues import Queue
 from multiprocessing.synchronize import Event
-from typing import cast
 
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.radios.base import MonitoringRadioReceiver
@@ -60,7 +59,7 @@ def filesystem_router_starter(*, q: Queue[TaggedMonitoringMessage], run_dir: str
                     message = pickle.load(f)
                 logger.debug("Message received is: %s", message)
                 assert isinstance(message, tuple)
-                target_radio.send(cast(TaggedMonitoringMessage, message))
+                target_radio.send(message)
                 os.remove(full_path_filename)
             except Exception:
                 logger.exception("Exception processing %s - probably will be retried next iteration", filename)
@@ -69,7 +68,7 @@ def filesystem_router_starter(*, q: Queue[TaggedMonitoringMessage], run_dir: str
 
 
 class FilesystemRadioReceiver(MonitoringRadioReceiver):
-    def __init__(self, resource_msgs: Queue, run_dir: str) -> None:
+    def __init__(self, resource_msgs: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
         self.exit_event = SpawnEvent()
         self.process = SpawnProcess(target=filesystem_router_starter,
                                     kwargs={"q": resource_msgs, "run_dir": run_dir, "exit_event": self.exit_event},

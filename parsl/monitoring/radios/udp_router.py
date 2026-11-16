@@ -20,6 +20,7 @@ from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringRouterStartError
 from parsl.monitoring.radios.base import MonitoringRadioReceiver
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
     SpawnEvent,
     SpawnProcess,
@@ -40,7 +41,7 @@ class MonitoringRouter:
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int,   # in seconds
-                 resource_msgs: mpq.Queue,
+                 resource_msgs: mpq.Queue[TaggedMonitoringMessage],
                  exit_event: Event,
                  hmac_key: bytes,
                  hmac_digest: str,
@@ -189,7 +190,7 @@ class UDPRadioReceiver(MonitoringRadioReceiver):
 
 
 def start_udp_receiver(*,
-                       monitoring_messages: Queue,
+                       monitoring_messages: Queue[TaggedMonitoringMessage],
                        port: Optional[int],
                        logdir: str,
                        debug: bool,
