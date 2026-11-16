@@ -115,6 +115,8 @@ See
 `issue #3515 <https://github.com/Parsl/parsl/issues/3515>`_
 for further discussion.
 
+.. _configuring_aws:
+
 Amazon Web Services
 -------------------
 
@@ -125,8 +127,14 @@ Amazon Web Services
 
 Amazon Web Services is a commercial cloud service which allows users to rent a range of computers and other computing services.
 The following snippet shows how Parsl can be configured to provision nodes from the Elastic Compute Cloud (EC2) service.
-The first time this configuration is used, Parsl will configure a Virtual Private Cloud and other networking and security infrastructure that will be
-re-used in subsequent executions. The configuration uses the `parsl.providers.AWSProvider` to connect to AWS.
+The first time this configuration is used, Parsl creates a Virtual Private Cloud and other networking and security infrastructure,
+records it in the state file, and re-uses it in subsequent executions until it is removed with ``teardown()``.
+The configuration uses the `parsl.providers.AWSProvider` to connect to AWS.
+
+The EC2 instances must be able to reach the Parsl script's host at ``address``,
+and the AMI must provide the same Python ``major.minor`` version as the Parsl script.
+This example assumes the Parsl script runs on an EC2 instance inside the provider's VPC.
+See :ref:`label-aws` for credentials, running from a workstation, version matching and removing the infrastructure.
 
 .. literalinclude:: ../../../parsl/configs/ec2.py
 
