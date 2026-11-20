@@ -57,6 +57,11 @@ gce_test: ## Run tests with GlobusComputeExecutor (--config .../globus_compute.p
 local_thread_test: ## run all tests with local_thread config (--config .../local_threads.py)
 	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --random-order --durations 10
 
+.PHONY: crossver_test
+crossver_test: ## run HTEX components from different Parsl/Python versions against each other (needs uv)
+	pip3 install .
+	cd parsl/tests && $(PYTHON) -m crossver
+
 .PHONY: htex_local_test
 htex_local_test: ## run all tests with htex_local config (--config .../htex_local.py)
 	pip3 install .
