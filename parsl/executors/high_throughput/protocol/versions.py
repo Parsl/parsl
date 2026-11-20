@@ -9,6 +9,8 @@ ProtocolVersion = int | Literal["legacy"]
 MAGIC = b"PHTX"
 PREFIX = struct.Struct("!4sH")
 
+OLDEST_SUPPORTED_PARSL = "2026.10.05"
+
 
 class UnsupportedProtocolVersion(ProtocolError):
     def __init__(self, version: ProtocolVersion, supported: Iterable[ProtocolVersion]) -> None:

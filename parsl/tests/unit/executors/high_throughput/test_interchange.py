@@ -12,7 +12,7 @@ import zmq
 
 from parsl import curvezmq
 from parsl.executors.high_throughput import protocol as proto
-from parsl.executors.high_throughput.errors import VersionMismatch
+from parsl.executors.high_throughput.errors import IncompatibleManager
 from parsl.executors.high_throughput.interchange import Interchange
 from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 from parsl.serialize import deserialize
@@ -36,8 +36,7 @@ def ix(tmpd_cwd):
                           log_config=None,
                           manager_selector=RandomManagerSelector(),
                           poll_period=10,
-                          run_id="test_run_id",
-                          _check_python_mismatch=True)
+                          run_id="test_run_id")
 
 
 @pytest.fixture
@@ -128,11 +127,9 @@ def test_draining_manager_shut_down_after_last_result(ix, manager_id):
     assert manager_id not in ix._ready_managers
 
 
-@pytest.mark.local
-def test_version_mismatch_reported_despite_missing_fields(ix, manager_id):
-    raw = {'type': 'registration', 'parsl_v': "2016.01.01", 'python_v': ix.current_platform['python_v']}
+def assert_rejected(ix: Interchange, manager_id: bytes, data: bytes) -> None:
     ix.socks = {ix.manager_sock: zmq.POLLIN}
-    cast(mock.MagicMock, ix.manager_sock).recv_multipart.return_value = [manager_id, pickle.dumps(raw)]
+    cast(mock.MagicMock, ix.manager_sock).recv_multipart.return_value = [manager_id, data]
     kill_event = threading.Event()
     ix.process_manager_socket_message(set(), None, kill_event)
 
@@ -141,7 +138,35 @@ def test_version_mismatch_reported_despite_missing_fields(ix, manager_id):
     (sent,), _ = cast(mock.MagicMock, ix.results_outgoing).send.call_args
     failure = proto.decode(sent, proto.INTERCHANGE_TO_EXECUTOR)
     assert isinstance(failure, proto.InterchangeFailure)
-    assert isinstance(deserialize(failure.exception), VersionMismatch)
+    exc = deserialize(failure.exception)
+    assert isinstance(exc, IncompatibleManager)
+    assert exc.manager_id == manager_id
+
+
+@pytest.mark.local
+def test_manager_below_floor_rejected_despite_missing_fields(ix, manager_id):
+    raw = {'type': 'registration', 'parsl_v': "2016.01.01", 'python_v': ix.current_platform['python_v']}
+    assert_rejected(ix, manager_id, pickle.dumps(raw))
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("parsl_v", ("2016.01.01", "2026.10.04", "2026.10.01+desc", "1.2.0"))
+def test_manager_below_floor_rejected(ix, manager_id, parsl_v):
+    assert_rejected(ix, manager_id, registration_msg(ix, parsl_v=parsl_v).encode())
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("parsl_v", (proto.OLDEST_SUPPORTED_PARSL, "2099.01.01", "1.3.0-dev", "garbage"))
+def test_manager_registered_despite_parsl_mismatch(ix, manager_id, parsl_v):
+    send_from_manager(ix, manager_id, registration_msg(ix, parsl_v=parsl_v))
+    assert manager_id in ix._ready_managers
+
+
+@pytest.mark.local
+def test_python_mismatch_warns(ix, manager_id, caplog):
+    send_from_manager(ix, manager_id, registration_msg(ix, python_v="2.7.18"))
+    assert manager_id in ix._ready_managers
+    assert any(r.levelno == logging.WARNING and "2.7.18" in r.getMessage() for r in caplog.records)
 
 
 @pytest.mark.local

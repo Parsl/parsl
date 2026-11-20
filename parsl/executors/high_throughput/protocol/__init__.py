@@ -27,6 +27,7 @@ from parsl.executors.high_throughput.protocol.messages import (
 )
 from parsl.executors.high_throughput.protocol.versions import (
     MAGIC,
+    OLDEST_SUPPORTED_PARSL,
     ProtocolVersion,
     UnsupportedProtocolVersion,
     peek_version,
@@ -37,6 +38,7 @@ __all__ = [
     'INTERCHANGE_TO_MANAGER',
     'MAGIC',
     'MANAGER_TO_INTERCHANGE',
+    'OLDEST_SUPPORTED_PARSL',
     'WIRE_FORMATS',
     'Channel',
     'ConnectionProbe',
