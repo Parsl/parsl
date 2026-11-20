@@ -1,9 +1,9 @@
 import os
-import pickle
 from unittest import mock
 
 import pytest
 
+from parsl.executors.high_throughput import protocol as proto
 from parsl.executors.high_throughput.mpi_resource_management import (
     MPITaskScheduler,
     TaskScheduler,
@@ -44,7 +44,7 @@ def test_MPISched_put_task():
     assert scheduler._free_node_counter.value == 8
 
     ctxt = {"resource_spec": {"num_nodes": 2, "ranks_per_node": 2}}
-    task_package = {"task_id": 1, "buffer": mock_task_buffer, "context": ctxt}
+    task_package = proto.Task(task_id=1, buffer=mock_task_buffer, context=ctxt)
     scheduler.put_task(task_package)
 
     assert scheduler._free_node_counter.value == 6
@@ -63,7 +63,7 @@ def test_MPISched_get_result():
     scheduler._free_node_counter.value = 4
     scheduler._map_tasks_to_nodes[1] = nodes
 
-    result_package = pickle.dumps({"task_id": 1, "type": "result", "result": b"Foo"})
+    result_package = proto.Result(task_id=1, result=b"Foo").encode()
     result_q.put(result_package)
     result_received = scheduler.get_result(block=True, timeout=1)
     assert result_received == result_package
@@ -83,13 +83,13 @@ def test_MPISched_roundtrip():
         assert scheduler._free_node_counter.value == 8
 
         ctxt = {"resource_spec": {"num_nodes": trip, "ranks_per_node": 2}}
-        task_package = {"task_id": trip, "buffer": mock_task_buffer, "context": ctxt}
+        task_package = proto.Task(task_id=trip, buffer=mock_task_buffer, context=ctxt)
         scheduler.put_task(task_package)
 
         assert scheduler._free_node_counter.value == 8 - trip
 
         # Pop in a mock result
-        result_pkl = pickle.dumps({"task_id": trip, "type": "result", "result": b"RESULT BUF"})
+        result_pkl = proto.Result(task_id=trip, result=b"RESULT BUF").encode()
         result_q.put(result_pkl)
 
         got_result = scheduler.get_result(True, 1)
@@ -108,14 +108,14 @@ def test_MPISched_contention():
     assert scheduler._free_node_counter.value == 8
 
     ctxt_1 = {"resource_spec": {"num_nodes": 8, "ranks_per_node": 2}}
-    task_package = {"task_id": 1, "buffer": mock_task_buffer, "context": ctxt_1}
+    task_package = proto.Task(task_id=1, buffer=mock_task_buffer, context=ctxt_1)
     scheduler.put_task(task_package)
 
     assert scheduler._free_node_counter.value == 0
     assert scheduler._backlog_queue.empty()
 
     ctxt_2 = {"resource_spec": {"num_nodes": 8, "ranks_per_node": 2}}
-    task_package = {"task_id": 2, "buffer": mock_task_buffer, "context": ctxt_2}
+    task_package = proto.Task(task_id=2, buffer=mock_task_buffer, context=ctxt_2)
     scheduler.put_task(task_package)
 
     # Second task should now be in the backlog_queue
@@ -128,7 +128,7 @@ def test_MPISched_contention():
     assert task_q.empty()  # Confirm that task 2 is not yet scheduled
 
     # Simulate worker returning result and the scheduler picking up result
-    result_pkl = pickle.dumps({"task_id": 1, "type": "result", "result": b"RESULT BUF"})
+    result_pkl = proto.Result(task_id=1, result=b"RESULT BUF").encode()
     result_q.put(result_pkl)
     got_result = scheduler.get_result(True, 1)
     assert got_result == result_pkl
@@ -158,6 +158,6 @@ def test_hashable_backlog_queue():
 
     for i in range(3):
         ctxt = {"resource_spec": {"num_nodes": 8, "ranks_per_node": 2}}
-        task_package = {"task_id": i, "buffer": mock_task_buffer, "context": ctxt}
+        task_package = proto.Task(task_id=i, buffer=mock_task_buffer, context=ctxt)
         scheduler.put_task(task_package)
     assert scheduler._backlog_queue.qsize() == 2, "Expected 2 backlogged tasks"
