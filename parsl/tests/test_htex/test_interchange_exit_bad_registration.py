@@ -52,7 +52,6 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
                           "cert_dir": None,
                           "manager_selector": RandomManagerSelector(),
                           "run_id": "test",
-                          "_check_python_mismatch": True,
                           }
 
     config_pickle = pickle.dumps(interchange_config)
@@ -76,13 +75,13 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
     # started successfully.
 
     # send bad registration message as if from a new worker pool. The badness here
-    # is that the Python version does not match the real Python version - which
+    # is that the Parsl version is too old - which
     # unlike some other bad interchange messages, should cause the interchange
     # to shut down.
 
     msg = {'type': 'registration',
-           'parsl_v': PARSL_VERSION,
-           'python_v': "1.1.1",  # this is the bad bit
+           'parsl_v': "2016.01.01",  # this is the bad bit
+           'python_v': "{}.{}.{}".format(*sys.version_info[:3]),
            'worker_count': 1,
            'uid': 'testuid',
            'block_id': '0',
@@ -128,20 +127,18 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
         {"parsl_v": PARSL_VERSION,
          "python_v": "0.0.0",  # python_v mismatch
          },
-        {"parsl_v": "0.0.0",  # parsl_v mismatch
+        {"parsl_v": "2099.01.01",  # parsl_v mismatch
          "python_v": "{}.{}.{}".format(sys.version_info.major,
                                        sys.version_info.minor,
                                        sys.version_info.micro)
          },
-        {"parsl_v": "0.0.0",  # parsl_v mismatch and
+        {"parsl_v": "2099.01.01",  # parsl_v mismatch and
          "python_v": "0.0.0",  # python_v mismatch
          }]
 )
-def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_version_info):
-    """Test that the interchange will ignore version checks
-
-    Uses _check_python_version flag to indicate that version mismatches should
-    be ignored.
+def test_accept_version_mismatch_at_registration(tmpd_cwd, try_assert, worker_version_info):
+    """Test that the interchange accepts managers despite Parsl or Python
+    version mismatches.
     """
 
     outgoing_q = zmq_pipes.TasksOutgoing(
@@ -171,7 +168,6 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
                           "cert_dir": None,
                           "manager_selector": RandomManagerSelector(),
                           "run_id": "test",
-                          "_check_python_mismatch": False,
                           }
 
     config_pickle = pickle.dumps(interchange_config)
@@ -194,10 +190,7 @@ def test_ignore_version_check_at_registration(tmpd_cwd, try_assert, worker_versi
     # then the worker polling code is also running and that the interchange has
     # started successfully.
 
-    # send bad registration message as if from a new worker pool. The badness here
-    # is that the Python version does not match the real Python version - which
-    # unlike some other bad interchange messages, should cause the interchange
-    # to shut down.
+    # send a version-mismatched registration message as if from a new worker pool.
 
     msg = {'type': 'registration',
            'worker_count': 1,

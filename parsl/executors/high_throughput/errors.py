@@ -18,17 +18,14 @@ class ManagerLost(Exception):
         )
 
 
-class VersionMismatch(Exception):
-    """Manager and Interchange versions do not match"""
-    def __init__(self, interchange_version: str, manager_version: str):
-        self.interchange_version = interchange_version
-        self.manager_version = manager_version
+class IncompatibleManager(Exception):
+    """Manager cannot communicate with the Interchange"""
+    def __init__(self, manager_id: bytes, reason: str):
+        self.manager_id = manager_id
+        self.reason = reason
 
     def __str__(self) -> str:
-        return (
-            f"Manager version info {self.manager_version} does not match interchange"
-            f" version info {self.interchange_version}"
-        )
+        return f"Manager {self.manager_id.decode()} is incompatible with the interchange: {self.reason}"
 
 
 class WorkerLost(Exception):

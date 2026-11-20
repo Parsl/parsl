@@ -18,7 +18,10 @@ from parsl import curvezmq
 from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import protocol as proto
-from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
+from parsl.executors.high_throughput.errors import (
+    IncompatibleManager,
+    ManagerLost,
+)
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.log_utils import set_file_logger
@@ -57,7 +60,6 @@ class Interchange:
                  manager_selector: ManagerSelector,
                  run_id: str,
                  log_config: Optional[LogConfig],
-                 _check_python_mismatch: bool,
                  ) -> None:
         """
         Parameters
@@ -101,12 +103,6 @@ class Interchange:
 
         cert_dir : str | None
             Path to the certificate directory.
-
-        _check_python_mismatch : bool
-            If True, the interchange and worker managers must run the same version of
-            Python and Parsl. Running different versions can cause inter-process
-            communication errors, so proceed with caution.
-            Default: True
         """
         self.cert_dir = cert_dir
         self.logdir = logdir
@@ -140,7 +136,6 @@ class Interchange:
         logger.info("Connected to client")
 
         self.run_id = run_id
-        self._check_python_mismatch = _check_python_mismatch
 
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
@@ -380,29 +375,30 @@ class Interchange:
                 return
 
             case proto.Registration():
-                ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
-                ix_parsl_v = self.current_platform['parsl_v']
                 mgr_python_v = msg.python_v
-                mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
                 mgr_parsl_v = msg.parsl_v
 
-                python_mismatch: bool = ix_minor_py != mgr_minor_py
-                parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
-                if self._check_python_mismatch and (parsl_mismatch or python_mismatch):
+                # assuming -dev parsls are local or CI installs (which they usually are), they should have the latest protocols
+                if not mgr_parsl_v.endswith("-dev") and mgr_parsl_v < proto.OLDEST_SUPPORTED_PARSL:
                     kill_event.set()
-                    vm_exc = VersionMismatch(
-                        f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
-                        f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
+                    exc = IncompatibleManager(
+                        manager_id,
+                        f"Parsl {mgr_parsl_v} is too old for this interchange;"
+                        f" requires Parsl {proto.OLDEST_SUPPORTED_PARSL} or newer",
                     )
-                    result_package = proto.InterchangeFailure(exception=serialize_object(vm_exc))
+                    result_package = proto.InterchangeFailure(exception=serialize_object(exc))
                     self.results_outgoing.send(result_package.encode())
-                    logger.error(
-                        'Manager has incompatible version info with the interchange;'
-                        ' sending failure reports and shutting down:'
-                        f'\n  Interchange: {vm_exc.interchange_version}'
-                        f'\n  Manager:     {vm_exc.manager_version}'
-                    )
+                    logger.error(f'{exc}; sending failure reports and shutting down')
                     return
+
+                ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
+                mgr_minor_py = mgr_python_v.rsplit('.', 1)[0]
+                if ix_minor_py != mgr_minor_py:
+                    logger.warning(
+                        f'Manager {manager_id!r} runs Python {mgr_python_v} but the interchange'
+                        f' runs Python {self.current_platform["python_v"]}; tasks may fail to'
+                        ' deserialize'
+                    )
 
                 new_rec = ManagerRecord(
                     block_id=msg.block_id,

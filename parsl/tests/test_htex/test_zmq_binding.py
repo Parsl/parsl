@@ -30,8 +30,7 @@ def make_interchange(*,
                        log_config=None,
                        manager_selector=RandomManagerSelector(),
                        poll_period=10,
-                       run_id="test_run_id",
-                       _check_python_mismatch=True)
+                       run_id="test_run_id")
 
 
 @pytest.fixture
