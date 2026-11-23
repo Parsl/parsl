@@ -345,13 +345,13 @@ class Manager:
                                               self.drain_time,  # legacy, remove ca Apr 2027
                                               last_interchange_contact + self.heartbeat_threshold)
             try:
-                pending_task_count = self.pending_task_queue.qsize()
+                pending_task_count: object = self.pending_task_queue.qsize()
             except NotImplementedError:
                 # Ref: https://github.com/python/cpython/blob/6d5e0dc0e330f4009e8dc3d1642e46b129788877/Lib/multiprocessing/queues.py#L125
-                pending_task_count = f"pending task count is not available on {platform.system()}"  # type: ignore[assignment]
+                pending_task_count = f"not available on {platform.system()}"
 
             logger.debug(
-                'ready workers: %d, pending tasks: %d',
+                'ready workers: %d, pending tasks: %s',
                 self.ready_worker_count.value,
                 pending_task_count,
             )
