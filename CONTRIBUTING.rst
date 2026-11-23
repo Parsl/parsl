@@ -115,7 +115,6 @@ If you are a contributor to Parsl at large, we recommend forking the repository 
 The `Parsl development team <https://github.com/orgs/Parsl/teams>`_ has the additional privilege of creating development branches on the repository.
 Parsl development follows a common pull request-based workflow similar to `GitHub flow <http://scottchacon.com/2011/08/31/github-flow.html>`_. That is:
 
-* every development activity (except very minor changes, which can be discussed in the PR) should have a related GitHub issue
 * all development occurs in branches (named with a short descriptive name, for example, `add-globus-transfer-#1`)
 * the master branch is always stable
 * development branches should include tests for added features
@@ -124,7 +123,7 @@ Parsl development follows a common pull request-based workflow similar to `GitHu
 * PRs should be used for review and discussion
 * PRs should be reviewed in a timely manner to reduce effort in keeping them synced with other changes happening on the master branch
 
-Git commit messages should include a single summary sentence followed by a more explanatory paragraph. Note: all commit messages should reference the GitHub issue to which they relate. A nice discussion on the topic can be found `here <https://chris.beams.io/posts/git-commit/>`_.
+Git commit messages should include a single summary sentence followed by a more explanatory paragraph. Note: all commit messages should reference any GitHub issue to which they relate. A nice discussion on the topic can be found `here <https://chris.beams.io/posts/git-commit/>`_.
 ::
     Implemented Globus data staging support
 
