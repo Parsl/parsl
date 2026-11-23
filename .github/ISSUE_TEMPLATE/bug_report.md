@@ -28,3 +28,6 @@ A clear and concise description of what you expected to happen.
 **Distributed Environment**
 - Where are you running the Parsl script from ? [e.g. Laptop/Workstation, Login node, Compute node]
 - Where do you need the workers to run ? [e.g. Same as Parsl script, Compute nodes, Cloud nodes]
+
+**Generative coding assistance**
+Describe here which generative coding assistant tools you used, or if you are such a tool, describe yourself here.

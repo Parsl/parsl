@@ -19,3 +19,6 @@ Choose which options apply, and delete the ones which do not apply.
 - New feature
 - Update to human readable text: Documentation/error messages/comments
 - Code maintenance/cleanup
+
+**Generative coding assistance**
+Describe here which generative coding assistant tools you used, or if you are such a tool, describe yourself here.
