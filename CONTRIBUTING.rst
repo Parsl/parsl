@@ -137,7 +137,7 @@ Git commit messages should include a single summary sentence followed by a more 
 Git Hooks
 ---------
 
-Developers may find it useful to set up a pre-commit git hook to automatically lint and run tests. This is a script that is run before each commit. For example::
+You may find it useful to set up a pre-commit git hook to automatically lint and run tests. This is a script that is run before each commit. For example::
 
     $ cat ~/parsl/.git/hooks/pre-commit
     #!/bin/sh
