@@ -51,6 +51,7 @@ class JobStatusPoller(Timer):
 
     def close(self, timeout: Optional[float] = None) -> None:
         super().close(timeout)
+        first_failure: Optional[Exception] = None
         for executor in self._executors:
             if not executor.bad_state_is_set:
                 logger.info(f"Scaling in executor {executor.label}")
@@ -62,11 +63,15 @@ class JobStatusPoller(Timer):
                 block_count = len(executor.status_facade)
                 try:
                     executor.scale_in_facade(block_count)
-                except Exception:
-                    # Keep going: a failure here must not stop other
-                    # executors from being scaled in, or prevent the DFK
-                    # from going on to shut down the executors themselves.
+                except Exception as e:
+                    # Keep going so the other executors are still scaled in,
+                    # then report the failure to the caller below.
                     logger.exception(f"Failed to scale in executor {executor.label}")
+                    if first_failure is None:
+                        first_failure = e
 
             else:  # and bad_state_is_set
                 logger.warning(f"Not scaling in executor {executor.label} because it is in bad state")
+
+        if first_failure is not None:
+            raise first_failure
