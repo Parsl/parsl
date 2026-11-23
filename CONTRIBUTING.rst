@@ -1,7 +1,7 @@
 Where to Start
 --------------
 
-We eagerly welcome contributions of any type (e.g., bug fixes, new features, reporting issues, documentation, etc).  If you're looking for a good place to start, we recommend perusing our current Git issues (those marked with `help wanted <https://github.com/Parsl/parsl/labels/help%20wanted>`_ are a good place to start).
+We eagerly welcome contributions of any type (e.g., bug fixes, new features, reporting issues, documentation, etc).  If you're looking for a good place to start, we recommend perusing our current Git issues.
 
 Please be aware of `Parsl's Code of Conduct <https://github.com/Parsl/.github/blob/main/CODE_OF_CONDUCT.md>`_. 
 
