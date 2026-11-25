@@ -1181,7 +1181,14 @@ class DataFlowKernel:
         self.usage_tracker.close()
 
         logger.info("Closing job status poller")
-        self.job_status_poller.close()
+        poller_failure: Optional[Exception] = None
+        try:
+            self.job_status_poller.close()
+        except Exception as e:
+            # Finish shutting everything else down, then raise this at the
+            # end so the failure still reaches the caller.
+            logger.exception("Job status poller failed to close cleanly")
+            poller_failure = e
         logger.info("Terminated job status poller")
 
         logger.info("Shutting down executors")
@@ -1233,6 +1240,9 @@ class DataFlowKernel:
         # This message won't go to the default parsl.log, but other handlers
         # should still see it.
         logger.info("DFK cleanup complete")
+
+        if poller_failure is not None:
+            raise poller_failure
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
