@@ -18,3 +18,4 @@ then configuring how Parsl will adjust `amount of resources according to demand 
    providers
    launchers
    elasticity
+   aws
