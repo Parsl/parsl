@@ -11,6 +11,7 @@ from concurrent.futures import Future
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
+import msgspec
 import typeguard
 
 from parsl import curvezmq
@@ -22,6 +23,7 @@ from parsl.executors.errors import (
     InvalidResourceSpecification,
     ScalingFailed,
 )
+from parsl.executors.high_throughput import protocol as proto
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
@@ -523,47 +525,40 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
             else:
 
-                msg = pickle.loads(serialized_msg)
+                msg = proto.decode(serialized_msg, proto.INTERCHANGE_TO_EXECUTOR)
 
-                if msg['type'] == 'result':
+                if isinstance(msg, proto.InterchangeFailure):
+                    logger.warning("Executor shutting down due to exception from interchange")
+                    exception = deserialize(msg.exception)
+                    self.set_bad_state_and_fail_all(exception)
+                    break
+
+                tid = msg.task_id
+                task_fut = self.tasks.pop(tid)
+
+                if msg.result is not None:
+                    result = deserialize(msg.result)
+                    task_fut.set_result(result)
+
+                elif msg.exception is not None:
                     try:
-                        tid = msg['task_id']
-                    except Exception:
-                        raise BadMessage("Message received does not contain 'task_id' field")
-
-                    if tid == -1 and 'exception' in msg:
-                        logger.warning("Executor shutting down due to exception from interchange")
-                        exception = deserialize(msg['exception'])
-                        self.set_bad_state_and_fail_all(exception)
-                        break
-
-                    task_fut = self.tasks.pop(tid)
-
-                    if 'result' in msg:
-                        result = deserialize(msg['result'])
-                        task_fut.set_result(result)
-
-                    elif 'exception' in msg:
-                        try:
-                            s = deserialize(msg['exception'])
-                            # s should be a RemoteExceptionWrapper... so we can reraise it
-                            if isinstance(s, RemoteExceptionWrapper):
-                                try:
-                                    s.reraise()
-                                except Exception as e:
-                                    task_fut.set_exception(e)
-                            elif isinstance(s, Exception):
-                                task_fut.set_exception(s)
-                            else:
-                                raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                        except Exception as e:
-                            # TODO could be a proper wrapped exception?
-                            task_fut.set_exception(
-                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                    else:
-                        raise BadMessage("Message received is neither result or exception")
+                        s = deserialize(msg.exception)
+                        # s should be a RemoteExceptionWrapper... so we can reraise it
+                        if isinstance(s, RemoteExceptionWrapper):
+                            try:
+                                s.reraise()
+                            except Exception as e:
+                                task_fut.set_exception(e)
+                        elif isinstance(s, Exception):
+                            task_fut.set_exception(s)
+                        else:
+                            raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                    except Exception as e:
+                        # TODO could be a proper wrapped exception?
+                        task_fut.set_exception(
+                            DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                 else:
-                    raise BadMessage("Message received with unknown type {}".format(msg['type']))
+                    raise BadMessage("Message received is neither result or exception")
 
         logger.info("Closing result ZMQ pipe")
         self.incoming_q.close()
@@ -772,9 +767,18 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         An HTEXFuture (a normal Future, with the attribute ``.parsl_executor_task_id``
         set).  The future will be set to done when the associated function buffer has
         been invoked and completed.
+
+        Raises
+        ------
+        ``msgspec.ValidationError`` if ``context`` or its contents are malformed.
         """
         if self.bad_state_is_set:
             raise self.executor_exception
+
+        # validate early to catch bad contexts well before re-serializing them on the interchange,
+        # but don't use the converted value because msgspec drops unknown fields.
+        msgspec.convert(context, proto.TaskContext)
+        task_context = typing.cast(proto.TaskContext, context)
 
         self._task_counter += 1
         task_id = self._task_counter
@@ -782,7 +786,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         fut = HTEXFuture(task_id)
         self.tasks[task_id] = fut
 
-        msg = {"task_id": task_id, "context": context, "buffer": buffer}
+        msg = proto.Task(task_id=task_id, context=task_context, buffer=buffer)
         self.outgoing_q.put(msg)
 
         return fut

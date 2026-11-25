@@ -502,7 +502,7 @@ class DataFlowKernel:
             else:
                 # all the joinables succeeded, so construct a result:
                 if isinstance(joinable, Future):
-                    assert inner_app_future is joinable
+                    assert inner_app_future is not None and inner_app_future is joinable
                     res = joinable.result()
                 elif isinstance(joinable, list):
                     res = []
