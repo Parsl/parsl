@@ -172,8 +172,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     if args.output_file is not None:
         if not args.json_output:
             parser.error("--output-file requires --json-output")
-        # Require a single filename. "." and ".." refer to directories.
-        if not args.output_file or args.output_file in (".", "..") or Path(args.output_file).name != args.output_file:
+        if not args.output_file or Path(args.output_file).name != args.output_file:
             parser.error("--output-file must be a filename only; use --output-dir for directories")
 
     if args.resources:

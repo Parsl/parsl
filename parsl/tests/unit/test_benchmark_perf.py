@@ -128,12 +128,26 @@ def test_custom_output_file_not_overwritten(benchmark_cli, tmp_path):
     assert path.read_text() == "existing report"
 
 
-@pytest.mark.parametrize("filename", ["", ".", "..", "../baseline.json", "nested/baseline.json", "/tmp/baseline.json"])
+@pytest.mark.parametrize("filename", ["", ".", "../baseline.json", "nested/baseline.json", "/tmp/baseline.json"])
 def test_invalid_output_filename(benchmark_cli, tmp_path, filename):
     with pytest.raises(SystemExit) as raised:
         benchmark_cli("--json-output", "--output-file", filename)
     assert raised.value.code == 2
     assert list(tmp_path.iterdir()) == []
+
+
+def test_parent_directory_output_filename(benchmark_cli, tmp_path, capsys):
+    existing_report = tmp_path / "existing.json"
+    existing_report.write_text("existing report")
+
+    with pytest.raises(SystemExit) as raised:
+        benchmark_cli("--json-output", "--output-file", "..")
+
+    assert raised.value.code == 2
+    assert "cannot create JSON output file:" in capsys.readouterr().err
+    assert existing_report.read_text() == "existing report"
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["existing.json", "parsl-perf-output"]
+    assert list((tmp_path / "parsl-perf-output").iterdir()) == []
 
 
 def test_output_filename_requires_json(benchmark_cli, tmp_path):
